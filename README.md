@@ -55,6 +55,23 @@ cd frontend
 mvn compile exec:java
 ```
 
+## Quick Start Scripts
+
+### Start Backend
+```bash
+./start-backend.sh
+```
+
+### Start Frontend
+```bash
+./start-frontend.sh
+```
+
+### Run API Demo
+```bash
+./demo-api.sh
+```
+
 ## Command Examples
 
 ### Move Command (via REST API)
