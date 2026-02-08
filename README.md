@@ -17,6 +17,7 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 - In-memory game state
 - Thread-safe game state management with synchronized access
 - Stable army identification using unique IDs (not list indices)
+- **Army Movement System**: Armies move 1 tile per tick using Manhattan distance pathfinding
 
 ### REST Endpoints
 - `GET /state` - Get current game state (returns JSON with grid, armies, tick count)
@@ -38,7 +39,15 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 {
   "grid": [[{"type": "CASTLE"}, ...], ...],
   "armies": [
-    {"id": 1, "x": 0, "y": 0, "soldiers": 10, "playerId": 1},
+    {
+      "id": 1, 
+      "x": 0, 
+      "y": 0, 
+      "soldiers": 10, 
+      "playerId": 1,
+      "destinationX": 5,
+      "destinationY": 5
+    },
     {"id": 2, "x": 9, "y": 9, "soldiers": 10, "playerId": 2}
   ],
   "tickCount": 0,
@@ -46,6 +55,8 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
   "height": 10
 }
 ```
+
+**Note**: `destinationX` and `destinationY` are optional fields. When set, they indicate the army is moving toward that destination.
 
 ### Running the Backend
 
@@ -134,11 +145,14 @@ start-frontend.bat
 
 ### Move Command (via REST API)
 ```bash
-# Move army by ID (use the army's unique ID from /state endpoint)
+# Move army by ID (sets destination - army will move gradually over multiple ticks)
+# Use the army's unique ID from /state endpoint
 curl -X POST http://localhost:8080/command \
   -H "Content-Type: application/json; charset=UTF-8" \
   -d '{"type":"MOVE","armyId":1,"targetX":5,"targetY":5}'
 ```
+
+**Note:** The MOVE command sets the army's destination but doesn't move it instantly. The army will move 1 tile per tick toward the destination.
 
 ### Tick Command
 ```bash
@@ -180,12 +194,12 @@ cd frontend
 ### Continuous Integration
 GitHub Actions workflow automatically runs on pull requests to `main` or `develop`:
 - Builds both backend and frontend
-- Runs all unit tests (41 total)
+- Runs all unit tests (56 total: 44 backend + 12 frontend)
 - Packages applications
 - Uses JDK 17 with Maven caching for faster builds
 
 Test coverage includes:
-- **Backend**: Model tests (Army, Command, Tile, GameState), Service tests (GameService with game mechanics)
+- **Backend**: Model tests (Army, Command, Tile, GameState), Service tests (GameService with game mechanics and movement system)
 - **Frontend**: Model tests (Army, Command, Tile, GameState)
 
 ## Game Rules
@@ -193,10 +207,35 @@ Test coverage includes:
 1. **Initial Setup:** Two castles at (0,0) and (9,9), two villages at (3,3) and (6,6)
 2. **Players:** Player 1 (human, blue armies) starts at (0,0); Player 2 (AI/enemy, red armies) starts at (9,9)
 3. **Starting Forces:** Each player starts with an army of 10 soldiers at their castle
-4. **Soldier Generation:** Each tick, armies positioned on villages gain 1 soldier
-5. **Combat:** When armies of different players occupy the same tile, combat occurs
-6. **Combat Resolution:** Each army's soldier count is reduced by the opponent's soldier count (simultaneous damage)
-7. **Army Removal:** Armies with 0 or fewer soldiers are removed from the game
+4. **Movement:** Armies move 1 tile per tick toward their destination using Manhattan distance pathfinding
+5. **Soldier Generation:** Each tick, armies positioned on villages gain 1 soldier
+6. **Combat:** When armies of different players occupy the same tile, combat occurs
+7. **Combat Resolution:** Each army's soldier count is reduced by the opponent's soldier count (simultaneous damage)
+8. **Army Removal:** Armies with 0 or fewer soldiers are removed from the game
+
+## Army Movement System
+
+The game features a realistic movement system where armies move gradually toward their destinations:
+
+### Movement Mechanics
+- **Command**: When a MOVE command is issued, the army's destination is set but it doesn't teleport instantly
+- **Movement Speed**: Armies move 1 tile per tick toward their destination
+- **Pathfinding**: Uses Manhattan distance pathfinding (horizontal movement preferred first, then vertical)
+- **Destination Indicator**: The frontend displays a colored square at the destination
+  - Light blue for Player 1 armies
+  - Light red for Player 2 armies
+- **Movement Cancellation**: Issuing a new MOVE command cancels the previous movement and sets a new destination
+- **Arrival**: When an army reaches its destination, the destination fields are cleared and movement stops
+
+### Example Movement Sequence
+```
+Initial: Army at (0,0), commanded to move to (3,2)
+Tick 1: Army moves to (1,0) - horizontal first
+Tick 2: Army moves to (2,0) - horizontal continues
+Tick 3: Army moves to (3,0) - reached horizontal destination
+Tick 4: Army moves to (3,1) - vertical movement begins
+Tick 5: Army moves to (3,2) - destination reached, stops moving
+```
 
 ## Core Game Loop
 
@@ -205,7 +244,17 @@ The game operates on a tick-based system. Each tick represents one turn where th
 ### 1. Tick Increment
 The global tick counter increments by 1.
 
-### 2. Soldier Generation Phase
+### 2. Army Movement Phase
+```
+For each army on the board:
+  - If army has a destination set:
+    - Calculate next position (1 step toward destination)
+    - Move army to next position
+    - If army reached destination:
+      - Clear destination fields
+```
+
+### 3. Soldier Generation Phase
 ```
 For each army on the board:
   - Check the tile type at army's current position
@@ -213,7 +262,7 @@ For each army on the board:
     - army.soldiers += 1
 ```
 
-### 3. Combat Resolution Phase
+### 4. Combat Resolution Phase
 ```
 For each pair of armies:
   - If armies occupy the same tile AND have different player IDs:
@@ -222,7 +271,7 @@ For each pair of armies:
     - army2.soldiers = max(0, army2.soldiers - army1.soldiers)
 ```
 
-### 4. Cleanup Phase
+### 5. Cleanup Phase
 ```
 For each army:
   - If army.soldiers <= 0:
@@ -230,29 +279,60 @@ For each army:
 ```
 
 ### Player Actions (Between Ticks)
-- Players can issue MOVE commands to reposition their armies
-- Commands are executed immediately (not queued)
+- Players can issue MOVE commands to set army destinations
+- MOVE commands set the destination immediately but armies move gradually (1 tile per tick)
 - Commands validate target coordinates are within bounds (0-9 for x and y)
 - Invalid commands are silently ignored
+- Issuing a new MOVE command cancels any previous movement
 
 ### Example Turn Sequence
 ```
-Initial State: Army A (10 soldiers) at (3,3) village, Army B (8 soldiers) at (5,5)
+Initial State: Army A (10 soldiers) at (0,0) castle, Army B (8 soldiers) at (9,9)
 
-Player issues: MOVE Army A to (5,5)
-Result: Army A moves to (5,5)
+Player issues: MOVE Army A to (3,3)
+Result: Army A destination set to (3,3), but army stays at (0,0)
 
 Player calls: POST /tick
-
-Tick executes:
+Tick 1 executes:
   1. Tick count: 0 -> 1
-  2. Soldier generation: (Army A is no longer on village, no generation occurs)
-  3. Combat: Army A and B are at (5,5), different players
-     - Army A: 10 - 8 = 2 soldiers
-     - Army B: 8 - 10 = 0 soldiers (will be removed)
-  4. Cleanup: Army B removed
+  2. Movement: Army A moves from (0,0) to (1,0) - moving toward (3,3)
+  3. Soldier generation: (No armies on villages)
+  4. Combat: (No armies on same tile)
+  5. Cleanup: (No defeated armies)
 
-Final State: Army A (2 soldiers) at (5,5), tick count = 1
+Player calls: POST /tick
+Tick 2 executes:
+  1. Tick count: 1 -> 2
+  2. Movement: Army A moves from (1,0) to (2,0)
+  3-5. (No changes)
+
+Player calls: POST /tick
+Tick 3 executes:
+  1. Tick count: 2 -> 3
+  2. Movement: Army A moves from (2,0) to (3,0)
+  3-5. (No changes)
+
+Player calls: POST /tick
+Tick 4 executes:
+  1. Tick count: 3 -> 4
+  2. Movement: Army A moves from (3,0) to (3,1)
+  3-5. (No changes)
+
+Player calls: POST /tick
+Tick 5 executes:
+  1. Tick count: 4 -> 5
+  2. Movement: Army A moves from (3,1) to (3,2)
+  3-5. (No changes)
+
+Player calls: POST /tick
+Tick 6 executes:
+  1. Tick count: 5 -> 6
+  2. Movement: Army A moves from (3,2) to (3,3) - destination reached!
+  3. Soldier generation: Army A at village gains 1 soldier (10 -> 11)
+  4. Combat: (No armies on same tile)
+  5. Cleanup: (No defeated armies)
+
+Final State: Army A (11 soldiers) at (3,3), Army B (8 soldiers) at (9,9), tick count = 6
 ```
 
 ## Architecture
