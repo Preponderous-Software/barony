@@ -230,11 +230,11 @@ cd frontend
 
 ### Run Tests
 ```bash
-# Backend tests (33 tests)
+# Backend tests (77 tests)
 cd backend
 ./mvnw test  # or: mvn test
 
-# Frontend tests (12 tests)
+# Frontend tests (15 tests)
 cd frontend
 ./mvnw test  # or: mvn test
 ```
