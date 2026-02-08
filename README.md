@@ -44,8 +44,6 @@ Server will start on http://localhost:8080
   - Red circles: Player 2 armies
 - HTTP client with proper timeouts and error handling
 - UTF-8 encoding for all network communication
-  - Blue circles: Player 1 armies
-  - Red circles: Player 2 armies
 
 ### Controls
 - `SPACE` - Send tick command to server
@@ -82,10 +80,10 @@ mvn compile exec:java
 
 ### Move Command (via REST API)
 ```bash
-# Move army by ID (use the army's ID from /state endpoint, not list index)
+# Move army by ID (use the army's unique ID from /state endpoint)
 curl -X POST http://localhost:8080/command \
   -H "Content-Type: application/json; charset=UTF-8" \
-  -d '{"type":"MOVE","armyIndex":1,"targetX":5,"targetY":5}'
+  -d '{"type":"MOVE","armyId":1,"targetX":5,"targetY":5}'
 ```
 
 ### Tick Command

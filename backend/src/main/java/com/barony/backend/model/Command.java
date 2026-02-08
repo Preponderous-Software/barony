@@ -2,7 +2,7 @@ package com.barony.backend.model;
 
 public class Command {
     private String type;
-    private int armyIndex;
+    private int armyId;
     private int targetX;
     private int targetY;
     
@@ -14,12 +14,12 @@ public class Command {
         this.type = type;
     }
     
-    public int getArmyIndex() {
-        return armyIndex;
+    public int getArmyId() {
+        return armyId;
     }
     
-    public void setArmyIndex(int armyIndex) {
-        this.armyIndex = armyIndex;
+    public void setArmyId(int armyId) {
+        this.armyId = armyId;
     }
     
     public int getTargetX() {

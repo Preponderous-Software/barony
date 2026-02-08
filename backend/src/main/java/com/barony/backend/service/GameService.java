@@ -87,7 +87,7 @@ public class GameService {
     
     public synchronized void executeCommand(Command command) {
         if ("MOVE".equals(command.getType())) {
-            int armyId = command.getArmyIndex(); // This is now an army ID, not an index
+            int armyId = command.getArmyId();
             
             Army targetArmy = null;
             for (Army army : gameState.getArmiesInternal()) {

@@ -1,5 +1,7 @@
 package com.barony.backend.model;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class Army {
     private int id;
     private int x;
@@ -7,10 +9,10 @@ public class Army {
     private int soldiers;
     private int playerId;
     
-    private static int nextId = 1;
+    private static final AtomicInteger nextId = new AtomicInteger(1);
     
     public Army(int x, int y, int soldiers, int playerId) {
-        this.id = nextId++;
+        this.id = nextId.getAndIncrement();
         this.x = x;
         this.y = y;
         this.soldiers = soldiers;
