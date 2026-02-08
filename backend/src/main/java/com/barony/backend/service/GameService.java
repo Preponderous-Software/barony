@@ -60,20 +60,6 @@ public class GameService {
         // Process army movement
         processMovement();
         
-        // Process village capture - armies capture villages they occupy
-        for (Army army : gameState.getArmiesInternal()) {
-            int x = army.getX();
-            int y = army.getY();
-            if (x >= 0 && x < gameState.getWidth() && y >= 0 && y < gameState.getHeight()) {
-                Tile tile = gameState.getGrid()[x][y];
-                TileType tileType = tile.getType();
-                if (tileType == TileType.VILLAGE && tile.getOwnerId() != army.getPlayerId()) {
-                    // Capture the village
-                    tile.setOwnerId(army.getPlayerId());
-                }
-            }
-        }
-        
         // Villages generate soldiers only for their owner
         for (Army army : gameState.getArmiesInternal()) {
             int x = army.getX();
@@ -89,6 +75,44 @@ public class GameService {
         
         // Process combat
         processCombat();
+        
+        // Process village capture after combat - only surviving armies can capture
+        // If multiple armies from different players occupy a village after combat, 
+        // the village becomes neutral (contested)
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE) {
+                    // Find all armies at this location
+                    Integer occupyingPlayer = null;
+                    boolean contested = false;
+                    
+                    for (Army army : gameState.getArmiesInternal()) {
+                        if (army.getX() == x && army.getY() == y) {
+                            if (occupyingPlayer == null) {
+                                occupyingPlayer = army.getPlayerId();
+                            } else if (occupyingPlayer != army.getPlayerId()) {
+                                // Multiple players occupy the same village - contested
+                                contested = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Update village ownership
+                    if (contested) {
+                        // Contested villages become neutral
+                        tile.setOwnerId(0);
+                    } else if (occupyingPlayer != null && tile.getOwnerId() != occupyingPlayer) {
+                        // Single player occupies - capture if not already owned
+                        tile.setOwnerId(occupyingPlayer);
+                    } else if (occupyingPlayer == null && tile.getOwnerId() != 0) {
+                        // No army on the village - keep current ownership
+                        // (Villages don't revert to neutral when abandoned)
+                    }
+                }
+            }
+        }
     }
     
     private void processMovement() {

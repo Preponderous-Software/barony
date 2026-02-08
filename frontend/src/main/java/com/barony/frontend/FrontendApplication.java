@@ -19,6 +19,7 @@ public class FrontendApplication {
     private long window;
     private GameClient client;
     private GameState gameState;
+    private String lastWindowTitle = "";
     
     public void run() {
         init();
@@ -138,7 +139,11 @@ public class FrontendApplication {
             player2Castles, player2Villages, player2Income,
             gameState.getTickCount());
         
-        glfwSetWindowTitle(window, title);
+        // Only update window title if it changed
+        if (!title.equals(lastWindowTitle)) {
+            glfwSetWindowTitle(window, title);
+            lastWindowTitle = title;
+        }
     }
     
     private void render() {

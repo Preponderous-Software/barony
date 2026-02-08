@@ -731,6 +731,22 @@ class GameServiceTest {
         state = gameService.getState();
         assertEquals(1, state.getGrid()[3][3].getOwnerId());
         
+        // Move Player 1 army away to avoid combat
+        Command move1Away = new Command();
+        move1Away.setType("MOVE");
+        move1Away.setArmyId(army1Id);
+        move1Away.setTargetX(0);
+        move1Away.setTargetY(0);
+        gameService.executeCommand(move1Away);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        // Village should still be owned by Player 1 (ownership persists when abandoned)
+        state = gameService.getState();
+        assertEquals(1, state.getGrid()[3][3].getOwnerId());
+        
         // Player 2 captures the same village
         Command move2 = new Command();
         move2.setType("MOVE");
@@ -746,12 +762,8 @@ class GameServiceTest {
         
         state = gameService.getState();
         
-        // Village should now be owned by Player 2 (or be neutral if both armies were destroyed in combat)
-        // If Player 2 army still exists, village should be owned by Player 2
-        boolean player2Exists = state.getArmies().stream().anyMatch(a -> a.getPlayerId() == 2);
-        if (player2Exists) {
-            assertEquals(2, state.getGrid()[3][3].getOwnerId());
-        }
+        // Village should now be owned by Player 2 since Player 2 army occupies it
+        assertEquals(2, state.getGrid()[3][3].getOwnerId());
     }
     
     @Test

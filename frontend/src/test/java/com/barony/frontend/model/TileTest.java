@@ -24,4 +24,24 @@ class TileTest {
         tile.setType(TileType.EMPTY);
         assertEquals(TileType.EMPTY, tile.getType());
     }
+    
+    @Test
+    void tileOwnerIdDefaultsToZero() {
+        Tile tile = new Tile();
+        assertEquals(0, tile.getOwnerId());
+    }
+    
+    @Test
+    void tileOwnerIdCanBeSetAndRetrieved() {
+        Tile tile = new Tile();
+        
+        tile.setOwnerId(1);
+        assertEquals(1, tile.getOwnerId());
+        
+        tile.setOwnerId(2);
+        assertEquals(2, tile.getOwnerId());
+        
+        tile.setOwnerId(0);
+        assertEquals(0, tile.getOwnerId());
+    }
 }
