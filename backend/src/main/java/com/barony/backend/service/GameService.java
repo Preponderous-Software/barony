@@ -54,6 +54,9 @@ public class GameService {
     public synchronized void tick() {
         gameState.incrementTick();
         
+        // Process army movement
+        processMovement();
+        
         // Villages generate soldiers
         for (Army army : gameState.getArmiesInternal()) {
             int x = army.getX();
@@ -68,6 +71,42 @@ public class GameService {
         
         // Process combat
         processCombat();
+    }
+    
+    private void processMovement() {
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.isMoving()) {
+                // Calculate next position using Manhattan distance pathfinding
+                int currentX = army.getX();
+                int currentY = army.getY();
+                int destX = army.getDestinationX();
+                int destY = army.getDestinationY();
+                
+                // Move one step toward destination
+                int nextX = currentX;
+                int nextY = currentY;
+                
+                // Prefer horizontal movement first, then vertical
+                if (currentX < destX) {
+                    nextX = currentX + 1;
+                } else if (currentX > destX) {
+                    nextX = currentX - 1;
+                } else if (currentY < destY) {
+                    nextY = currentY + 1;
+                } else if (currentY > destY) {
+                    nextY = currentY - 1;
+                }
+                
+                army.setX(nextX);
+                army.setY(nextY);
+                
+                // Clear destination if reached
+                if (nextX == destX && nextY == destY) {
+                    army.setDestinationX(null);
+                    army.setDestinationY(null);
+                }
+            }
+        }
     }
     
     private void processCombat() {
@@ -124,8 +163,15 @@ public class GameService {
                 // Validate target position
                 if (targetX >= 0 && targetX < gameState.getWidth() && 
                     targetY >= 0 && targetY < gameState.getHeight()) {
-                    targetArmy.setX(targetX);
-                    targetArmy.setY(targetY);
+                    // If target equals current position, clear any existing destination
+                    if (targetX == targetArmy.getX() && targetY == targetArmy.getY()) {
+                        targetArmy.setDestinationX(null);
+                        targetArmy.setDestinationY(null);
+                    } else {
+                        // Set destination instead of instant movement
+                        targetArmy.setDestinationX(targetX);
+                        targetArmy.setDestinationY(targetY);
+                    }
                 }
             }
         }
