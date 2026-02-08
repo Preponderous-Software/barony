@@ -242,7 +242,7 @@ cd frontend
 ### Continuous Integration
 GitHub Actions workflow automatically runs on pull requests to `main` or `develop`:
 - Builds both backend and frontend
-- Runs all unit tests (88 total: 69 backend + 19 frontend - including castle capture and win condition tests)
+- Runs all unit tests (92 total: 77 backend + 15 frontend - including castle capture and win condition tests)
 - Packages applications
 - Uses JDK 17 with Maven caching for faster builds
 
