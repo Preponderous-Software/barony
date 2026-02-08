@@ -202,13 +202,13 @@ cd frontend
 ### Continuous Integration
 GitHub Actions workflow automatically runs on pull requests to `main` or `develop`:
 - Builds both backend and frontend
-- Runs all unit tests (68 total: 58 backend + 12 frontend - including 10 new ownership tests)
+- Runs all unit tests (72 total: 58 backend + 14 frontend - including ownership and capture tests)
 - Packages applications
 - Uses JDK 17 with Maven caching for faster builds
 
 Test coverage includes:
-- **Backend**: Model tests (Army, Command, Tile with ownership, GameState), Service tests (GameService with game mechanics, movement system, and territory control)
-- **Frontend**: Model tests (Army, Command, Tile, GameState)
+- **Backend**: Model tests (Army, Command, Tile with ownership, GameState), Service tests (GameService with game mechanics, movement system, and territory control including post-combat capture)
+- **Frontend**: Model tests (Army, Command, Tile with ownerId, GameState)
 
 ## Game Rules
 
@@ -233,9 +233,11 @@ The game features a territory control system where tiles can be owned by players
   - Villages start neutral (ownerId = 0)
   
 - **Village Capture:**
-  - When an army occupies a village, it instantly captures it for their player
-  - Capture happens even if the village is already owned by another player
-  - No capture timer - ownership changes immediately when an enemy army occupies
+  - Village capture occurs **after combat resolution** to ensure only surviving armies can claim territory
+  - When a single player's army occupies a village after combat, it captures the village for that player
+  - **Contested Villages**: If multiple armies from different players occupy the same village after combat, the village becomes neutral (ownerId = 0)
+  - **Ownership Persistence**: Villages retain their ownership when abandoned (no army present)
+  - No capture timer - ownership changes immediately based on post-combat occupation
   
 - **Soldier Generation:**
   - Only villages owned by a player generate soldiers
@@ -334,6 +336,18 @@ For each pair of armies:
 For each army:
   - If army.soldiers <= 0:
     - Remove army from game
+```
+
+### 7. Village Capture Phase
+```
+For each village tile:
+  - Find all armies at this location (after combat)
+  - If single player occupies the village:
+    - tile.ownerId = occupyingPlayer (capture village)
+  - If multiple players occupy the village:
+    - tile.ownerId = 0 (contested - becomes neutral)
+  - If no armies occupy the village:
+    - Keep current ownership (villages persist when abandoned)
 ```
 
 ### Player Actions (Between Ticks)
