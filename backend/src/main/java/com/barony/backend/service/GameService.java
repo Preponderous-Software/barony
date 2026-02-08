@@ -106,10 +106,8 @@ public class GameService {
                     } else if (occupyingPlayer != null && tile.getOwnerId() != occupyingPlayer) {
                         // Single player occupies - capture if not already owned
                         tile.setOwnerId(occupyingPlayer);
-                    } else if (occupyingPlayer == null && tile.getOwnerId() != 0) {
-                        // No army on the village - keep current ownership
-                        // (Villages don't revert to neutral when abandoned)
                     }
+                    // Note: Villages retain ownership when abandoned (no occupyingPlayer)
                 }
             }
         }
