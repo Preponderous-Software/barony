@@ -466,7 +466,7 @@ class GameServiceTest {
     }
     
     @Test
-    void pathfindingUsesManhanttanDistance() {
+    void pathfindingUsesManhattanDistance() {
         GameState state = gameService.getState();
         int armyId = state.getArmies().get(0).getId();
         
