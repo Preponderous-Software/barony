@@ -687,7 +687,7 @@ class GameServiceTest {
     }
     
     @Test
-    void armyCapuresVillageWhenOccupying() {
+    void armyCapturesVillageWhenOccupying() {
         GameState state = gameService.getState();
         int armyId = state.getArmies().get(0).getId();
         
