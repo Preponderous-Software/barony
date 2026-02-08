@@ -12,7 +12,8 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 ### Features
 - 2D grid (10x10)
 - Tile types: CASTLE, VILLAGE, EMPTY
-- Villages generate 1 soldier per tick for armies on them
+- **Territory Control System**: Villages and castles can be owned by players
+- Villages generate 1 soldier per tick for armies of the owning player
 - Integer-based combat (armies reduce each other's soldiers equally)
 - In-memory game state
 - Thread-safe game state management with synchronized access
@@ -37,7 +38,7 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 ### State Response Structure
 ```json
 {
-  "grid": [[{"type": "CASTLE"}, ...], ...],
+  "grid": [[{"type": "CASTLE", "ownerId": 1}, ...], ...],
   "armies": [
     {
       "id": 1, 
@@ -56,7 +57,9 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 }
 ```
 
-**Note**: `destinationX` and `destinationY` are optional fields. When set, they indicate the army is moving toward that destination.
+**Note**: 
+- `destinationX` and `destinationY` are optional fields. When set, they indicate the army is moving toward that destination.
+- `ownerId` indicates tile ownership: 0=neutral, 1=player1, 2=player2
 
 ### Running the Backend
 
@@ -79,11 +82,16 @@ Server will start on http://localhost:8080
 ### Features
 - Renders 10x10 grid using LWJGL (cross-platform support for Linux, macOS, Windows)
 - Visual representation:
-  - Gray tiles: CASTLE
-  - Brown tiles: VILLAGE  
-  - Green tiles: EMPTY
-  - Blue circles: Player 1 armies
-  - Red circles: Player 2 armies
+  - **Castles**: Gray base with colored outline (blue for Player 1, red for Player 2)
+  - **Villages**: 
+    - Neutral: Brown
+    - Player 1 owned: Brown with blue tint
+    - Player 2 owned: Brown with red tint
+  - **Empty tiles**: Green
+  - **Armies**:
+    - Blue circles: Player 1 armies
+    - Red circles: Player 2 armies
+- **Territory Statistics Display**: Window title shows castles owned, villages owned, and income per tick for each player
 - HTTP client with proper timeouts and error handling
 - UTF-8 encoding for all network communication
 
@@ -194,12 +202,12 @@ cd frontend
 ### Continuous Integration
 GitHub Actions workflow automatically runs on pull requests to `main` or `develop`:
 - Builds both backend and frontend
-- Runs all unit tests (56 total: 44 backend + 12 frontend)
+- Runs all unit tests (68 total: 58 backend + 12 frontend - including 10 new ownership tests)
 - Packages applications
 - Uses JDK 17 with Maven caching for faster builds
 
 Test coverage includes:
-- **Backend**: Model tests (Army, Command, Tile, GameState), Service tests (GameService with game mechanics and movement system)
+- **Backend**: Model tests (Army, Command, Tile with ownership, GameState), Service tests (GameService with game mechanics, movement system, and territory control)
 - **Frontend**: Model tests (Army, Command, Tile, GameState)
 
 ## Game Rules
@@ -208,10 +216,52 @@ Test coverage includes:
 2. **Players:** Player 1 (human, blue armies) starts at (0,0); Player 2 (AI/enemy, red armies) starts at (9,9)
 3. **Starting Forces:** Each player starts with an army of 10 soldiers at their castle
 4. **Movement:** Armies move 1 tile per tick toward their destination using Manhattan distance pathfinding
-5. **Soldier Generation:** Each tick, armies positioned on villages gain 1 soldier
-6. **Combat:** When armies of different players occupy the same tile, combat occurs
-7. **Combat Resolution:** Each army's soldier count is reduced by the opponent's soldier count (simultaneous damage)
-8. **Army Removal:** Armies with 0 or fewer soldiers are removed from the game
+5. **Territory Control:** Villages can be captured by occupying them with an army
+6. **Soldier Generation:** Each tick, armies positioned on villages owned by their player gain 1 soldier
+7. **Combat:** When armies of different players occupy the same tile, combat occurs
+8. **Combat Resolution:** Each army's soldier count is reduced by the opponent's soldier count (simultaneous damage)
+9. **Army Removal:** Armies with 0 or fewer soldiers are removed from the game
+
+## Territory Control
+
+The game features a territory control system where tiles can be owned by players:
+
+### Ownership Mechanics
+- **Initial Ownership:**
+  - Player 1's castle at (0,0) starts owned by Player 1
+  - Player 2's castle at (9,9) starts owned by Player 2
+  - Villages start neutral (ownerId = 0)
+  
+- **Village Capture:**
+  - When an army occupies a village, it instantly captures it for their player
+  - Capture happens even if the village is already owned by another player
+  - No capture timer - ownership changes immediately when an enemy army occupies
+  
+- **Soldier Generation:**
+  - Only villages owned by a player generate soldiers
+  - Neutral villages (ownerId = 0) do NOT generate soldiers
+  - Each owned village generates +1 soldier per tick for armies of the owning player on that village
+  
+- **Income Calculation:**
+  - A player's income per tick equals the number of villages they own
+  - Use `getPlayerIncome(playerId)` to calculate total soldier generation potential
+
+### Visual Indicators
+- **Castles**: Gray base with colored outline (blue=Player 1, red=Player 2)
+- **Villages**:
+  - Neutral: Brown
+  - Player 1 owned: Brown with blue tint
+  - Player 2 owned: Brown with red tint
+- **Statistics**: Window title displays: `P1: XC YV +Z/tick | P2: XC YV +Z/tick`
+  - XC = castles owned
+  - YV = villages owned
+  - +Z/tick = income (soldiers generated per tick)
+
+### Strategic Implications
+- Controlling more villages increases your army growth rate
+- Capturing enemy villages reduces their income while increasing yours
+- Villages are key strategic objectives for long-term advantage
+- Castle ownership is initialized at game start (castle capture mechanics will be added in future tickets)
 
 ## Army Movement System
 
@@ -254,15 +304,23 @@ For each army on the board:
       - Clear destination fields
 ```
 
-### 3. Soldier Generation Phase
+### 3. Village Capture Phase
 ```
 For each army on the board:
-  - Check the tile type at army's current position
-  - If tile is a VILLAGE:
-    - army.soldiers += 1
+  - Check the tile at army's current position
+  - If tile is a VILLAGE and tile.ownerId != army.playerId:
+    - tile.ownerId = army.playerId (capture the village)
 ```
 
-### 4. Combat Resolution Phase
+### 4. Soldier Generation Phase
+```
+For each army on the board:
+  - Check the tile at army's current position
+  - If tile is a VILLAGE and tile.ownerId == army.playerId:
+    - army.soldiers += 1 (owned villages generate soldiers)
+```
+
+### 5. Combat Resolution Phase
 ```
 For each pair of armies:
   - If armies occupy the same tile AND have different player IDs:
@@ -271,7 +329,7 @@ For each pair of armies:
     - army2.soldiers = max(0, army2.soldiers - army1.soldiers)
 ```
 
-### 5. Cleanup Phase
+### 6. Cleanup Phase
 ```
 For each army:
   - If army.soldiers <= 0:
