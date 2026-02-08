@@ -49,6 +49,13 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 
 ### Running the Backend
 
+**Option 1: Using Maven Wrapper (no Maven installation required)**
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+**Option 2: Using installed Maven**
 ```bash
 cd backend
 mvn spring-boot:run
@@ -78,6 +85,13 @@ Server will start on http://localhost:8080
 
 **Important:** Start the backend first!
 
+**Option 1: Using Maven Wrapper (no Maven installation required)**
+```bash
+cd frontend
+./mvnw compile exec:java
+```
+
+**Option 2: Using installed Maven**
 ```bash
 cd frontend
 mvn compile exec:java
@@ -85,20 +99,36 @@ mvn compile exec:java
 
 ## Quick Start Scripts
 
-### Start Backend
+### Unix/Linux/macOS
+
+**Start Backend:**
 ```bash
 ./start-backend.sh
 ```
 
-### Start Frontend
+**Start Frontend:**
 ```bash
 ./start-frontend.sh
 ```
 
-### Run API Demo
+**Run API Demo:**
 ```bash
 ./demo-api.sh
 ```
+
+### Windows
+
+**Start Backend:**
+```batch
+start-backend.bat
+```
+
+**Start Frontend (requires X server like VcXsrv if using WSL):**
+```batch
+start-frontend.bat
+```
+
+**Note:** For WSL users, you'll need an X server running on Windows (e.g., VcXsrv, Xming) since WSL doesn't have native display support. The batch script provides a native Windows alternative.
 
 ## Command Examples
 
@@ -122,29 +152,29 @@ curl http://localhost:8080/state
 
 ## Development
 
-Both projects use Maven and Java 17.
+Both projects use Maven and Java 17. Maven Wrapper (mvnw) is included, so Maven installation is optional.
 
 ### Build Backend
 ```bash
 cd backend
-mvn clean package
+./mvnw clean package  # or: mvn clean package if Maven is installed
 ```
 
 ### Build Frontend
 ```bash
 cd frontend
-mvn clean package
+./mvnw clean package  # or: mvn clean package if Maven is installed
 ```
 
 ### Run Tests
 ```bash
-# Backend tests (29 tests)
+# Backend tests (33 tests)
 cd backend
-mvn test
+./mvnw test  # or: mvn test
 
 # Frontend tests (12 tests)
 cd frontend
-mvn test
+./mvnw test  # or: mvn test
 ```
 
 ### Continuous Integration

@@ -3,4 +3,4 @@
 # Frontend startup script
 # Note: Backend must be running first!
 cd "$(dirname "$0")/frontend"
-mvn compile exec:java
+./mvnw compile exec:java
