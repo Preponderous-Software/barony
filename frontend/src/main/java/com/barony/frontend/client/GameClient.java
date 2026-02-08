@@ -91,6 +91,26 @@ public class GameClient {
         }
     }
     
+    public GameState reset() {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(baseUrl + "/api/reset");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setConnectTimeout(CONNECT_TIMEOUT);
+            conn.setReadTimeout(READ_TIMEOUT);
+            
+            return readResponse(conn);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+    
     private GameState readResponse(HttpURLConnection conn) throws Exception {
         int responseCode = conn.getResponseCode();
         InputStream inputStream;

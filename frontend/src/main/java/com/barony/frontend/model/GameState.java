@@ -6,6 +6,8 @@ public class GameState {
     private Tile[][] grid;
     private List<Army> armies;
     private int tickCount;
+    private boolean gameOver;
+    private Integer winnerId; // null if game not over, player ID if game over
     
     public Tile[][] getGrid() {
         return grid;
@@ -29,5 +31,21 @@ public class GameState {
     
     public void setTickCount(int tickCount) {
         this.tickCount = tickCount;
+    }
+    
+    public boolean isGameOver() {
+        return gameOver;
+    }
+    
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
+    }
+    
+    public Integer getWinnerId() {
+        return winnerId;
+    }
+    
+    public void setWinnerId(Integer winnerId) {
+        this.winnerId = winnerId;
     }
 }

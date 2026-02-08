@@ -21,6 +21,7 @@ public class FrontendApplication {
     private GameState gameState;
     private String lastWindowTitle = "";
     private java.util.Scanner inputScanner; // Shared scanner for console input, never closed
+    private boolean gameOverMessagePrinted = false; // Track if we've printed the game over message
     
     public void run() {
         init();
@@ -52,6 +53,20 @@ public class FrontendApplication {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
                 glfwSetWindowShouldClose(window, true);
             }
+            
+            // Disable input when game is over (except R for reset)
+            if (gameState != null && gameState.isGameOver()) {
+                if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
+                    // Reset game
+                    if (client != null) {
+                        gameState = client.reset();
+                        gameOverMessagePrinted = false; // Reset flag
+                        System.out.println("Game reset!");
+                    }
+                }
+                return; // Ignore all other input when game is over
+            }
+            
             if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
                 // Send a tick command
                 if (client != null) {
@@ -266,6 +281,44 @@ public class FrontendApplication {
                     glEnd();
                     glLineWidth(1.0f);
                 }
+                
+                // Draw capture progress bar for contested castles
+                if (type == TileType.CASTLE && tile.getOccupationTicks() > 0) {
+                    float barHeight = cellHeight / 10;
+                    float barY = y2 - barHeight; // Just below top of tile
+                    float barWidth = cellWidth * 0.8f;
+                    float barX1 = x1 + (cellWidth - barWidth) / 2;
+                    float barX2 = barX1 + barWidth;
+                    
+                    // Background (gray)
+                    glColor3f(0.3f, 0.3f, 0.3f);
+                    glBegin(GL_QUADS);
+                    glVertex2f(barX1, barY);
+                    glVertex2f(barX2, barY);
+                    glVertex2f(barX2, barY - barHeight);
+                    glVertex2f(barX1, barY - barHeight);
+                    glEnd();
+                    
+                    // Progress fill (red for enemy occupation)
+                    float progress = Math.min(tile.getOccupationTicks(), 3) / 3.0f;
+                    float fillWidth = barWidth * progress;
+                    glColor3f(1.0f, 0.0f, 0.0f); // Red
+                    glBegin(GL_QUADS);
+                    glVertex2f(barX1, barY);
+                    glVertex2f(barX1 + fillWidth, barY);
+                    glVertex2f(barX1 + fillWidth, barY - barHeight);
+                    glVertex2f(barX1, barY - barHeight);
+                    glEnd();
+                    
+                    // Border
+                    glColor3f(0.0f, 0.0f, 0.0f);
+                    glBegin(GL_LINE_LOOP);
+                    glVertex2f(barX1, barY);
+                    glVertex2f(barX2, barY);
+                    glVertex2f(barX2, barY - barHeight);
+                    glVertex2f(barX1, barY - barHeight);
+                    glEnd();
+                }
             }
         }
         
@@ -385,6 +438,98 @@ public class FrontendApplication {
                         glEnd();
                     }
                 }
+            }
+        }
+        
+        // Draw win/loss overlay if game is over
+        if (gameState.isGameOver()) {
+            // Draw semi-transparent overlay
+            glColor4f(0.0f, 0.0f, 0.0f, 0.7f);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBegin(GL_QUADS);
+            glVertex2f(-1.0f, -1.0f);
+            glVertex2f(1.0f, -1.0f);
+            glVertex2f(1.0f, 1.0f);
+            glVertex2f(-1.0f, 1.0f);
+            glEnd();
+            glDisable(GL_BLEND);
+            
+            // Draw win/loss text box
+            float boxWidth = 0.8f;
+            float boxHeight = 0.4f;
+            
+            // Determine winner and color
+            Integer winnerId = gameState.getWinnerId();
+            boolean playerWon = winnerId != null && winnerId == 1;
+            
+            // Box background
+            if (playerWon) {
+                glColor3f(0.0f, 0.3f, 0.0f); // Dark green for win
+            } else {
+                glColor3f(0.3f, 0.0f, 0.0f); // Dark red for loss
+            }
+            glBegin(GL_QUADS);
+            glVertex2f(-boxWidth, -boxHeight);
+            glVertex2f(boxWidth, -boxHeight);
+            glVertex2f(boxWidth, boxHeight);
+            glVertex2f(-boxWidth, boxHeight);
+            glEnd();
+            
+            // Box border
+            if (playerWon) {
+                glColor3f(0.0f, 1.0f, 0.0f); // Bright green
+            } else {
+                glColor3f(1.0f, 0.0f, 0.0f); // Bright red
+            }
+            glLineWidth(4.0f);
+            glBegin(GL_LINE_LOOP);
+            glVertex2f(-boxWidth, -boxHeight);
+            glVertex2f(boxWidth, -boxHeight);
+            glVertex2f(boxWidth, boxHeight);
+            glVertex2f(-boxWidth, boxHeight);
+            glEnd();
+            glLineWidth(1.0f);
+            
+            // Draw large title text representation (using shapes since no text rendering)
+            // We'll draw a large colored bar to represent the text
+            if (playerWon) {
+                glColor3f(0.0f, 1.0f, 0.0f); // Green
+            } else {
+                glColor3f(1.0f, 0.0f, 0.0f); // Red
+            }
+            
+            // Draw text indicator (large rectangle at top of box)
+            float textHeight = 0.15f;
+            float textWidth = 0.6f;
+            glBegin(GL_QUADS);
+            glVertex2f(-textWidth, boxHeight - 0.1f - textHeight);
+            glVertex2f(textWidth, boxHeight - 0.1f - textHeight);
+            glVertex2f(textWidth, boxHeight - 0.1f);
+            glVertex2f(-textWidth, boxHeight - 0.1f);
+            glEnd();
+            
+            // Draw "Press R to Play Again" indicator (smaller rectangle at bottom)
+            glColor3f(1.0f, 1.0f, 1.0f); // White
+            float buttonHeight = 0.08f;
+            float buttonWidth = 0.5f;
+            glBegin(GL_QUADS);
+            glVertex2f(-buttonWidth, -boxHeight + 0.1f);
+            glVertex2f(buttonWidth, -boxHeight + 0.1f);
+            glVertex2f(buttonWidth, -boxHeight + 0.1f + buttonHeight);
+            glVertex2f(-buttonWidth, -boxHeight + 0.1f + buttonHeight);
+            glEnd();
+            
+            // Print message to console only once
+            if (!gameOverMessagePrinted) {
+                if (playerWon) {
+                    System.out.println("=== VICTORY! Player 1 Wins! ===");
+                    System.out.println("Press R to play again");
+                } else {
+                    System.out.println("=== DEFEAT! Player 2 Wins! ===");
+                    System.out.println("Press R to play again");
+                }
+                gameOverMessagePrinted = true;
             }
         }
     }
