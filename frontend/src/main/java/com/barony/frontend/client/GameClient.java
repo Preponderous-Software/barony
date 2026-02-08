@@ -25,13 +25,13 @@ public class GameClient {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = in.readLine()) != null) {
-                response.append(line);
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response.append(line);
+                }
             }
-            in.close();
             
             return gson.fromJson(response.toString(), GameState.class);
         } catch (Exception e) {
@@ -46,13 +46,13 @@ public class GameClient {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = in.readLine()) != null) {
-                response.append(line);
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response.append(line);
+                }
             }
-            in.close();
             
             return gson.fromJson(response.toString(), GameState.class);
         } catch (Exception e) {
@@ -70,18 +70,18 @@ public class GameClient {
             conn.setDoOutput(true);
             
             String jsonCommand = gson.toJson(command);
-            OutputStream os = conn.getOutputStream();
-            os.write(jsonCommand.getBytes());
-            os.flush();
-            os.close();
-            
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = in.readLine()) != null) {
-                response.append(line);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(jsonCommand.getBytes());
+                os.flush();
             }
-            in.close();
+            
+            StringBuilder response = new StringBuilder();
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response.append(line);
+                }
+            }
             
             return gson.fromJson(response.toString(), GameState.class);
         } catch (Exception e) {

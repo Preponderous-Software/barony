@@ -51,8 +51,13 @@ public class GameService {
     }
     
     private void processCombat() {
-        for (int i = 0; i < gameState.getArmies().size(); i++) {
-            for (int j = i + 1; j < gameState.getArmies().size(); j++) {
+        int armyCount = gameState.getArmies().size();
+        for (int i = 0; i < armyCount; i++) {
+            for (int j = i + 1; j < armyCount; j++) {
+                if (i >= gameState.getArmies().size() || j >= gameState.getArmies().size()) {
+                    continue;
+                }
+                
                 Army army1 = gameState.getArmies().get(i);
                 Army army2 = gameState.getArmies().get(j);
                 
