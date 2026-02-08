@@ -223,33 +223,49 @@ public class GameService {
     }
     
     private void mergeFriendlyArmies() {
-        // Find and merge armies that are co-located and belong to the same player
-        boolean merged = true;
-        while (merged) {
-            merged = false;
-            outer:
-            for (int i = 0; i < gameState.getArmiesInternal().size(); i++) {
-                for (int j = i + 1; j < gameState.getArmiesInternal().size(); j++) {
-                    Army army1 = gameState.getArmiesInternal().get(i);
-                    Army army2 = gameState.getArmiesInternal().get(j);
+        // Group armies by location and player ID for efficient merging (O(n) instead of O(n^3))
+        java.util.Map<String, java.util.List<Army>> armyGroups = new java.util.HashMap<>();
+        
+        for (Army army : gameState.getArmiesInternal()) {
+            String key = army.getX() + "," + army.getY() + "," + army.getPlayerId();
+            armyGroups.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(army);
+        }
+        
+        // Merge each group that has multiple armies
+        for (java.util.List<Army> group : armyGroups.values()) {
+            if (group.size() > 1) {
+                // Sort by ID to find the lowest ID army (the one we'll keep)
+                group.sort((a, b) -> Integer.compare(a.getId(), b.getId()));
+                
+                Army keepArmy = group.get(0); // Lowest ID
+                int totalSoldiers = keepArmy.getSoldiers();
+                
+                // Check if any army in the group is moving (for movement state preservation)
+                boolean anyMoving = keepArmy.isMoving();
+                Integer destX = keepArmy.getDestinationX();
+                Integer destY = keepArmy.getDestinationY();
+                
+                // Merge all other armies into the lowest ID army
+                for (int i = 1; i < group.size(); i++) {
+                    Army removeArmy = group.get(i);
+                    totalSoldiers += removeArmy.getSoldiers();
                     
-                    // Check if armies are at same location and same player
-                    if (army1.getX() == army2.getX() && 
-                        army1.getY() == army2.getY() && 
-                        army1.getPlayerId() == army2.getPlayerId()) {
-                        
-                        // Merge into the army with lower ID
-                        Army keepArmy = (army1.getId() < army2.getId()) ? army1 : army2;
-                        Army removeArmy = (army1.getId() < army2.getId()) ? army2 : army1;
-                        
-                        // Combine soldier counts
-                        keepArmy.setSoldiers(keepArmy.getSoldiers() + removeArmy.getSoldiers());
-                        
-                        // Remove the higher ID army
-                        gameState.getArmiesInternal().remove(removeArmy);
-                        merged = true;
-                        break outer;
+                    // If keepArmy wasn't moving but this army is, adopt its movement
+                    if (!anyMoving && removeArmy.isMoving()) {
+                        anyMoving = true;
+                        destX = removeArmy.getDestinationX();
+                        destY = removeArmy.getDestinationY();
                     }
+                    // Note: If both have destinations, keep the lower ID army's destination
+                    
+                    gameState.getArmiesInternal().remove(removeArmy);
+                }
+                
+                // Update the kept army with merged values
+                keepArmy.setSoldiers(totalSoldiers);
+                if (anyMoving && destX != null && destY != null) {
+                    keepArmy.setDestinationX(destX);
+                    keepArmy.setDestinationY(destY);
                 }
             }
         }

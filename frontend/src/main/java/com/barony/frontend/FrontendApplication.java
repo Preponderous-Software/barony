@@ -20,6 +20,7 @@ public class FrontendApplication {
     private GameClient client;
     private GameState gameState;
     private String lastWindowTitle = "";
+    private java.util.Scanner inputScanner; // Shared scanner for console input, never closed
     
     public void run() {
         init();
@@ -74,26 +75,38 @@ public class FrontendApplication {
                     int firstArmyId = firstArmy.getId();
                     int totalSoldiers = firstArmy.getSoldiers();
                     
-                    // Prompt user for split amount
-                    System.out.println("Split command initiated for army ID " + firstArmyId + " with " + totalSoldiers + " soldiers");
-                    System.out.print("Enter number of soldiers to split off (1-" + (totalSoldiers - 1) + "): ");
-                    
-                    try (java.util.Scanner scanner = new java.util.Scanner(System.in)) {
-                        if (scanner.hasNextInt()) {
-                            int splitAmount = scanner.nextInt();
-                            
-                            if (splitAmount >= 1 && splitAmount < totalSoldiers) {
-                                Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
-                                gameState = client.sendCommand(cmd);
-                                System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
-                            } else {
-                                System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
+                    // Check if army has enough soldiers to split
+                    if (totalSoldiers <= 1) {
+                        System.out.println("Split command not possible for army ID " + firstArmyId + " because it has " + totalSoldiers + " soldier" + (totalSoldiers == 1 ? "" : "s") + ".");
+                    } else {
+                        // Note: Reading from console will block the render loop. Consider this a limitation for the prototype.
+                        // In a production game, use an in-game UI or handle input on a separate thread.
+                        System.out.println("Split command initiated for army ID " + firstArmyId + " with " + totalSoldiers + " soldiers");
+                        System.out.print("Enter number of soldiers to split off (1-" + (totalSoldiers - 1) + "): ");
+                        
+                        try {
+                            // Use shared scanner that never closes System.in
+                            if (inputScanner == null) {
+                                inputScanner = new java.util.Scanner(System.in);
                             }
-                        } else {
-                            System.out.println("Invalid input. Split command cancelled.");
+                            
+                            if (inputScanner.hasNextInt()) {
+                                int splitAmount = inputScanner.nextInt();
+                                
+                                if (splitAmount >= 1 && splitAmount < totalSoldiers) {
+                                    Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
+                                    gameState = client.sendCommand(cmd);
+                                    System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
+                                } else {
+                                    System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
+                                }
+                            } else {
+                                System.out.println("Invalid input. Split command cancelled.");
+                                inputScanner.next(); // Consume invalid token
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error processing split command: " + e.getMessage());
                         }
-                    } catch (Exception e) {
-                        System.out.println("Error processing split command: " + e.getMessage());
                     }
                 }
             }
@@ -329,9 +342,9 @@ public class FrontendApplication {
                     }
                     glEnd();
                     
-                    // Draw soldier count as text overlay (simple visualization using a white outline circle with size proportional to soldier count)
-                    // Since LWJGL doesn't have built-in text rendering, we'll use a simple visual indicator
-                    // Draw a smaller white circle in the center with size proportional to soldier count
+                    // Draw a white circle in the center as a visual background for soldier count indicators
+                    // Since LWJGL doesn't have built-in text rendering, we use simple shapes
+                    // The soldier count is represented by the colored dots drawn below, not by this circle's size
                     glColor3f(1.0f, 1.0f, 1.0f); // White
                     float textRadius = radius * 0.5f;
                     glBegin(GL_TRIANGLE_FAN);
