@@ -60,6 +60,9 @@ public class GameService {
         // Process army movement
         processMovement();
         
+        // Merge co-located friendly armies
+        mergeFriendlyArmies();
+        
         // Villages generate soldiers only for their owner
         for (Army army : gameState.getArmiesInternal()) {
             int x = army.getX();
@@ -214,7 +217,71 @@ public class GameService {
                     }
                 }
             }
+        } else if ("SPLIT".equals(command.getType())) {
+            splitArmy(command.getArmyId(), command.getSplitAmount());
         }
+    }
+    
+    private void mergeFriendlyArmies() {
+        // Find and merge armies that are co-located and belong to the same player
+        boolean merged = true;
+        while (merged) {
+            merged = false;
+            outer:
+            for (int i = 0; i < gameState.getArmiesInternal().size(); i++) {
+                for (int j = i + 1; j < gameState.getArmiesInternal().size(); j++) {
+                    Army army1 = gameState.getArmiesInternal().get(i);
+                    Army army2 = gameState.getArmiesInternal().get(j);
+                    
+                    // Check if armies are at same location and same player
+                    if (army1.getX() == army2.getX() && 
+                        army1.getY() == army2.getY() && 
+                        army1.getPlayerId() == army2.getPlayerId()) {
+                        
+                        // Merge into the army with lower ID
+                        Army keepArmy = (army1.getId() < army2.getId()) ? army1 : army2;
+                        Army removeArmy = (army1.getId() < army2.getId()) ? army2 : army1;
+                        
+                        // Combine soldier counts
+                        keepArmy.setSoldiers(keepArmy.getSoldiers() + removeArmy.getSoldiers());
+                        
+                        // Remove the higher ID army
+                        gameState.getArmiesInternal().remove(removeArmy);
+                        merged = true;
+                        break outer;
+                    }
+                }
+            }
+        }
+    }
+    
+    public synchronized void splitArmy(int armyId, int soldierCount) {
+        // Find the target army
+        Army targetArmy = null;
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getId() == armyId) {
+                targetArmy = army;
+                break;
+            }
+        }
+        
+        if (targetArmy == null) {
+            return; // Army not found
+        }
+        
+        // Validate split amount
+        if (soldierCount < 1 || soldierCount >= targetArmy.getSoldiers()) {
+            return; // Invalid split - need at least 1 soldier in each army
+        }
+        
+        // Create new army at same location with split amount
+        Army newArmy = new Army(targetArmy.getX(), targetArmy.getY(), soldierCount, targetArmy.getPlayerId());
+        
+        // Reduce soldiers in original army
+        targetArmy.setSoldiers(targetArmy.getSoldiers() - soldierCount);
+        
+        // Add new army to game state
+        gameState.getArmiesInternal().add(newArmy);
     }
     
     public synchronized int getPlayerIncome(int playerId) {
