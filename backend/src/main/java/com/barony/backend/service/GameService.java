@@ -23,19 +23,19 @@ public class GameService {
         gameState.getGrid()[6][6].setType(TileType.VILLAGE);
         
         // Add initial armies
-        gameState.getArmies().add(new Army(0, 0, 10, 1));
-        gameState.getArmies().add(new Army(9, 9, 10, 2));
+        gameState.getArmiesInternal().add(new Army(0, 0, 10, 1));
+        gameState.getArmiesInternal().add(new Army(9, 9, 10, 2));
     }
     
-    public GameState getState() {
+    public synchronized GameState getState() {
         return gameState;
     }
     
-    public void tick() {
+    public synchronized void tick() {
         gameState.incrementTick();
         
         // Villages generate soldiers
-        for (Army army : gameState.getArmies()) {
+        for (Army army : gameState.getArmiesInternal()) {
             int x = army.getX();
             int y = army.getY();
             if (x >= 0 && x < gameState.getWidth() && y >= 0 && y < gameState.getHeight()) {
@@ -51,15 +51,15 @@ public class GameService {
     }
     
     private void processCombat() {
-        int armyCount = gameState.getArmies().size();
+        int armyCount = gameState.getArmiesInternal().size();
         for (int i = 0; i < armyCount; i++) {
             for (int j = i + 1; j < armyCount; j++) {
-                if (i >= gameState.getArmies().size() || j >= gameState.getArmies().size()) {
+                if (i >= gameState.getArmiesInternal().size() || j >= gameState.getArmiesInternal().size()) {
                     continue;
                 }
                 
-                Army army1 = gameState.getArmies().get(i);
-                Army army2 = gameState.getArmies().get(j);
+                Army army1 = gameState.getArmiesInternal().get(i);
+                Army army2 = gameState.getArmiesInternal().get(j);
                 
                 // Check if armies are on the same tile
                 if (army1.getX() == army2.getX() && army1.getY() == army2.getY()) {
@@ -76,7 +76,7 @@ public class GameService {
         }
         
         // Remove defeated armies
-        Iterator<Army> iterator = gameState.getArmies().iterator();
+        Iterator<Army> iterator = gameState.getArmiesInternal().iterator();
         while (iterator.hasNext()) {
             Army army = iterator.next();
             if (army.getSoldiers() <= 0) {
@@ -85,19 +85,27 @@ public class GameService {
         }
     }
     
-    public void executeCommand(Command command) {
+    public synchronized void executeCommand(Command command) {
         if ("MOVE".equals(command.getType())) {
-            int armyIndex = command.getArmyIndex();
-            if (armyIndex >= 0 && armyIndex < gameState.getArmies().size()) {
-                Army army = gameState.getArmies().get(armyIndex);
+            int armyId = command.getArmyIndex(); // This is now an army ID, not an index
+            
+            Army targetArmy = null;
+            for (Army army : gameState.getArmiesInternal()) {
+                if (army.getId() == armyId) {
+                    targetArmy = army;
+                    break;
+                }
+            }
+            
+            if (targetArmy != null) {
                 int targetX = command.getTargetX();
                 int targetY = command.getTargetY();
                 
                 // Validate target position
                 if (targetX >= 0 && targetX < gameState.getWidth() && 
                     targetY >= 0 && targetY < gameState.getHeight()) {
-                    army.setX(targetX);
-                    army.setY(targetY);
+                    targetArmy.setX(targetX);
+                    targetArmy.setY(targetY);
                 }
             }
         }

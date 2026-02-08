@@ -58,11 +58,12 @@ public class FrontendApplication {
                 }
             }
             if (key == GLFW_KEY_M && action == GLFW_RELEASE) {
-                // Send a move command for army 0
+                // Send a move command for first army using its ID
                 if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    Command cmd = new Command("MOVE", 0, 5, 5);
+                    int firstArmyId = gameState.getArmies().get(0).getId();
+                    Command cmd = new Command("MOVE", firstArmyId, 5, 5);
                     gameState = client.sendCommand(cmd);
-                    System.out.println("Move command sent for army 0 to (5,5)");
+                    System.out.println("Move command sent for army ID " + firstArmyId + " to (5,5)");
                 }
             }
         });

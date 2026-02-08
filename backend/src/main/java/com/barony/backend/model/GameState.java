@@ -26,6 +26,11 @@ public class GameState {
     }
     
     public List<Army> getArmies() {
+        return new ArrayList<>(armies);
+    }
+    
+    // Internal method for direct access to armies list for modifications
+    public List<Army> getArmiesInternal() {
         return armies;
     }
     

@@ -1,10 +1,19 @@
 package com.barony.frontend.model;
 
 public class Army {
+    private int id;
     private int x;
     private int y;
     private int soldiers;
     private int playerId;
+    
+    public int getId() {
+        return id;
+    }
+    
+    public void setId(int id) {
+        this.id = id;
+    }
     
     public int getX() {
         return x;
