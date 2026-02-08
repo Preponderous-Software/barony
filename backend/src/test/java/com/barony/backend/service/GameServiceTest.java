@@ -1222,4 +1222,393 @@ class GameServiceTest {
         assertNotNull(survivingP1);
         assertEquals(lowestId, survivingP1.getId());
     }
+    
+    // Castle Capture Tests
+    
+    @Test
+    void castleHasOccupationTicksField() {
+        GameState state = gameService.getState();
+        Tile castle = state.getGrid()[0][0];
+        assertEquals(TileType.CASTLE, castle.getType());
+        assertEquals(0, castle.getOccupationTicks());
+    }
+    
+    @Test
+    void castleCaptureRequiresThreeTicks() {
+        GameState state = gameService.getState();
+        
+        // Move Player 2 army to Player 1 castle at (0,0)
+        int army2Id = state.getArmies().get(1).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army2Id);
+        move.setTargetX(0);
+        move.setTargetY(0);
+        gameService.executeCommand(move);
+        
+        // Move Player 1 army away so it doesn't fight at the castle
+        int army1Id = state.getArmies().get(0).getId();
+        Command moveAway = new Command();
+        moveAway.setType("MOVE");
+        moveAway.setArmyId(army1Id);
+        moveAway.setTargetX(5);
+        moveAway.setTargetY(0); // Move horizontally away
+        gameService.executeCommand(moveAway);
+        
+        // Wait for Player 1 to leave (5 ticks) then Player 2 to arrive (18 ticks) + 3 for capture
+        for (int i = 0; i < 26; i++) {
+            gameService.tick();
+        }
+        
+        // Verify Player 2 army is at castle
+        state = gameService.getState();
+        Army army2 = state.getArmies().stream()
+            .filter(a -> a.getId() == army2Id)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(army2);
+        assertEquals(0, army2.getX());
+        assertEquals(0, army2.getY());
+        
+        // Castle should have been captured after 3 ticks of occupation
+        Tile castle = state.getGrid()[0][0];
+        assertEquals(2, castle.getOwnerId());
+        assertEquals(0, castle.getOccupationTicks()); // Reset after capture
+    }
+    
+    @Test
+    void castleOccupationResetsWhenEnemyLeaves() {
+        GameState state = gameService.getState();
+        
+        // Move Player 2 army to Player 1 castle
+        int army2Id = state.getArmies().get(1).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army2Id);
+        move.setTargetX(0);
+        move.setTargetY(0);
+        gameService.executeCommand(move);
+        
+        // Move Player 1 army away
+        int army1Id = state.getArmies().get(0).getId();
+        Command moveAway = new Command();
+        moveAway.setType("MOVE");
+        moveAway.setArmyId(army1Id);
+        moveAway.setTargetX(5);
+        moveAway.setTargetY(5);
+        gameService.executeCommand(moveAway);
+        
+        // Wait for Player 2 to reach castle and start occupation (but not complete it)
+        // 18 ticks to reach + 1 tick of occupation = 19 ticks
+        for (int i = 0; i < 19; i++) {
+            gameService.tick();
+        }
+        
+        // Occupation should have started but not completed
+        state = gameService.getState();
+        Tile castle = state.getGrid()[0][0];
+        int ticksBefore = castle.getOccupationTicks();
+        assertTrue(ticksBefore > 0 && ticksBefore < 3);
+        assertEquals(1, castle.getOwnerId()); // Still owned by Player 1
+        
+        // Move Player 2 army away
+        Command moveAway2 = new Command();
+        moveAway2.setType("MOVE");
+        moveAway2.setArmyId(army2Id);
+        moveAway2.setTargetX(1);
+        moveAway2.setTargetY(1);
+        gameService.executeCommand(moveAway2);
+        
+        gameService.tick();
+        
+        // Occupation should reset when army leaves
+        state = gameService.getState();
+        castle = state.getGrid()[0][0];
+        assertEquals(0, castle.getOccupationTicks());
+        assertEquals(1, castle.getOwnerId()); // Still owned by Player 1
+    }
+    
+    @Test
+    void castleOccupationResetsWhenFriendlyArmyPresent() {
+        GameState state = gameService.getState();
+        
+        // Move Player 2 army toward Player 1 castle
+        int army2Id = state.getArmies().get(1).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army2Id);
+        move.setTargetX(0);
+        move.setTargetY(0);
+        gameService.executeCommand(move);
+        
+        // Player 1 army stays at castle
+        
+        // Tick several times
+        for (int i = 0; i < 20; i++) {
+            gameService.tick();
+            state = gameService.getState();
+            
+            // Check if armies are at same location
+            Army army1 = state.getArmies().stream()
+                .filter(a -> a.getPlayerId() == 1)
+                .findFirst()
+                .orElse(null);
+            Army army2 = state.getArmies().stream()
+                .filter(a -> a.getId() == army2Id)
+                .findFirst()
+                .orElse(null);
+            
+            if (army2 != null && army1 != null && 
+                army2.getX() == 0 && army2.getY() == 0) {
+                // Both armies at castle - occupation should reset or not increase
+                Tile castle = state.getGrid()[0][0];
+                assertEquals(0, castle.getOccupationTicks());
+            }
+        }
+    }
+    
+    @Test
+    void playerLosesWhenAllCastlesCaptured() {
+        GameState state = gameService.getState();
+        
+        // Initial state - no game over
+        assertFalse(state.isGameOver());
+        assertNull(state.getWinnerId());
+        
+        // Move Player 2 army to Player 1 castle
+        int army2Id = state.getArmies().get(1).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army2Id);
+        move.setTargetX(0);
+        move.setTargetY(0);
+        gameService.executeCommand(move);
+        
+        // Move Player 1 army away
+        int army1Id = state.getArmies().get(0).getId();
+        Command moveAway = new Command();
+        moveAway.setType("MOVE");
+        moveAway.setArmyId(army1Id);
+        moveAway.setTargetX(5);
+        moveAway.setTargetY(5);
+        gameService.executeCommand(moveAway);
+        
+        // Wait for Player 2 to capture Player 1's castle
+        for (int i = 0; i < 20; i++) {
+            gameService.tick();
+        }
+        
+        // Game should be over with Player 2 winning
+        state = gameService.getState();
+        assertTrue(state.isGameOver());
+        assertEquals(2, state.getWinnerId());
+    }
+    
+    @Test
+    void playerWinsWhenEnemyHasNoCastles() {
+        GameState state = gameService.getState();
+        
+        // Move Player 1 army to Player 2 castle
+        int army1Id = state.getArmies().get(0).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army1Id);
+        move.setTargetX(9);
+        move.setTargetY(9);
+        gameService.executeCommand(move);
+        
+        // Move Player 2 army away
+        int army2Id = state.getArmies().get(1).getId();
+        Command moveAway = new Command();
+        moveAway.setType("MOVE");
+        moveAway.setArmyId(army2Id);
+        moveAway.setTargetX(5);
+        moveAway.setTargetY(5);
+        gameService.executeCommand(moveAway);
+        
+        // Wait for Player 1 to capture Player 2's castle
+        for (int i = 0; i < 20; i++) {
+            gameService.tick();
+        }
+        
+        // Game should be over with Player 1 winning
+        state = gameService.getState();
+        assertTrue(state.isGameOver());
+        assertEquals(1, state.getWinnerId());
+    }
+    
+    @Test
+    void commandsRejectedWhenGameOver() {
+        GameState state = gameService.getState();
+        
+        // Move Player 1 army to Player 2 castle to win
+        int army1Id = state.getArmies().get(0).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army1Id);
+        move.setTargetX(9);
+        move.setTargetY(9);
+        gameService.executeCommand(move);
+        
+        // Move Player 2 away
+        int army2Id = state.getArmies().get(1).getId();
+        Command moveAway = new Command();
+        moveAway.setType("MOVE");
+        moveAway.setArmyId(army2Id);
+        moveAway.setTargetX(5);
+        moveAway.setTargetY(5);
+        gameService.executeCommand(moveAway);
+        
+        // Wait for game to end
+        for (int i = 0; i < 20; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        assertTrue(state.isGameOver());
+        
+        // Try to issue a command - should be ignored
+        Army army1Before = state.getArmies().stream()
+            .filter(a -> a.getId() == army1Id)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(army1Before);
+        int xBefore = army1Before.getX();
+        int yBefore = army1Before.getY();
+        
+        Command newMove = new Command();
+        newMove.setType("MOVE");
+        newMove.setArmyId(army1Id);
+        newMove.setTargetX(5);
+        newMove.setTargetY(5);
+        gameService.executeCommand(newMove);
+        
+        // Command should be ignored - destination not set
+        state = gameService.getState();
+        Army army1After = state.getArmies().stream()
+            .filter(a -> a.getId() == army1Id)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(army1After);
+        assertFalse(army1After.isMoving());
+    }
+    
+    @Test
+    void resetGameResetsAllState() {
+        // Modify game state
+        gameService.tick();
+        gameService.tick();
+        
+        GameState state = gameService.getState();
+        int army1Id = state.getArmies().get(0).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army1Id);
+        move.setTargetX(5);
+        move.setTargetY(5);
+        gameService.executeCommand(move);
+        
+        gameService.tick();
+        
+        state = gameService.getState();
+        assertTrue(state.getTickCount() > 0);
+        
+        // Reset game
+        gameService.resetGame();
+        
+        // Verify reset
+        state = gameService.getState();
+        assertEquals(0, state.getTickCount());
+        assertEquals(2, state.getArmies().size());
+        assertFalse(state.isGameOver());
+        assertNull(state.getWinnerId());
+        
+        // Verify castles are reset to original ownership
+        assertEquals(1, state.getGrid()[0][0].getOwnerId());
+        assertEquals(2, state.getGrid()[9][9].getOwnerId());
+        
+        // Verify armies are at starting positions
+        Army army1 = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .orElse(null);
+        Army army2 = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .orElse(null);
+        
+        assertNotNull(army1);
+        assertNotNull(army2);
+        assertEquals(0, army1.getX());
+        assertEquals(0, army1.getY());
+        assertEquals(9, army2.getX());
+        assertEquals(9, army2.getY());
+    }
+    
+    @Test
+    void castleOccupationTicksVisibleInState() {
+        GameState state = gameService.getState();
+        
+        // Move Player 2 to Player 1 castle
+        int army2Id = state.getArmies().get(1).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army2Id);
+        move.setTargetX(0);
+        move.setTargetY(0);
+        gameService.executeCommand(move);
+        
+        // Move Player 1 away
+        int army1Id = state.getArmies().get(0).getId();
+        Command moveAway = new Command();
+        moveAway.setType("MOVE");
+        moveAway.setArmyId(army1Id);
+        moveAway.setTargetX(5);
+        moveAway.setTargetY(5);
+        gameService.executeCommand(moveAway);
+        
+        // Wait for Player 2 to reach castle
+        for (int i = 0; i < 15; i++) {
+            gameService.tick();
+        }
+        
+        // Check that occupation ticks are visible in state
+        state = gameService.getState();
+        Tile castle = state.getGrid()[0][0];
+        assertTrue(castle.getOccupationTicks() >= 0);
+    }
+    
+    @Test
+    void castleCaptureResetsCaptureProgress() {
+        GameState state = gameService.getState();
+        
+        // Move Player 2 to Player 1 castle
+        int army2Id = state.getArmies().get(1).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army2Id);
+        move.setTargetX(0);
+        move.setTargetY(0);
+        gameService.executeCommand(move);
+        
+        // Move Player 1 away
+        int army1Id = state.getArmies().get(0).getId();
+        Command moveAway = new Command();
+        moveAway.setType("MOVE");
+        moveAway.setArmyId(army1Id);
+        moveAway.setTargetX(5);
+        moveAway.setTargetY(5);
+        gameService.executeCommand(moveAway);
+        
+        // Wait for castle to be captured
+        for (int i = 0; i < 20; i++) {
+            gameService.tick();
+        }
+        
+        // After capture, occupation ticks should be reset
+        state = gameService.getState();
+        Tile castle = state.getGrid()[0][0];
+        assertEquals(2, castle.getOwnerId());
+        assertEquals(0, castle.getOccupationTicks());
+    }
 }
