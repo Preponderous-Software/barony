@@ -35,4 +35,33 @@ class ArmyTest {
         assertEquals(3, army.getX());
         assertEquals(4, army.getY());
     }
+    
+    @Test
+    void armySoldiersCanBeUpdated() {
+        Army army = new Army(0, 0, 10, 1);
+        
+        army.setSoldiers(20);
+        assertEquals(20, army.getSoldiers());
+        
+        army.setSoldiers(5);
+        assertEquals(5, army.getSoldiers());
+    }
+    
+    @Test
+    void armyPlayerIdCanBeUpdated() {
+        Army army = new Army(0, 0, 10, 1);
+        
+        army.setPlayerId(2);
+        assertEquals(2, army.getPlayerId());
+    }
+    
+    @Test
+    void multipleArmiesHaveUniqueSequentialIds() {
+        Army army1 = new Army(0, 0, 10, 1);
+        Army army2 = new Army(1, 1, 10, 1);
+        Army army3 = new Army(2, 2, 10, 1);
+        
+        assertTrue(army2.getId() > army1.getId());
+        assertTrue(army3.getId() > army2.getId());
+    }
 }
