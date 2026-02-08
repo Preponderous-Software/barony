@@ -163,9 +163,15 @@ public class GameService {
                 // Validate target position
                 if (targetX >= 0 && targetX < gameState.getWidth() && 
                     targetY >= 0 && targetY < gameState.getHeight()) {
-                    // Set destination instead of instant movement
-                    targetArmy.setDestinationX(targetX);
-                    targetArmy.setDestinationY(targetY);
+                    // If target equals current position, clear any existing destination
+                    if (targetX == targetArmy.getX() && targetY == targetArmy.getY()) {
+                        targetArmy.setDestinationX(null);
+                        targetArmy.setDestinationY(null);
+                    } else {
+                        // Set destination instead of instant movement
+                        targetArmy.setDestinationX(targetX);
+                        targetArmy.setDestinationY(targetY);
+                    }
                 }
             }
         }

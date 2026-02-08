@@ -360,6 +360,8 @@ class GameServiceTest {
         
         assertNotNull(army);
         assertFalse(army.isMoving());
+        assertNull(army.getDestinationX());
+        assertNull(army.getDestinationY());
     }
     
     @Test

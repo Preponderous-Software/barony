@@ -176,7 +176,7 @@ public class FrontendApplication {
                         glColor3f(1.0f, 0.5f, 0.5f); // Light red
                     }
                     
-                    float squareSize = cellWidth / 3;
+                    float squareSize = Math.min(cellWidth, cellHeight) / 3;
                     glBegin(GL_LINE_LOOP);
                     glVertex2f(destCenterX - squareSize, destCenterY - squareSize);
                     glVertex2f(destCenterX + squareSize, destCenterY - squareSize);
