@@ -78,19 +78,22 @@ public class FrontendApplication {
                     System.out.println("Split command initiated for army ID " + firstArmyId + " with " + totalSoldiers + " soldiers");
                     System.out.print("Enter number of soldiers to split off (1-" + (totalSoldiers - 1) + "): ");
                     
-                    try {
-                        java.util.Scanner scanner = new java.util.Scanner(System.in);
-                        int splitAmount = scanner.nextInt();
-                        
-                        if (splitAmount >= 1 && splitAmount < totalSoldiers) {
-                            Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
-                            gameState = client.sendCommand(cmd);
-                            System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
+                    try (java.util.Scanner scanner = new java.util.Scanner(System.in)) {
+                        if (scanner.hasNextInt()) {
+                            int splitAmount = scanner.nextInt();
+                            
+                            if (splitAmount >= 1 && splitAmount < totalSoldiers) {
+                                Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
+                                gameState = client.sendCommand(cmd);
+                                System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
+                            } else {
+                                System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
+                            }
                         } else {
-                            System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
+                            System.out.println("Invalid input. Split command cancelled.");
                         }
                     } catch (Exception e) {
-                        System.out.println("Invalid input. Split command cancelled.");
+                        System.out.println("Error processing split command: " + e.getMessage());
                     }
                 }
             }
