@@ -35,6 +35,15 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 }
 ```
 
+**Split Command:**
+```json
+{
+  "type": "SPLIT",
+  "armyId": 1,
+  "splitAmount": 5
+}
+```
+
 ### State Response Structure
 ```json
 {
@@ -98,6 +107,7 @@ Server will start on http://localhost:8080
 ### Controls
 - `SPACE` - Send tick command to server
 - `M` - Move first army to position (5,5) using its unique ID
+- `S` - Split first army (prompts for soldier count in console)
 - `ESC` - Close window
 
 ### Running the Frontend
@@ -161,6 +171,17 @@ curl -X POST http://localhost:8080/command \
 ```
 
 **Note:** The MOVE command sets the army's destination but doesn't move it instantly. The army will move 1 tile per tick toward the destination.
+
+### Split Command (via REST API)
+```bash
+# Split army by ID (creates a new army at the same location)
+# Use the army's unique ID from /state endpoint
+curl -X POST http://localhost:8080/command \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -d '{"type":"SPLIT","armyId":1,"splitAmount":5}'
+```
+
+**Note:** The SPLIT command creates a new army at the same location with the specified number of soldiers. The original army's soldier count is reduced accordingly. Both armies must have at least 1 soldier after the split.
 
 ### Tick Command
 ```bash
@@ -289,6 +310,45 @@ Tick 4: Army moves to (3,1) - vertical movement begins
 Tick 5: Army moves to (3,2) - destination reached, stops moving
 ```
 
+## Army Management System
+
+The game features army splitting and automatic merging mechanics for tactical flexibility:
+
+### Split Mechanics
+- **Split Command**: Divides an army into two separate units at the same location
+- **Validation**: 
+  - Minimum 1 soldier must remain in both armies after split
+  - Cannot split 0 or negative soldiers
+  - Cannot split all soldiers (would leave 0 in original army)
+- **New Army**: Created at the same location with a new unique ID
+- **Original Army**: Soldier count reduced by the split amount
+- **Frontend Controls**: Press `S` key and enter split amount in console
+
+### Merge Mechanics
+- **Automatic Merging**: Friendly armies at the same location automatically merge each tick
+- **Merge Process**: 
+  - Occurs during the movement phase of each tick
+  - Only merges armies with same `playerId` at same location
+  - Combines soldier counts
+  - Keeps the army with the lowest ID
+  - Removes the higher ID army
+- **Multiple Armies**: If 3+ friendly armies are at the same location, they all merge into the lowest ID army
+- **Enemy Armies**: Armies from different players do NOT merge - they fight instead
+
+### Visual Display
+- **Soldier Count**: Displayed on each army circle as a visual indicator (dots pattern)
+- **Multiple Armies**: When multiple armies occupy the same tile, they are rendered with circular offsets
+- **Army Circles**: 
+  - Blue for Player 1
+  - Red for Player 2
+  - White center with colored dots indicating soldier count (up to 10 dots shown)
+
+### Strategic Uses
+- **Split Before Battle**: Divide forces to minimize losses if one army is defeated
+- **Garrison Splitting**: Leave small garrison armies at captured villages while moving main force
+- **Flanking Maneuvers**: Split army to attack from multiple directions
+- **Auto-Merge**: Reinforcements automatically combine when armies meet at a location
+
 ## Core Game Loop
 
 The game operates on a tick-based system. Each tick represents one turn where the following sequence occurs:
@@ -306,7 +366,16 @@ For each army on the board:
       - Clear destination fields
 ```
 
-### 3. Village Capture Phase
+### 3. Army Merge Phase
+```
+For each pair of armies:
+  - If armies occupy the same tile AND have same playerId:
+    - Combine soldier counts into army with lower ID
+    - Remove army with higher ID
+  - Repeat until no more merges possible
+```
+
+### 4. Village Capture Phase
 ```
 For each army on the board:
   - Check the tile at army's current position
@@ -314,7 +383,7 @@ For each army on the board:
     - tile.ownerId = army.playerId (capture the village)
 ```
 
-### 4. Soldier Generation Phase
+### 5. Soldier Generation Phase
 ```
 For each army on the board:
   - Check the tile at army's current position
@@ -322,7 +391,7 @@ For each army on the board:
     - army.soldiers += 1 (owned villages generate soldiers)
 ```
 
-### 5. Combat Resolution Phase
+### 6. Combat Resolution Phase
 ```
 For each pair of armies:
   - If armies occupy the same tile AND have different player IDs:
@@ -331,14 +400,14 @@ For each pair of armies:
     - army2.soldiers = max(0, army2.soldiers - army1.soldiers)
 ```
 
-### 6. Cleanup Phase
+### 7. Cleanup Phase
 ```
 For each army:
   - If army.soldiers <= 0:
     - Remove army from game
 ```
 
-### 7. Village Capture Phase
+### 8. Village Capture Phase
 ```
 For each village tile:
   - Find all armies at this location (after combat)
@@ -352,8 +421,11 @@ For each village tile:
 
 ### Player Actions (Between Ticks)
 - Players can issue MOVE commands to set army destinations
+- Players can issue SPLIT commands to divide armies
 - MOVE commands set the destination immediately but armies move gradually (1 tile per tick)
+- SPLIT commands execute immediately, creating a new army at the same location
 - Commands validate target coordinates are within bounds (0-9 for x and y)
+- SPLIT commands validate soldier counts (minimum 1 soldier per army)
 - Invalid commands are silently ignored
 - Issuing a new MOVE command cancels any previous movement
 
