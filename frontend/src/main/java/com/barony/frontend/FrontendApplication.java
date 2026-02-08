@@ -19,6 +19,7 @@ public class FrontendApplication {
     private long window;
     private GameClient client;
     private GameState gameState;
+    private String lastWindowTitle = "";
     
     public void run() {
         init();
@@ -97,10 +98,51 @@ public class FrontendApplication {
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
+            updateWindowTitle();
             render();
             
             glfwSwapBuffers(window);
             glfwPollEvents();
+        }
+    }
+    
+    private void updateWindowTitle() {
+        if (gameState == null || gameState.getGrid() == null) {
+            return;
+        }
+        
+        // Count territory ownership
+        int player1Castles = 0;
+        int player2Castles = 0;
+        int player1Villages = 0;
+        int player2Villages = 0;
+        
+        Tile[][] grid = gameState.getGrid();
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[0].length; y++) {
+                Tile tile = grid[x][y];
+                if (tile.getType() == TileType.CASTLE) {
+                    if (tile.getOwnerId() == 1) player1Castles++;
+                    else if (tile.getOwnerId() == 2) player2Castles++;
+                } else if (tile.getType() == TileType.VILLAGE) {
+                    if (tile.getOwnerId() == 1) player1Villages++;
+                    else if (tile.getOwnerId() == 2) player2Villages++;
+                }
+            }
+        }
+        
+        int player1Income = player1Villages;
+        int player2Income = player2Villages;
+        
+        String title = String.format("Barony Client | P1: %dC %dV +%d/tick | P2: %dC %dV +%d/tick | Tick: %d",
+            player1Castles, player1Villages, player1Income,
+            player2Castles, player2Villages, player2Income,
+            gameState.getTickCount());
+        
+        // Only update window title if it changed
+        if (!title.equals(lastWindowTitle)) {
+            glfwSetWindowTitle(window, title);
+            lastWindowTitle = title;
         }
     }
     
@@ -124,13 +166,24 @@ public class FrontendApplication {
                 float x2 = x1 + cellWidth;
                 float y2 = y1 + cellHeight;
                 
-                TileType type = grid[x][y].getType();
+                Tile tile = grid[x][y];
+                TileType type = tile.getType();
+                int ownerId = tile.getOwnerId();
+                
                 switch (type) {
                     case CASTLE:
+                        // Gray base with colored outline for owned castles
                         glColor3f(0.5f, 0.5f, 0.5f); // Gray
                         break;
                     case VILLAGE:
-                        glColor3f(0.6f, 0.3f, 0.0f); // Brown
+                        // Brown base with ownership tint
+                        if (ownerId == 1) {
+                            glColor3f(0.4f, 0.3f, 0.6f); // Brown with blue tint
+                        } else if (ownerId == 2) {
+                            glColor3f(0.7f, 0.2f, 0.0f); // Brown with red tint
+                        } else {
+                            glColor3f(0.6f, 0.3f, 0.0f); // Brown (neutral)
+                        }
                         break;
                     case EMPTY:
                         glColor3f(0.0f, 0.5f, 0.0f); // Green
@@ -152,6 +205,24 @@ public class FrontendApplication {
                 glVertex2f(x2, y2);
                 glVertex2f(x1, y2);
                 glEnd();
+                
+                // Draw colored outline for owned castles
+                if (type == TileType.CASTLE && ownerId > 0) {
+                    if (ownerId == 1) {
+                        glColor3f(0.0f, 0.0f, 1.0f); // Blue outline for Player 1
+                    } else if (ownerId == 2) {
+                        glColor3f(1.0f, 0.0f, 0.0f); // Red outline for Player 2
+                    }
+                    
+                    glLineWidth(3.0f);
+                    glBegin(GL_LINE_LOOP);
+                    glVertex2f(x1, y1);
+                    glVertex2f(x2, y1);
+                    glVertex2f(x2, y2);
+                    glVertex2f(x1, y2);
+                    glEnd();
+                    glLineWidth(1.0f);
+                }
             }
         }
         

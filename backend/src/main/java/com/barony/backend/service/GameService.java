@@ -16,9 +16,11 @@ public class GameService {
     private void initializeGame() {
         gameState = new GameState(10, 10);
         
-        // Set up initial board
+        // Set up initial board with ownership
         gameState.getGrid()[0][0].setType(TileType.CASTLE);
+        gameState.getGrid()[0][0].setOwnerId(1); // Player 1 castle
         gameState.getGrid()[9][9].setType(TileType.CASTLE);
+        gameState.getGrid()[9][9].setOwnerId(2); // Player 2 castle
         gameState.getGrid()[3][3].setType(TileType.VILLAGE);
         gameState.getGrid()[6][6].setType(TileType.VILLAGE);
         
@@ -40,6 +42,7 @@ public class GameService {
         for (int x = 0; x < gameState.getWidth(); x++) {
             for (int y = 0; y < gameState.getHeight(); y++) {
                 snapshot.getGrid()[x][y].setType(gameState.getGrid()[x][y].getType());
+                snapshot.getGrid()[x][y].setOwnerId(gameState.getGrid()[x][y].getOwnerId());
             }
         }
         
@@ -57,13 +60,14 @@ public class GameService {
         // Process army movement
         processMovement();
         
-        // Villages generate soldiers
+        // Villages generate soldiers only for their owner
         for (Army army : gameState.getArmiesInternal()) {
             int x = army.getX();
             int y = army.getY();
             if (x >= 0 && x < gameState.getWidth() && y >= 0 && y < gameState.getHeight()) {
-                TileType tileType = gameState.getGrid()[x][y].getType();
-                if (tileType == TileType.VILLAGE) {
+                Tile tile = gameState.getGrid()[x][y];
+                TileType tileType = tile.getType();
+                if (tileType == TileType.VILLAGE && tile.getOwnerId() == army.getPlayerId()) {
                     army.setSoldiers(army.getSoldiers() + 1);
                 }
             }
@@ -71,6 +75,42 @@ public class GameService {
         
         // Process combat
         processCombat();
+        
+        // Process village capture after combat - only surviving armies can capture
+        // If multiple armies from different players occupy a village after combat, 
+        // the village becomes neutral (contested)
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE) {
+                    // Find all armies at this location
+                    Integer occupyingPlayer = null;
+                    boolean contested = false;
+                    
+                    for (Army army : gameState.getArmiesInternal()) {
+                        if (army.getX() == x && army.getY() == y) {
+                            if (occupyingPlayer == null) {
+                                occupyingPlayer = army.getPlayerId();
+                            } else if (occupyingPlayer != army.getPlayerId()) {
+                                // Multiple players occupy the same village - contested
+                                contested = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Update village ownership
+                    if (contested) {
+                        // Contested villages become neutral
+                        tile.setOwnerId(0);
+                    } else if (occupyingPlayer != null && tile.getOwnerId() != occupyingPlayer) {
+                        // Single player occupies - capture if not already owned
+                        tile.setOwnerId(occupyingPlayer);
+                    }
+                    // Note: Villages retain ownership when abandoned (no occupyingPlayer)
+                }
+            }
+        }
     }
     
     private void processMovement() {
@@ -175,5 +215,18 @@ public class GameService {
                 }
             }
         }
+    }
+    
+    public synchronized int getPlayerIncome(int playerId) {
+        int income = 0;
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == playerId) {
+                    income++;
+                }
+            }
+        }
+        return income;
     }
 }

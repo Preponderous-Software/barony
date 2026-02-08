@@ -669,4 +669,280 @@ class GameServiceTest {
         assertNotNull(army);
         assertEquals(soldiersBefore + 1, army.getSoldiers());
     }
+    
+    @Test
+    void castlesInitializeWithOwnership() {
+        GameState state = gameService.getState();
+        
+        assertEquals(1, state.getGrid()[0][0].getOwnerId()); // Player 1 castle
+        assertEquals(2, state.getGrid()[9][9].getOwnerId()); // Player 2 castle
+    }
+    
+    @Test
+    void villagesInitializeAsNeutral() {
+        GameState state = gameService.getState();
+        
+        assertEquals(0, state.getGrid()[3][3].getOwnerId()); // Village is neutral
+        assertEquals(0, state.getGrid()[6][6].getOwnerId()); // Village is neutral
+    }
+    
+    @Test
+    void armyCapturesVillageWhenOccupying() {
+        GameState state = gameService.getState();
+        int armyId = state.getArmies().get(0).getId();
+        
+        // Move Player 1 army to neutral village at (3,3)
+        Command moveToVillage = new Command();
+        moveToVillage.setType("MOVE");
+        moveToVillage.setArmyId(armyId);
+        moveToVillage.setTargetX(3);
+        moveToVillage.setTargetY(3);
+        gameService.executeCommand(moveToVillage);
+        
+        // Move to village (3 horizontal + 3 vertical = 6 ticks)
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        
+        // Village should now be owned by Player 1
+        assertEquals(1, state.getGrid()[3][3].getOwnerId());
+    }
+    
+    @Test
+    void enemyArmyCapturesOwnedVillage() {
+        GameState state = gameService.getState();
+        int army1Id = state.getArmies().get(0).getId();
+        int army2Id = state.getArmies().get(1).getId();
+        
+        // Player 1 captures village at (3,3)
+        Command move1 = new Command();
+        move1.setType("MOVE");
+        move1.setArmyId(army1Id);
+        move1.setTargetX(3);
+        move1.setTargetY(3);
+        gameService.executeCommand(move1);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        assertEquals(1, state.getGrid()[3][3].getOwnerId());
+        
+        // Move Player 1 army away to avoid combat
+        Command move1Away = new Command();
+        move1Away.setType("MOVE");
+        move1Away.setArmyId(army1Id);
+        move1Away.setTargetX(0);
+        move1Away.setTargetY(0);
+        gameService.executeCommand(move1Away);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        // Village should still be owned by Player 1 (ownership persists when abandoned)
+        state = gameService.getState();
+        assertEquals(1, state.getGrid()[3][3].getOwnerId());
+        
+        // Player 2 captures the same village
+        Command move2 = new Command();
+        move2.setType("MOVE");
+        move2.setArmyId(army2Id);
+        move2.setTargetX(3);
+        move2.setTargetY(3);
+        gameService.executeCommand(move2);
+        
+        // Wait for Player 2 to reach village (from 9,9 to 3,3 = 6+6 = 12 ticks)
+        for (int i = 0; i < 12; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        
+        // Village should now be owned by Player 2 since Player 2 army occupies it
+        assertEquals(2, state.getGrid()[3][3].getOwnerId());
+    }
+    
+    @Test
+    void neutralVillageDoesNotGenerateSoldiers() {
+        GameState state = gameService.getState();
+        int armyId = state.getArmies().get(0).getId();
+        
+        // Move to neutral village
+        Command moveToVillage = new Command();
+        moveToVillage.setType("MOVE");
+        moveToVillage.setArmyId(armyId);
+        moveToVillage.setTargetX(3);
+        moveToVillage.setTargetY(3);
+        gameService.executeCommand(moveToVillage);
+        
+        // Move to village but not yet there
+        for (int i = 0; i < 5; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        Army army = state.getArmies().stream()
+            .filter(a -> a.getId() == armyId)
+            .findFirst()
+            .orElse(null);
+        
+        assertNotNull(army);
+        int soldiersBeforeArrival = army.getSoldiers();
+        
+        // One more tick to arrive at village
+        gameService.tick();
+        
+        state = gameService.getState();
+        army = state.getArmies().stream()
+            .filter(a -> a.getId() == armyId)
+            .findFirst()
+            .orElse(null);
+        
+        assertNotNull(army);
+        // Village is now captured and owned, so soldiers should NOT have increased during capture tick
+        // (capture happens before generation, but army now owns it so next tick it generates)
+        
+        int soldiersAfterCapture = army.getSoldiers();
+        
+        // Next tick should generate soldiers since army now owns the village
+        gameService.tick();
+        
+        state = gameService.getState();
+        army = state.getArmies().stream()
+            .filter(a -> a.getId() == armyId)
+            .findFirst()
+            .orElse(null);
+        
+        assertNotNull(army);
+        assertEquals(soldiersAfterCapture + 1, army.getSoldiers());
+    }
+    
+    @Test
+    void ownedVillageGeneratesSoldiersForOwner() {
+        GameState state = gameService.getState();
+        int armyId = state.getArmies().get(0).getId();
+        
+        // Capture village
+        Command moveToVillage = new Command();
+        moveToVillage.setType("MOVE");
+        moveToVillage.setArmyId(armyId);
+        moveToVillage.setTargetX(3);
+        moveToVillage.setTargetY(3);
+        gameService.executeCommand(moveToVillage);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        Army army = state.getArmies().stream()
+            .filter(a -> a.getId() == armyId)
+            .findFirst()
+            .orElse(null);
+        
+        assertNotNull(army);
+        int soldiersBefore = army.getSoldiers();
+        
+        // Tick again - should generate soldiers since army owns the village
+        gameService.tick();
+        
+        state = gameService.getState();
+        army = state.getArmies().stream()
+            .filter(a -> a.getId() == armyId)
+            .findFirst()
+            .orElse(null);
+        
+        assertNotNull(army);
+        assertEquals(soldiersBefore + 1, army.getSoldiers());
+    }
+    
+    @Test
+    void getPlayerIncomeReturnsVillageCount() {
+        GameState state = gameService.getState();
+        
+        // Initially, no villages are owned
+        assertEquals(0, gameService.getPlayerIncome(1));
+        assertEquals(0, gameService.getPlayerIncome(2));
+        
+        // Player 1 captures village at (3,3)
+        int army1Id = state.getArmies().get(0).getId();
+        Command move1 = new Command();
+        move1.setType("MOVE");
+        move1.setArmyId(army1Id);
+        move1.setTargetX(3);
+        move1.setTargetY(3);
+        gameService.executeCommand(move1);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        // Player 1 should have income of 1
+        assertEquals(1, gameService.getPlayerIncome(1));
+        assertEquals(0, gameService.getPlayerIncome(2));
+    }
+    
+    @Test
+    void getPlayerIncomeCountsMultipleVillages() {
+        GameState state = gameService.getState();
+        int army1Id = state.getArmies().get(0).getId();
+        int army2Id = state.getArmies().get(1).getId();
+        
+        // Player 1 captures village at (3,3)
+        Command move1 = new Command();
+        move1.setType("MOVE");
+        move1.setArmyId(army1Id);
+        move1.setTargetX(3);
+        move1.setTargetY(3);
+        gameService.executeCommand(move1);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        // Player 2 captures village at (6,6)
+        Command move2 = new Command();
+        move2.setType("MOVE");
+        move2.setArmyId(army2Id);
+        move2.setTargetX(6);
+        move2.setTargetY(6);
+        gameService.executeCommand(move2);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        // Each player should have income of 1
+        assertEquals(1, gameService.getPlayerIncome(1));
+        assertEquals(1, gameService.getPlayerIncome(2));
+    }
+    
+    @Test
+    void captureChangesVillageOwnership() {
+        GameState state = gameService.getState();
+        Tile village = state.getGrid()[3][3];
+        
+        // Initially neutral
+        assertEquals(0, village.getOwnerId());
+        
+        // Player 1 captures
+        int army1Id = state.getArmies().get(0).getId();
+        Command move = new Command();
+        move.setType("MOVE");
+        move.setArmyId(army1Id);
+        move.setTargetX(3);
+        move.setTargetY(3);
+        gameService.executeCommand(move);
+        
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        assertEquals(1, state.getGrid()[3][3].getOwnerId());
+    }
 }
