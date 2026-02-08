@@ -6,6 +6,8 @@ public class Army {
     private int y;
     private int soldiers;
     private int playerId;
+    private Integer destinationX;
+    private Integer destinationY;
     
     public int getId() {
         return id;
@@ -45,5 +47,26 @@ public class Army {
     
     public void setPlayerId(int playerId) {
         this.playerId = playerId;
+    }
+    
+    public Integer getDestinationX() {
+        return destinationX;
+    }
+    
+    public void setDestinationX(Integer destinationX) {
+        this.destinationX = destinationX;
+    }
+    
+    public Integer getDestinationY() {
+        return destinationY;
+    }
+    
+    public void setDestinationY(Integer destinationY) {
+        this.destinationY = destinationY;
+    }
+    
+    public boolean isMoving() {
+        return destinationX != null && destinationY != null 
+            && (x != destinationX || y != destinationY);
     }
 }

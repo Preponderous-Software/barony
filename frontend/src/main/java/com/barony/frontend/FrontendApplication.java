@@ -161,6 +161,30 @@ public class FrontendApplication {
                 int armyX = army.getX();
                 int armyY = army.getY();
                 
+                // Draw destination indicator if army is moving
+                if (army.isMoving()) {
+                    int destX = army.getDestinationX();
+                    int destY = army.getDestinationY();
+                    
+                    float destCenterX = -1.0f + destX * cellWidth + cellWidth / 2;
+                    float destCenterY = -1.0f + destY * cellHeight + cellHeight / 2;
+                    
+                    // Draw destination square (lighter color based on player)
+                    if (army.getPlayerId() == 1) {
+                        glColor3f(0.5f, 0.5f, 1.0f); // Light blue
+                    } else {
+                        glColor3f(1.0f, 0.5f, 0.5f); // Light red
+                    }
+                    
+                    float squareSize = cellWidth / 3;
+                    glBegin(GL_LINE_LOOP);
+                    glVertex2f(destCenterX - squareSize, destCenterY - squareSize);
+                    glVertex2f(destCenterX + squareSize, destCenterY - squareSize);
+                    glVertex2f(destCenterX + squareSize, destCenterY + squareSize);
+                    glVertex2f(destCenterX - squareSize, destCenterY + squareSize);
+                    glEnd();
+                }
+                
                 float centerX = -1.0f + armyX * cellWidth + cellWidth / 2;
                 float centerY = -1.0f + armyY * cellHeight + cellHeight / 2;
                 float radius = cellWidth / 4;
