@@ -33,4 +33,41 @@ class TileTest {
         tile.setType(TileType.EMPTY);
         assertEquals(TileType.EMPTY, tile.getType());
     }
+    
+    @Test
+    void tileDefaultsToNeutralOwnership() {
+        Tile tile = new Tile(TileType.VILLAGE);
+        assertEquals(0, tile.getOwnerId());
+    }
+    
+    @Test
+    void tileCanBeCreatedWithOwner() {
+        Tile tile = new Tile(TileType.CASTLE, 1);
+        assertEquals(TileType.CASTLE, tile.getType());
+        assertEquals(1, tile.getOwnerId());
+    }
+    
+    @Test
+    void tileOwnershipCanBeChanged() {
+        Tile tile = new Tile(TileType.VILLAGE);
+        assertEquals(0, tile.getOwnerId());
+        
+        tile.setOwnerId(1);
+        assertEquals(1, tile.getOwnerId());
+        
+        tile.setOwnerId(2);
+        assertEquals(2, tile.getOwnerId());
+    }
+    
+    @Test
+    void castleCanHaveOwnership() {
+        Tile castle = new Tile(TileType.CASTLE, 1);
+        assertEquals(1, castle.getOwnerId());
+    }
+    
+    @Test
+    void villageCanHaveOwnership() {
+        Tile village = new Tile(TileType.VILLAGE, 2);
+        assertEquals(2, village.getOwnerId());
+    }
 }
