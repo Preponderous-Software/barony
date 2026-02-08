@@ -60,6 +60,9 @@ public class GameService {
         // Process army movement
         processMovement();
         
+        // Merge co-located friendly armies
+        mergeFriendlyArmies();
+        
         // Villages generate soldiers only for their owner
         for (Army army : gameState.getArmiesInternal()) {
             int x = army.getX();
@@ -214,7 +217,87 @@ public class GameService {
                     }
                 }
             }
+        } else if ("SPLIT".equals(command.getType())) {
+            splitArmy(command.getArmyId(), command.getSplitAmount());
         }
+    }
+    
+    private void mergeFriendlyArmies() {
+        // Group armies by location and player ID for efficient merging (O(n) instead of O(n^3))
+        java.util.Map<String, java.util.List<Army>> armyGroups = new java.util.HashMap<>();
+        
+        for (Army army : gameState.getArmiesInternal()) {
+            String key = army.getX() + "," + army.getY() + "," + army.getPlayerId();
+            armyGroups.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(army);
+        }
+        
+        // Merge each group that has multiple armies
+        for (java.util.List<Army> group : armyGroups.values()) {
+            if (group.size() > 1) {
+                // Sort by ID to find the lowest ID army (the one we'll keep)
+                group.sort((a, b) -> Integer.compare(a.getId(), b.getId()));
+                
+                Army keepArmy = group.get(0); // Lowest ID
+                int totalSoldiers = keepArmy.getSoldiers();
+                
+                // Check if any army in the group is moving (for movement state preservation)
+                boolean anyMoving = keepArmy.isMoving();
+                Integer destX = keepArmy.getDestinationX();
+                Integer destY = keepArmy.getDestinationY();
+                
+                // Merge all other armies into the lowest ID army
+                for (int i = 1; i < group.size(); i++) {
+                    Army removeArmy = group.get(i);
+                    totalSoldiers += removeArmy.getSoldiers();
+                    
+                    // If keepArmy wasn't moving but this army is, adopt its movement
+                    if (!anyMoving && removeArmy.isMoving()) {
+                        anyMoving = true;
+                        destX = removeArmy.getDestinationX();
+                        destY = removeArmy.getDestinationY();
+                    }
+                    // Note: If both have destinations, keep the lower ID army's destination
+                    
+                    gameState.getArmiesInternal().remove(removeArmy);
+                }
+                
+                // Update the kept army with merged values
+                keepArmy.setSoldiers(totalSoldiers);
+                if (anyMoving && destX != null && destY != null) {
+                    keepArmy.setDestinationX(destX);
+                    keepArmy.setDestinationY(destY);
+                }
+            }
+        }
+    }
+    
+    public synchronized void splitArmy(int armyId, int soldierCount) {
+        // Find the target army
+        Army targetArmy = null;
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getId() == armyId) {
+                targetArmy = army;
+                break;
+            }
+        }
+        
+        if (targetArmy == null) {
+            return; // Army not found
+        }
+        
+        // Validate split amount
+        if (soldierCount < 1 || soldierCount >= targetArmy.getSoldiers()) {
+            return; // Invalid split - need at least 1 soldier in each army
+        }
+        
+        // Create new army at same location with split amount
+        Army newArmy = new Army(targetArmy.getX(), targetArmy.getY(), soldierCount, targetArmy.getPlayerId());
+        
+        // Reduce soldiers in original army
+        targetArmy.setSoldiers(targetArmy.getSoldiers() - soldierCount);
+        
+        // Add new army to game state
+        gameState.getArmiesInternal().add(newArmy);
     }
     
     public synchronized int getPlayerIncome(int playerId) {

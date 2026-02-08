@@ -945,4 +945,281 @@ class GameServiceTest {
         state = gameService.getState();
         assertEquals(1, state.getGrid()[3][3].getOwnerId());
     }
+    
+    @Test
+    void splitArmyCreatesNewArmyAtSameLocation() {
+        GameState state = gameService.getState();
+        Army originalArmy = state.getArmies().get(0);
+        int originalId = originalArmy.getId();
+        int originalSoldiers = originalArmy.getSoldiers();
+        int originalX = originalArmy.getX();
+        int originalY = originalArmy.getY();
+        
+        // Split 3 soldiers from the army
+        gameService.splitArmy(originalId, 3);
+        
+        state = gameService.getState();
+        assertEquals(3, state.getArmies().size()); // Should now have 3 armies
+        
+        // Find the original army and verify its soldier count decreased
+        Army updatedOriginal = null;
+        Army newArmy = null;
+        for (Army army : state.getArmies()) {
+            if (army.getId() == originalId) {
+                updatedOriginal = army;
+            } else if (army.getX() == originalX && army.getY() == originalY && army.getId() != originalId) {
+                newArmy = army;
+            }
+        }
+        
+        assertNotNull(updatedOriginal);
+        assertNotNull(newArmy);
+        assertEquals(originalSoldiers - 3, updatedOriginal.getSoldiers());
+        assertEquals(3, newArmy.getSoldiers());
+        assertEquals(originalX, newArmy.getX());
+        assertEquals(originalY, newArmy.getY());
+        assertEquals(updatedOriginal.getPlayerId(), newArmy.getPlayerId());
+    }
+    
+    @Test
+    void splitArmyValidatesMinimumSoldiers() {
+        GameState state = gameService.getState();
+        Army army = state.getArmies().get(0);
+        int originalSoldiers = army.getSoldiers();
+        
+        // Try to split all soldiers (invalid - would leave 0 in original)
+        gameService.splitArmy(army.getId(), originalSoldiers);
+        
+        state = gameService.getState();
+        assertEquals(2, state.getArmies().size()); // Should still be 2, no split occurred
+        
+        // Verify soldier count unchanged
+        Army sameArmy = null;
+        for (Army a : state.getArmies()) {
+            if (a.getId() == army.getId()) {
+                sameArmy = a;
+                break;
+            }
+        }
+        assertNotNull(sameArmy);
+        assertEquals(originalSoldiers, sameArmy.getSoldiers());
+    }
+    
+    @Test
+    void splitArmyValidatesPositiveSoldierCount() {
+        GameState state = gameService.getState();
+        Army army = state.getArmies().get(0);
+        int originalSoldiers = army.getSoldiers();
+        
+        // Try to split 0 soldiers (invalid)
+        gameService.splitArmy(army.getId(), 0);
+        
+        state = gameService.getState();
+        assertEquals(2, state.getArmies().size()); // Should still be 2, no split occurred
+        
+        // Try to split negative soldiers (invalid)
+        gameService.splitArmy(army.getId(), -5);
+        
+        state = gameService.getState();
+        assertEquals(2, state.getArmies().size()); // Should still be 2, no split occurred
+    }
+    
+    @Test
+    void splitArmyHandlesInvalidArmyId() {
+        GameState state = gameService.getState();
+        int armyCount = state.getArmies().size();
+        
+        // Try to split from non-existent army
+        gameService.splitArmy(9999, 5);
+        
+        state = gameService.getState();
+        assertEquals(armyCount, state.getArmies().size()); // No new army created
+    }
+    
+    @Test
+    void coLocatedFriendlyArmiesMergeAutomatically() {
+        // Clear the board and add two armies at same location for player 1
+        gameService = new GameService();
+        GameState state = gameService.getState();
+        
+        // Get player 1's starting army and split it
+        Army p1Army = null;
+        for (Army army : state.getArmies()) {
+            if (army.getPlayerId() == 1) {
+                p1Army = army;
+                break;
+            }
+        }
+        assertNotNull(p1Army);
+        
+        // Split the army
+        gameService.splitArmy(p1Army.getId(), 3);
+        
+        state = gameService.getState();
+        assertEquals(3, state.getArmies().size()); // Now 3 armies (P1 split + P2)
+        
+        // Tick should merge the two P1 armies
+        gameService.tick();
+        
+        state = gameService.getState();
+        assertEquals(2, state.getArmies().size()); // Back to 2 armies (merged P1 + P2)
+        
+        // Verify the merged army has combined soldier count
+        Army mergedP1Army = null;
+        for (Army army : state.getArmies()) {
+            if (army.getPlayerId() == 1) {
+                mergedP1Army = army;
+                break;
+            }
+        }
+        assertNotNull(mergedP1Army);
+        assertEquals(10, mergedP1Army.getSoldiers()); // 7 + 3 = 10 (castles don't generate soldiers)
+    }
+    
+    @Test
+    void mergeKeepsLowestArmyId() {
+        gameService = new GameService();
+        GameState state = gameService.getState();
+        
+        Army p1Army = null;
+        for (Army army : state.getArmies()) {
+            if (army.getPlayerId() == 1) {
+                p1Army = army;
+                break;
+            }
+        }
+        assertNotNull(p1Army);
+        int originalId = p1Army.getId();
+        
+        // Split to create a new army with higher ID
+        gameService.splitArmy(p1Army.getId(), 3);
+        
+        // Tick to trigger merge
+        gameService.tick();
+        
+        state = gameService.getState();
+        
+        // Verify the surviving army has the original (lower) ID
+        Army survivingArmy = null;
+        for (Army army : state.getArmies()) {
+            if (army.getPlayerId() == 1) {
+                survivingArmy = army;
+                break;
+            }
+        }
+        assertNotNull(survivingArmy);
+        assertEquals(originalId, survivingArmy.getId());
+    }
+    
+    @Test
+    void enemyArmiesDoNotMerge() {
+        gameService = new GameService();
+        
+        // Move both armies to same location
+        GameState state = gameService.getState();
+        Army p1Army = state.getArmies().get(0);
+        Army p2Army = state.getArmies().get(1);
+        
+        Command moveP1 = new Command();
+        moveP1.setType("MOVE");
+        moveP1.setArmyId(p1Army.getId());
+        moveP1.setTargetX(5);
+        moveP1.setTargetY(5);
+        gameService.executeCommand(moveP1);
+        
+        Command moveP2 = new Command();
+        moveP2.setType("MOVE");
+        moveP2.setArmyId(p2Army.getId());
+        moveP2.setTargetX(5);
+        moveP2.setTargetY(5);
+        gameService.executeCommand(moveP2);
+        
+        // Move armies to same location
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        // Enemy armies fight instead of merging, both should be destroyed (10 vs 10)
+        assertEquals(0, state.getArmies().size());
+    }
+    
+    @Test
+    void splitCommandExecutedThroughExecuteCommand() {
+        GameState state = gameService.getState();
+        Army army = state.getArmies().get(0);
+        int originalSoldiers = army.getSoldiers();
+        
+        Command splitCmd = new Command();
+        splitCmd.setType("SPLIT");
+        splitCmd.setArmyId(army.getId());
+        splitCmd.setSplitAmount(4);
+        
+        gameService.executeCommand(splitCmd);
+        
+        state = gameService.getState();
+        assertEquals(3, state.getArmies().size()); // 3 armies now
+        
+        // Find the original army and verify it lost soldiers
+        Army updatedArmy = null;
+        for (Army a : state.getArmies()) {
+            if (a.getId() == army.getId()) {
+                updatedArmy = a;
+                break;
+            }
+        }
+        assertNotNull(updatedArmy);
+        assertEquals(originalSoldiers - 4, updatedArmy.getSoldiers());
+    }
+    
+    @Test
+    void multipleFriendlyArmiesMergeIntoLowestId() {
+        gameService = new GameService();
+        GameState state = gameService.getState();
+        
+        Army p1Army = null;
+        for (Army army : state.getArmies()) {
+            if (army.getPlayerId() == 1) {
+                p1Army = army;
+                break;
+            }
+        }
+        assertNotNull(p1Army);
+        int lowestId = p1Army.getId();
+        
+        // Create multiple splits
+        gameService.splitArmy(p1Army.getId(), 2);
+        state = gameService.getState();
+        
+        // Find the new army and split it too
+        Army newArmy = null;
+        for (Army army : state.getArmies()) {
+            if (army.getPlayerId() == 1 && army.getId() != lowestId) {
+                newArmy = army;
+                break;
+            }
+        }
+        assertNotNull(newArmy);
+        gameService.splitArmy(newArmy.getId(), 1);
+        
+        state = gameService.getState();
+        assertEquals(4, state.getArmies().size()); // P1 original + 2 splits + P2
+        
+        // Tick to merge all P1 armies
+        gameService.tick();
+        
+        state = gameService.getState();
+        assertEquals(2, state.getArmies().size()); // Back to 2 (merged P1 + P2)
+        
+        // Verify surviving army has lowest ID
+        Army survivingP1 = null;
+        for (Army army : state.getArmies()) {
+            if (army.getPlayerId() == 1) {
+                survivingP1 = army;
+                break;
+            }
+        }
+        assertNotNull(survivingP1);
+        assertEquals(lowestId, survivingP1.getId());
+    }
 }

@@ -5,12 +5,19 @@ public class Command {
     private int armyId;
     private int targetX;
     private int targetY;
+    private int splitAmount;
     
     public Command(String type, int armyId, int targetX, int targetY) {
         this.type = type;
         this.armyId = armyId;
         this.targetX = targetX;
         this.targetY = targetY;
+    }
+    
+    public Command(String type, int armyId, int splitAmount) {
+        this.type = type;
+        this.armyId = armyId;
+        this.splitAmount = splitAmount;
     }
     
     public String getType() {
@@ -27,5 +34,9 @@ public class Command {
     
     public int getTargetY() {
         return targetY;
+    }
+    
+    public int getSplitAmount() {
+        return splitAmount;
     }
 }

@@ -5,6 +5,7 @@ public class Command {
     private int armyId;
     private int targetX;
     private int targetY;
+    private int splitAmount;
     
     public String getType() {
         return type;
@@ -36,5 +37,13 @@ public class Command {
     
     public void setTargetY(int targetY) {
         this.targetY = targetY;
+    }
+    
+    public int getSplitAmount() {
+        return splitAmount;
+    }
+    
+    public void setSplitAmount(int splitAmount) {
+        this.splitAmount = splitAmount;
     }
 }
