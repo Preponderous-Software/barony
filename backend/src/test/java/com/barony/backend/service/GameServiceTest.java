@@ -224,4 +224,34 @@ class GameServiceTest {
         GameState stateAfter = gameService.getState();
         assertEquals(armiesBefore, stateAfter.getArmies().size());
     }
+    
+    @Test
+    void getStateReturnsSnapshot() {
+        GameState state1 = gameService.getState();
+        GameState state2 = gameService.getState();
+        
+        // Should be different instances (snapshots)
+        assertNotSame(state1, state2, "getState() should return a new snapshot each time");
+        
+        // But should have the same content
+        assertEquals(state1.getTickCount(), state2.getTickCount());
+        assertEquals(state1.getArmies().size(), state2.getArmies().size());
+    }
+    
+    @Test
+    void modifyingSnapshotDoesNotAffectGameState() {
+        GameState snapshot = gameService.getState();
+        int originalArmyCount = snapshot.getArmies().size();
+        int originalTickCount = snapshot.getTickCount();
+        
+        // Try to modify the snapshot's tick count via incrementTick
+        snapshot.incrementTick();
+        
+        // Get a fresh snapshot
+        GameState freshSnapshot = gameService.getState();
+        
+        // Original tick count should be unchanged
+        assertEquals(originalTickCount, freshSnapshot.getTickCount());
+        assertEquals(originalArmyCount, freshSnapshot.getArmies().size());
+    }
 }

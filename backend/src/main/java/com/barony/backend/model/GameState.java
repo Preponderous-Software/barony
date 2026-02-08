@@ -1,5 +1,6 @@
 package com.barony.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +31,8 @@ public class GameState {
     }
     
     // Internal method for direct access to armies list for modifications
+    // JsonIgnore prevents this from being serialized in API responses
+    @JsonIgnore
     public List<Army> getArmiesInternal() {
         return armies;
     }

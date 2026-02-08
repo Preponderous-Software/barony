@@ -19,6 +19,15 @@ public class Army {
         this.playerId = playerId;
     }
     
+    // Copy constructor for creating snapshots
+    public Army(Army other) {
+        this.id = other.id;
+        this.x = other.x;
+        this.y = other.y;
+        this.soldiers = other.soldiers;
+        this.playerId = other.playerId;
+    }
+    
     public int getId() {
         return id;
     }

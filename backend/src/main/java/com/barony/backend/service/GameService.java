@@ -28,7 +28,27 @@ public class GameService {
     }
     
     public synchronized GameState getState() {
-        return gameState;
+        // Return a snapshot/deep copy to prevent concurrent modification during serialization
+        GameState snapshot = new GameState(gameState.getWidth(), gameState.getHeight());
+        
+        // Copy tick count (need to access directly since there's no setter)
+        for (int i = 0; i < gameState.getTickCount(); i++) {
+            snapshot.incrementTick();
+        }
+        
+        // Deep copy the grid
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                snapshot.getGrid()[x][y].setType(gameState.getGrid()[x][y].getType());
+            }
+        }
+        
+        // Deep copy the armies using copy constructor
+        for (Army army : gameState.getArmiesInternal()) {
+            snapshot.getArmiesInternal().add(new Army(army));
+        }
+        
+        return snapshot;
     }
     
     public synchronized void tick() {

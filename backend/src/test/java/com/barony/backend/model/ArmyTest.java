@@ -64,4 +64,32 @@ class ArmyTest {
         assertTrue(army2.getId() > army1.getId());
         assertTrue(army3.getId() > army2.getId());
     }
+    
+    @Test
+    void armyCopyConstructorPreservesAllProperties() {
+        Army original = new Army(5, 7, 15, 2);
+        Army copy = new Army(original);
+        
+        assertEquals(original.getId(), copy.getId());
+        assertEquals(original.getX(), copy.getX());
+        assertEquals(original.getY(), copy.getY());
+        assertEquals(original.getSoldiers(), copy.getSoldiers());
+        assertEquals(original.getPlayerId(), copy.getPlayerId());
+    }
+    
+    @Test
+    void armyCopyIsIndependent() {
+        Army original = new Army(5, 7, 15, 2);
+        Army copy = new Army(original);
+        
+        // Modify the copy
+        copy.setX(10);
+        copy.setY(10);
+        copy.setSoldiers(20);
+        
+        // Original should be unchanged
+        assertEquals(5, original.getX());
+        assertEquals(7, original.getY());
+        assertEquals(15, original.getSoldiers());
+    }
 }
