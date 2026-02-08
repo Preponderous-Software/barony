@@ -67,6 +67,33 @@ public class FrontendApplication {
                     System.out.println("Move command sent for army ID " + firstArmyId + " to (5,5)");
                 }
             }
+            if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
+                // Send a split command for first army
+                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
+                    Army firstArmy = gameState.getArmies().get(0);
+                    int firstArmyId = firstArmy.getId();
+                    int totalSoldiers = firstArmy.getSoldiers();
+                    
+                    // Prompt user for split amount
+                    System.out.println("Split command initiated for army ID " + firstArmyId + " with " + totalSoldiers + " soldiers");
+                    System.out.print("Enter number of soldiers to split off (1-" + (totalSoldiers - 1) + "): ");
+                    
+                    try {
+                        java.util.Scanner scanner = new java.util.Scanner(System.in);
+                        int splitAmount = scanner.nextInt();
+                        
+                        if (splitAmount >= 1 && splitAmount < totalSoldiers) {
+                            Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
+                            gameState = client.sendCommand(cmd);
+                            System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
+                        } else {
+                            System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Invalid input. Split command cancelled.");
+                    }
+                }
+            }
         });
         
         try (MemoryStack stack = stackPush()) {
@@ -228,55 +255,120 @@ public class FrontendApplication {
         
         // Draw armies
         if (gameState.getArmies() != null) {
+            // Group armies by location for offset rendering
+            java.util.Map<String, java.util.List<Army>> armiesByLocation = new java.util.HashMap<>();
             for (Army army : gameState.getArmies()) {
-                int armyX = army.getX();
-                int armyY = army.getY();
+                String locationKey = army.getX() + "," + army.getY();
+                armiesByLocation.computeIfAbsent(locationKey, k -> new java.util.ArrayList<>()).add(army);
+            }
+            
+            for (java.util.Map.Entry<String, java.util.List<Army>> entry : armiesByLocation.entrySet()) {
+                java.util.List<Army> armies = entry.getValue();
                 
-                // Draw destination indicator if army is moving
-                if (army.isMoving()) {
-                    int destX = army.getDestinationX();
-                    int destY = army.getDestinationY();
+                for (int i = 0; i < armies.size(); i++) {
+                    Army army = armies.get(i);
+                    int armyX = army.getX();
+                    int armyY = army.getY();
                     
-                    float destCenterX = -1.0f + destX * cellWidth + cellWidth / 2;
-                    float destCenterY = -1.0f + destY * cellHeight + cellHeight / 2;
-                    
-                    // Draw destination square (lighter color based on player)
-                    if (army.getPlayerId() == 1) {
-                        glColor3f(0.5f, 0.5f, 1.0f); // Light blue
-                    } else {
-                        glColor3f(1.0f, 0.5f, 0.5f); // Light red
+                    // Calculate offset for multiple armies at same location
+                    float offsetX = 0;
+                    float offsetY = 0;
+                    if (armies.size() > 1) {
+                        // Offset in a circular pattern
+                        double angle = 2 * Math.PI * i / armies.size();
+                        offsetX = (float) (Math.cos(angle) * cellWidth / 8);
+                        offsetY = (float) (Math.sin(angle) * cellHeight / 8);
                     }
                     
-                    float squareSize = Math.min(cellWidth, cellHeight) / 3;
-                    glBegin(GL_LINE_LOOP);
-                    glVertex2f(destCenterX - squareSize, destCenterY - squareSize);
-                    glVertex2f(destCenterX + squareSize, destCenterY - squareSize);
-                    glVertex2f(destCenterX + squareSize, destCenterY + squareSize);
-                    glVertex2f(destCenterX - squareSize, destCenterY + squareSize);
+                    // Draw destination indicator if army is moving
+                    if (army.isMoving()) {
+                        int destX = army.getDestinationX();
+                        int destY = army.getDestinationY();
+                        
+                        float destCenterX = -1.0f + destX * cellWidth + cellWidth / 2;
+                        float destCenterY = -1.0f + destY * cellHeight + cellHeight / 2;
+                        
+                        // Draw destination square (lighter color based on player)
+                        if (army.getPlayerId() == 1) {
+                            glColor3f(0.5f, 0.5f, 1.0f); // Light blue
+                        } else {
+                            glColor3f(1.0f, 0.5f, 0.5f); // Light red
+                        }
+                        
+                        float squareSize = Math.min(cellWidth, cellHeight) / 3;
+                        glBegin(GL_LINE_LOOP);
+                        glVertex2f(destCenterX - squareSize, destCenterY - squareSize);
+                        glVertex2f(destCenterX + squareSize, destCenterY - squareSize);
+                        glVertex2f(destCenterX + squareSize, destCenterY + squareSize);
+                        glVertex2f(destCenterX - squareSize, destCenterY + squareSize);
+                        glEnd();
+                    }
+                    
+                    float centerX = -1.0f + armyX * cellWidth + cellWidth / 2 + offsetX;
+                    float centerY = -1.0f + armyY * cellHeight + cellHeight / 2 + offsetY;
+                    float radius = cellWidth / 4;
+                    
+                    // Color based on player
+                    if (army.getPlayerId() == 1) {
+                        glColor3f(0.0f, 0.0f, 1.0f); // Blue
+                    } else {
+                        glColor3f(1.0f, 0.0f, 0.0f); // Red
+                    }
+                    
+                    // Draw circle for army
+                    glBegin(GL_TRIANGLE_FAN);
+                    glVertex2f(centerX, centerY);
+                    for (int j = 0; j <= 20; j++) {
+                        float angle = (float) (2 * Math.PI * j / 20);
+                        float x = centerX + radius * (float) Math.cos(angle);
+                        float y = centerY + radius * (float) Math.sin(angle);
+                        glVertex2f(x, y);
+                    }
                     glEnd();
+                    
+                    // Draw soldier count as text overlay (simple visualization using a white outline circle with size proportional to soldier count)
+                    // Since LWJGL doesn't have built-in text rendering, we'll use a simple visual indicator
+                    // Draw a smaller white circle in the center with size proportional to soldier count
+                    glColor3f(1.0f, 1.0f, 1.0f); // White
+                    float textRadius = radius * 0.5f;
+                    glBegin(GL_TRIANGLE_FAN);
+                    glVertex2f(centerX, centerY);
+                    for (int j = 0; j <= 20; j++) {
+                        float angle = (float) (2 * Math.PI * j / 20);
+                        float x = centerX + textRadius * (float) Math.cos(angle);
+                        float y = centerY + textRadius * (float) Math.sin(angle);
+                        glVertex2f(x, y);
+                    }
+                    glEnd();
+                    
+                    // Draw soldier count indicator using small dots (limited to showing up to 10)
+                    int displaySoldiers = Math.min(army.getSoldiers(), 10);
+                    if (army.getPlayerId() == 1) {
+                        glColor3f(0.0f, 0.0f, 0.5f); // Dark blue
+                    } else {
+                        glColor3f(0.5f, 0.0f, 0.0f); // Dark red
+                    }
+                    
+                    // Draw dots in a grid pattern
+                    float dotRadius = textRadius / 5;
+                    int dotsPerRow = 3;
+                    for (int d = 0; d < displaySoldiers; d++) {
+                        int row = d / dotsPerRow;
+                        int col = d % dotsPerRow;
+                        float dotX = centerX - dotRadius * 2 + col * dotRadius * 2;
+                        float dotY = centerY - dotRadius * 2 + row * dotRadius * 2;
+                        
+                        glBegin(GL_TRIANGLE_FAN);
+                        glVertex2f(dotX, dotY);
+                        for (int j = 0; j <= 8; j++) {
+                            float angle = (float) (2 * Math.PI * j / 8);
+                            float x = dotX + dotRadius * (float) Math.cos(angle);
+                            float y = dotY + dotRadius * (float) Math.sin(angle);
+                            glVertex2f(x, y);
+                        }
+                        glEnd();
+                    }
                 }
-                
-                float centerX = -1.0f + armyX * cellWidth + cellWidth / 2;
-                float centerY = -1.0f + armyY * cellHeight + cellHeight / 2;
-                float radius = cellWidth / 4;
-                
-                // Color based on player
-                if (army.getPlayerId() == 1) {
-                    glColor3f(0.0f, 0.0f, 1.0f); // Blue
-                } else {
-                    glColor3f(1.0f, 0.0f, 0.0f); // Red
-                }
-                
-                // Draw circle for army
-                glBegin(GL_TRIANGLE_FAN);
-                glVertex2f(centerX, centerY);
-                for (int i = 0; i <= 20; i++) {
-                    float angle = (float) (2 * Math.PI * i / 20);
-                    float x = centerX + radius * (float) Math.cos(angle);
-                    float y = centerY + radius * (float) Math.sin(angle);
-                    glVertex2f(x, y);
-                }
-                glEnd();
             }
         }
     }

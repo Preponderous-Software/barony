@@ -21,4 +21,13 @@ class CommandTest {
         
         assertEquals("ATTACK", command.getType());
     }
+    
+    @Test
+    void splitCommandCreatesWithCorrectValues() {
+        Command command = new Command("SPLIT", 1, 5);
+        
+        assertEquals("SPLIT", command.getType());
+        assertEquals(1, command.getArmyId());
+        assertEquals(5, command.getSplitAmount());
+    }
 }
