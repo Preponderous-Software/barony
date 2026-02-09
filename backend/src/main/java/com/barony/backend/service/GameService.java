@@ -424,6 +424,7 @@ public class GameService {
         final int AI_PLAYER_ID = 2;
         
         // AI spawning: spawn 10 soldiers at P2 castle every 5 ticks
+        // Spawns when tickCount is exactly divisible by 5 (i.e., at tickCount 5, 10, 15, ...)
         if (gameState.getTickCount() % 5 == 0) {
             spawnAIArmy();
         }

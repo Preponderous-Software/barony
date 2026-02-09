@@ -1704,7 +1704,7 @@ class GameServiceTest {
             .mapToInt(Army::getSoldiers)
             .sum();
         
-        // Execute 10 ticks (should spawn at tick 5 and tick 10)
+        // Execute 10 ticks (tickCount will become 5 and 10, triggering spawns)
         for (int i = 0; i < 10; i++) {
             gameService.tick();
         }
