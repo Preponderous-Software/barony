@@ -170,8 +170,9 @@ Server will start on http://localhost:8080
 
 **HUD Layout:**
 - **Top Bar** (dark background, 15% screen height):
-  - Displays game statistics for both players
-  - Shows tick count, castles, villages, and income
+  - Displays proportional bars showing army, castle, and village counts for both players
+  - Color-coded segments: Player 1 (blue/green shades), Player 2 (red/yellow shades)
+  - Visual representation replaces text due to no text rendering library
   
 - **Side Panel** (right side, 30% screen width):
   - Shows selected army details when an army is selected
@@ -180,8 +181,9 @@ Server will start on http://localhost:8080
   
 - **Bottom Bar** (30% screen height):
   - Game event log showing last 10 actions
-  - Color-coded entries (alternating for visibility)
-  - Messages include: army selections, movement commands, tick events
+  - Color-coded bars (alternating for visibility) representing recent events
+  - Each bar represents an event: army selections, movement commands, tick events
+  - Events tracked internally but displayed as visual bars (no text rendering)
   
 - **Game Area** (center):
   - Main grid display (70% screen width, 55% screen height)

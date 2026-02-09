@@ -40,6 +40,12 @@ public class FrontendApplication {
     private static final int MAX_PANEL_SOLDIERS = 20;
     private static final int MAX_TOOLTIP_SOLDIERS = 10;
     
+    // HUD layout constants (centralized to avoid duplication)
+    private static final float GAME_LEFT = -1.0f;
+    private static final float GAME_RIGHT = 0.7f;
+    private static final float GAME_BOTTOM = -0.7f;
+    private static final float GAME_TOP = 0.85f;
+    
     public void run() {
         init();
         loop();
@@ -294,13 +300,8 @@ public class FrontendApplication {
         float cellHeight = 2.0f / gridHeight;
         
         // Adjust rendering to account for HUD space
-        // Main game area: from -1 to 0.7 (horizontal), -0.7 to 0.85 (vertical)
-        float gameLeft = -1.0f;
-        float gameRight = 0.7f;
-        float gameBottom = -0.7f;
-        float gameTop = 0.85f;
-        float gameWidth = gameRight - gameLeft;
-        float gameHeight = gameTop - gameBottom;
+        float gameWidth = GAME_RIGHT - GAME_LEFT;
+        float gameHeight = GAME_TOP - GAME_BOTTOM;
         
         cellWidth = gameWidth / gridWidth;
         cellHeight = gameHeight / gridHeight;
@@ -308,8 +309,8 @@ public class FrontendApplication {
         // Draw tiles
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
-                float x1 = gameLeft + x * cellWidth;
-                float y1 = gameBottom + y * cellHeight;
+                float x1 = GAME_LEFT + x * cellWidth;
+                float y1 = GAME_BOTTOM + y * cellHeight;
                 float x2 = x1 + cellWidth;
                 float y2 = y1 + cellHeight;
                 
@@ -443,8 +444,8 @@ public class FrontendApplication {
                         int destX = army.getDestinationX();
                         int destY = army.getDestinationY();
                         
-                        float destCenterX = gameLeft + destX * cellWidth + cellWidth / 2;
-                        float destCenterY = gameBottom + destY * cellHeight + cellHeight / 2;
+                        float destCenterX = GAME_LEFT + destX * cellWidth + cellWidth / 2;
+                        float destCenterY = GAME_BOTTOM + destY * cellHeight + cellHeight / 2;
                         
                         // Draw destination square (lighter color based on player)
                         if (army.getPlayerId() == 1) {
@@ -462,8 +463,8 @@ public class FrontendApplication {
                         glEnd();
                     }
                     
-                    float centerX = gameLeft + armyX * cellWidth + cellWidth / 2 + offsetX;
-                    float centerY = gameBottom + armyY * cellHeight + cellHeight / 2 + offsetY;
+                    float centerX = GAME_LEFT + armyX * cellWidth + cellWidth / 2 + offsetX;
+                    float centerY = GAME_BOTTOM + armyY * cellHeight + cellHeight / 2 + offsetY;
                     float radius = cellWidth / 4;
                     
                     // Color based on player
@@ -645,18 +646,19 @@ public class FrontendApplication {
         int[] height = new int[1];
         glfwGetWindowSize(window, width, height);
         
+        // Guard against minimized window (width/height could be 0)
+        if (width[0] <= 0 || height[0] <= 0) {
+            hoveredGridX = -1;
+            hoveredGridY = -1;
+            return;
+        }
+        
         // Convert mouse position to normalized coordinates
         float normX = (float) (mouseX / width[0] * 2 - 1);
         float normY = (float) (1 - mouseY / height[0] * 2);
         
-        // Game area boundaries
-        float gameLeft = -1.0f;
-        float gameRight = 0.7f;
-        float gameBottom = -0.7f;
-        float gameTop = 0.85f;
-        
         // Check if mouse is in game area
-        if (normX < gameLeft || normX > gameRight || normY < gameBottom || normY > gameTop) {
+        if (normX < GAME_LEFT || normX > GAME_RIGHT || normY < GAME_BOTTOM || normY > GAME_TOP) {
             hoveredGridX = -1;
             hoveredGridY = -1;
             return;
@@ -666,11 +668,24 @@ public class FrontendApplication {
         int gridWidth = gameState.getGrid().length;
         int gridHeight = gameState.getGrid()[0].length;
         
-        float gameWidth = gameRight - gameLeft;
-        float gameHeight = gameTop - gameBottom;
+        float gameWidth = GAME_RIGHT - GAME_LEFT;
+        float gameHeight = GAME_TOP - GAME_BOTTOM;
         
-        int newGridX = (int) ((normX - gameLeft) / gameWidth * gridWidth);
-        int newGridY = (int) ((normY - gameBottom) / gameHeight * gridHeight);
+        int newGridX = (int) ((normX - GAME_LEFT) / gameWidth * gridWidth);
+        int newGridY = (int) ((normY - GAME_BOTTOM) / gameHeight * gridHeight);
+        
+        // Clamp to valid grid index ranges to avoid off-by-one at right/top edges
+        if (newGridX < 0) {
+            newGridX = 0;
+        } else if (newGridX >= gridWidth) {
+            newGridX = gridWidth - 1;
+        }
+        
+        if (newGridY < 0) {
+            newGridY = 0;
+        } else if (newGridY >= gridHeight) {
+            newGridY = gridHeight - 1;
+        }
         
         // Check if hovered tile changed
         if (newGridX != hoveredGridX || newGridY != hoveredGridY) {
@@ -681,7 +696,7 @@ public class FrontendApplication {
     }
     
     private void handleMouseClick(int button) {
-        if (gameState == null || gameState.getGrid() == null) {
+        if (gameState == null || gameState.getGrid() == null || client == null) {
             return;
         }
         
@@ -709,7 +724,10 @@ public class FrontendApplication {
             } else if (selectedArmyId != null) {
                 // Move selected army to clicked tile
                 Command cmd = new Command("MOVE", selectedArmyId, hoveredGridX, hoveredGridY);
-                gameState = client.sendCommand(cmd);
+                GameState newState = client.sendCommand(cmd);
+                if (newState != null) {
+                    gameState = newState;
+                }
                 addLogMessage("Army #" + selectedArmyId + " moving to (" + hoveredGridX + "," + hoveredGridY + ")");
                 System.out.println("Move command sent for army ID " + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
             }
@@ -774,15 +792,11 @@ public class FrontendApplication {
             return;
         }
         
-        int[] width = new int[1];
-        int[] height = new int[1];
-        glfwGetWindowSize(window, width, height);
-        
         // Render top bar (dark background)
         glColor3f(0.1f, 0.1f, 0.1f);
         glBegin(GL_QUADS);
-        glVertex2f(-1.0f, 0.85f);
-        glVertex2f(1.0f, 0.85f);
+        glVertex2f(-1.0f, GAME_TOP);
+        glVertex2f(1.0f, GAME_TOP);
         glVertex2f(1.0f, 1.0f);
         glVertex2f(-1.0f, 1.0f);
         glEnd();
@@ -790,11 +804,11 @@ public class FrontendApplication {
         // Top bar border
         glColor3f(0.5f, 0.5f, 0.5f);
         glBegin(GL_LINES);
-        glVertex2f(-1.0f, 0.85f);
-        glVertex2f(1.0f, 0.85f);
+        glVertex2f(-1.0f, GAME_TOP);
+        glVertex2f(1.0f, GAME_TOP);
         glEnd();
         
-        // Count territories for display
+        // Count territories and armies for display
         int player1Armies = 0;
         int player2Armies = 0;
         if (gameState.getArmies() != null) {
@@ -825,20 +839,105 @@ public class FrontendApplication {
             }
         }
         
+        // Visualize stats in the top HUD as simple proportional bars
+        float hudLeft = -0.95f;
+        float hudRight = 0.95f;
+        float hudTop = 0.98f;
+        float barHeight = 0.03f;
+        float barSpacing = 0.01f;
+        
+        // Armies bar (top row)
+        int totalArmies = player1Armies + player2Armies;
+        if (totalArmies > 0) {
+            float armiesBarTop = hudTop;
+            float armiesBarBottom = hudTop - barHeight;
+            float armiesMid = hudLeft + (hudRight - hudLeft) * (player1Armies / (float) totalArmies);
+            
+            // Player 1 armies segment
+            glColor3f(0.2f, 0.6f, 1.0f);
+            glBegin(GL_QUADS);
+            glVertex2f(hudLeft, armiesBarBottom);
+            glVertex2f(armiesMid, armiesBarBottom);
+            glVertex2f(armiesMid, armiesBarTop);
+            glVertex2f(hudLeft, armiesBarTop);
+            glEnd();
+            
+            // Player 2 armies segment
+            glColor3f(1.0f, 0.3f, 0.3f);
+            glBegin(GL_QUADS);
+            glVertex2f(armiesMid, armiesBarBottom);
+            glVertex2f(hudRight, armiesBarBottom);
+            glVertex2f(hudRight, armiesBarTop);
+            glVertex2f(armiesMid, armiesBarTop);
+            glEnd();
+        }
+        
+        // Castles bar (middle row)
+        int totalCastles = player1Castles + player2Castles;
+        if (totalCastles > 0) {
+            float castlesBarTop = hudTop - (barHeight + barSpacing);
+            float castlesBarBottom = castlesBarTop - barHeight;
+            float castlesMid = hudLeft + (hudRight - hudLeft) * (player1Castles / (float) totalCastles);
+            
+            // Player 1 castles segment
+            glColor3f(0.1f, 0.8f, 0.4f);
+            glBegin(GL_QUADS);
+            glVertex2f(hudLeft, castlesBarBottom);
+            glVertex2f(castlesMid, castlesBarBottom);
+            glVertex2f(castlesMid, castlesBarTop);
+            glVertex2f(hudLeft, castlesBarTop);
+            glEnd();
+            
+            // Player 2 castles segment
+            glColor3f(0.9f, 0.8f, 0.2f);
+            glBegin(GL_QUADS);
+            glVertex2f(castlesMid, castlesBarBottom);
+            glVertex2f(hudRight, castlesBarBottom);
+            glVertex2f(hudRight, castlesBarTop);
+            glVertex2f(castlesMid, castlesBarTop);
+            glEnd();
+        }
+        
+        // Villages bar (bottom row within the top HUD)
+        int totalVillages = player1Villages + player2Villages;
+        if (totalVillages > 0) {
+            float villagesBarTop = hudTop - 2 * (barHeight + barSpacing);
+            float villagesBarBottom = villagesBarTop - barHeight;
+            float villagesMid = hudLeft + (hudRight - hudLeft) * (player1Villages / (float) totalVillages);
+            
+            // Player 1 villages segment
+            glColor3f(0.5f, 0.5f, 1.0f);
+            glBegin(GL_QUADS);
+            glVertex2f(hudLeft, villagesBarBottom);
+            glVertex2f(villagesMid, villagesBarBottom);
+            glVertex2f(villagesMid, villagesBarTop);
+            glVertex2f(hudLeft, villagesBarTop);
+            glEnd();
+            
+            // Player 2 villages segment
+            glColor3f(1.0f, 0.5f, 0.5f);
+            glBegin(GL_QUADS);
+            glVertex2f(villagesMid, villagesBarBottom);
+            glVertex2f(hudRight, villagesBarBottom);
+            glVertex2f(hudRight, villagesBarTop);
+            glVertex2f(villagesMid, villagesBarTop);
+            glEnd();
+        }
+        
         // Render side panel (right side, dark background)
         glColor3f(0.1f, 0.1f, 0.1f);
         glBegin(GL_QUADS);
-        glVertex2f(0.7f, -1.0f);
+        glVertex2f(GAME_RIGHT, -1.0f);
         glVertex2f(1.0f, -1.0f);
-        glVertex2f(1.0f, 0.85f);
-        glVertex2f(0.7f, 0.85f);
+        glVertex2f(1.0f, GAME_TOP);
+        glVertex2f(GAME_RIGHT, GAME_TOP);
         glEnd();
         
         // Side panel border
         glColor3f(0.5f, 0.5f, 0.5f);
         glBegin(GL_LINES);
-        glVertex2f(0.7f, -1.0f);
-        glVertex2f(0.7f, 0.85f);
+        glVertex2f(GAME_RIGHT, -1.0f);
+        glVertex2f(GAME_RIGHT, GAME_TOP);
         glEnd();
         
         // Render selected army info in side panel
@@ -876,7 +975,7 @@ public class FrontendApplication {
             
             // Draw soldier count bars
             float barY = 0.68f;
-            float barHeight = 0.03f;
+            float soldierBarHeight = 0.03f;
             int displaySoldiers = Math.min(selectedArmy.getSoldiers(), MAX_PANEL_SOLDIERS);
             for (int i = 0; i < displaySoldiers; i++) {
                 if (selectedArmy.getPlayerId() == 1) {
@@ -888,8 +987,8 @@ public class FrontendApplication {
                 glBegin(GL_QUADS);
                 glVertex2f(0.72f, barY - i * 0.032f);
                 glVertex2f(0.98f, barY - i * 0.032f);
-                glVertex2f(0.98f, barY - i * 0.032f - barHeight);
-                glVertex2f(0.72f, barY - i * 0.032f - barHeight);
+                glVertex2f(0.98f, barY - i * 0.032f - soldierBarHeight);
+                glVertex2f(0.72f, barY - i * 0.032f - soldierBarHeight);
                 glEnd();
             }
             
@@ -910,22 +1009,22 @@ public class FrontendApplication {
         glColor3f(0.1f, 0.1f, 0.1f);
         glBegin(GL_QUADS);
         glVertex2f(-1.0f, -1.0f);
-        glVertex2f(0.7f, -1.0f);
-        glVertex2f(0.7f, -0.7f);
-        glVertex2f(-1.0f, -0.7f);
+        glVertex2f(GAME_RIGHT, -1.0f);
+        glVertex2f(GAME_RIGHT, GAME_BOTTOM);
+        glVertex2f(-1.0f, GAME_BOTTOM);
         glEnd();
         
         // Bottom bar border
         glColor3f(0.5f, 0.5f, 0.5f);
         glBegin(GL_LINES);
-        glVertex2f(-1.0f, -0.7f);
-        glVertex2f(0.7f, -0.7f);
+        glVertex2f(-1.0f, GAME_BOTTOM);
+        glVertex2f(GAME_RIGHT, GAME_BOTTOM);
         glEnd();
         
-        // Draw game log entries as colored bars (can't render text in basic OpenGL)
+        // Draw game log entries as colored bars representing events
         float logY = -0.72f;
         float logHeight = 0.025f;
-        for (int i = 0; i < Math.min(gameLog.size(), 10); i++) {
+        for (int i = 0; i < Math.min(gameLog.size(), MAX_LOG_ENTRIES); i++) {
             // Alternate colors for visibility
             if (i % 2 == 0) {
                 glColor3f(0.3f, 0.3f, 0.4f);
@@ -959,11 +1058,16 @@ public class FrontendApplication {
         int[] height = new int[1];
         glfwGetWindowSize(window, width, height);
         
+        // Guard against minimized window
+        if (width[0] <= 0 || height[0] <= 0) {
+            return;
+        }
+        
         float normX = (float) (mouseX / width[0] * 2 - 1);
         float normY = (float) (1 - mouseY / height[0] * 2);
         
         // Don't show tooltip if hovering over HUD areas
-        if (normY > 0.85f || normX > 0.7f || normY < -0.7f) {
+        if (normY > GAME_TOP || normX > GAME_RIGHT || normY < GAME_BOTTOM) {
             return;
         }
         
@@ -974,8 +1078,8 @@ public class FrontendApplication {
         float tooltipY = normY - 0.05f;
         
         // Keep tooltip on screen
-        if (tooltipX + tooltipWidth > 0.7f) tooltipX = normX - tooltipWidth - 0.05f;
-        if (tooltipY - tooltipHeight < -0.7f) tooltipY = normY + tooltipHeight + 0.05f;
+        if (tooltipX + tooltipWidth > GAME_RIGHT) tooltipX = normX - tooltipWidth - 0.05f;
+        if (tooltipY - tooltipHeight < GAME_BOTTOM) tooltipY = normY + tooltipHeight + 0.05f;
         
         // Tooltip background
         glEnable(GL_BLEND);
@@ -1103,13 +1207,8 @@ public class FrontendApplication {
         int gridWidth = gameState.getGrid().length;
         int gridHeight = gameState.getGrid()[0].length;
         
-        // Game area boundaries
-        float gameLeft = -1.0f;
-        float gameRight = 0.7f;
-        float gameBottom = -0.7f;
-        float gameTop = 0.85f;
-        float gameWidth = gameRight - gameLeft;
-        float gameHeight = gameTop - gameBottom;
+        float gameWidth = GAME_RIGHT - GAME_LEFT;
+        float gameHeight = GAME_TOP - GAME_BOTTOM;
         
         float cellWidth = gameWidth / gridWidth;
         float cellHeight = gameHeight / gridHeight;
@@ -1117,8 +1216,8 @@ public class FrontendApplication {
         int armyX = selectedArmy.getX();
         int armyY = selectedArmy.getY();
         
-        float x1 = gameLeft + armyX * cellWidth;
-        float y1 = gameBottom + armyY * cellHeight;
+        float x1 = GAME_LEFT + armyX * cellWidth;
+        float y1 = GAME_BOTTOM + armyY * cellHeight;
         float x2 = x1 + cellWidth;
         float y2 = y1 + cellHeight;
         
@@ -1165,9 +1264,15 @@ public class FrontendApplication {
         int[] width = new int[1];
         int[] height = new int[1];
         glfwGetWindowSize(window, width, height);
+        
+        // Guard against minimized window
+        if (width[0] <= 0 || height[0] <= 0) {
+            return;
+        }
+        
         float normX = (float) (mouseX / width[0] * 2 - 1);
         float normY = (float) (1 - mouseY / height[0] * 2);
-        if (normY > 0.85f || normX > 0.7f || normY < -0.7f) {
+        if (normY > GAME_TOP || normX > GAME_RIGHT || normY < GAME_BOTTOM) {
             return;
         }
         
@@ -1178,19 +1283,14 @@ public class FrontendApplication {
             return;
         }
         
-        // Game area boundaries
-        float gameLeft = -1.0f;
-        float gameRight = 0.7f;
-        float gameBottom = -0.7f;
-        float gameTop = 0.85f;
-        float gameWidth = gameRight - gameLeft;
-        float gameHeight = gameTop - gameBottom;
+        float gameWidth = GAME_RIGHT - GAME_LEFT;
+        float gameHeight = GAME_TOP - GAME_BOTTOM;
         
         float cellWidth = gameWidth / gridWidth;
         float cellHeight = gameHeight / gridHeight;
         
-        float centerX = gameLeft + hoveredGridX * cellWidth + cellWidth / 2;
-        float centerY = gameBottom + hoveredGridY * cellHeight + cellHeight / 2;
+        float centerX = GAME_LEFT + hoveredGridX * cellWidth + cellWidth / 2;
+        float centerY = GAME_BOTTOM + hoveredGridY * cellHeight + cellHeight / 2;
         float radius = cellWidth / 4;
         
         // Draw faint circle preview
