@@ -113,6 +113,10 @@ Server will start on http://localhost:8080
 ### Controls
 - `SPACE` - Send tick command to server
 - `M` - Move first army to position (5,5) using its unique ID
+- `1` - Move first army to Player 1 castle (0,0)
+- `2` - Move first army to Player 2 castle (9,9)
+- `3` - Move first army to village (3,3)
+- `4` - Move first army to village (6,6)
 - `S` - Split first army (prompts for soldier count in console)
 - `R` - Play again (reset game) - only available when game is over
 - `ESC` - Close window

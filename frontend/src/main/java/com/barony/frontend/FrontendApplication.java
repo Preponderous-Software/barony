@@ -59,9 +59,14 @@ public class FrontendApplication {
                 if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
                     // Reset game
                     if (client != null) {
-                        gameState = client.reset();
-                        gameOverMessagePrinted = false; // Reset flag
-                        System.out.println("Game reset!");
+                        GameState newState = client.reset();
+                        if (newState != null) {
+                            gameState = newState;
+                            gameOverMessagePrinted = false; // Reset flag
+                            System.out.println("Game reset!");
+                        } else {
+                            System.err.println("Failed to reset game: server returned no state. Previous state preserved.");
+                        }
                     }
                 }
                 return; // Ignore all other input when game is over
@@ -81,6 +86,43 @@ public class FrontendApplication {
                     Command cmd = new Command("MOVE", firstArmyId, 5, 5);
                     gameState = client.sendCommand(cmd);
                     System.out.println("Move command sent for army ID " + firstArmyId + " to (5,5)");
+                }
+            }
+            // Number keys for moving first army to strategic locations
+            if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
+                // Move to Player 1 castle (0,0)
+                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
+                    int firstArmyId = gameState.getArmies().get(0).getId();
+                    Command cmd = new Command("MOVE", firstArmyId, 0, 0);
+                    gameState = client.sendCommand(cmd);
+                    System.out.println("Move command sent for army ID " + firstArmyId + " to Player 1 castle (0,0)");
+                }
+            }
+            if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
+                // Move to Player 2 castle (9,9)
+                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
+                    int firstArmyId = gameState.getArmies().get(0).getId();
+                    Command cmd = new Command("MOVE", firstArmyId, 9, 9);
+                    gameState = client.sendCommand(cmd);
+                    System.out.println("Move command sent for army ID " + firstArmyId + " to Player 2 castle (9,9)");
+                }
+            }
+            if (key == GLFW_KEY_3 && action == GLFW_RELEASE) {
+                // Move to village at (3,3)
+                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
+                    int firstArmyId = gameState.getArmies().get(0).getId();
+                    Command cmd = new Command("MOVE", firstArmyId, 3, 3);
+                    gameState = client.sendCommand(cmd);
+                    System.out.println("Move command sent for army ID " + firstArmyId + " to village (3,3)");
+                }
+            }
+            if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
+                // Move to village at (6,6)
+                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
+                    int firstArmyId = gameState.getArmies().get(0).getId();
+                    Command cmd = new Command("MOVE", firstArmyId, 6, 6);
+                    gameState = client.sendCommand(cmd);
+                    System.out.println("Move command sent for army ID " + firstArmyId + " to village (6,6)");
                 }
             }
             if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
@@ -461,7 +503,7 @@ public class FrontendApplication {
             
             // Determine winner and color
             Integer winnerId = gameState.getWinnerId();
-            boolean playerWon = winnerId != null && winnerId == 1;
+            boolean playerWon = winnerId != null && winnerId.intValue() == 1;
             
             // Box background
             if (playerWon) {

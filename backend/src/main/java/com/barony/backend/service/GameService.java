@@ -60,6 +60,11 @@ public class GameService {
     }
     
     public synchronized void tick() {
+        // Don't process ticks if game is over
+        if (gameState.isGameOver()) {
+            return;
+        }
+        
         gameState.incrementTick();
         
         // Process army movement

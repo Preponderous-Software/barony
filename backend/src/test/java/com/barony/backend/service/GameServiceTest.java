@@ -1567,15 +1567,37 @@ class GameServiceTest {
         moveAway.setTargetY(5);
         gameService.executeCommand(moveAway);
         
-        // Wait for Player 2 to reach castle
-        for (int i = 0; i < 15; i++) {
+        // Wait for Player 2 to reach castle (18 ticks to reach)
+        for (int i = 0; i < 18; i++) {
             gameService.tick();
         }
         
-        // Check that occupation ticks are visible in state
+        // Verify Player 2 army is at castle
         state = gameService.getState();
+        Army army2 = state.getArmies().stream()
+            .filter(a -> a.getId() == army2Id)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(army2);
+        assertEquals(0, army2.getX());
+        assertEquals(0, army2.getY());
+        
+        // Check that occupation ticks are visible and have started
         Tile castle = state.getGrid()[0][0];
-        assertTrue(castle.getOccupationTicks() >= 0);
+        assertEquals(1, castle.getOccupationTicks()); // Occupation starts on arrival tick
+        
+        // Tick once more to verify it increments
+        gameService.tick();
+        state = gameService.getState();
+        castle = state.getGrid()[0][0];
+        assertEquals(2, castle.getOccupationTicks()); // Occupation continues
+        
+        // Tick again to verify it continues
+        gameService.tick();
+        state = gameService.getState();
+        castle = state.getGrid()[0][0];
+        assertEquals(0, castle.getOccupationTicks()); // Captured after 3 ticks, resets to 0
+        assertEquals(2, castle.getOwnerId()); // Castle now owned by Player 2
     }
     
     @Test
