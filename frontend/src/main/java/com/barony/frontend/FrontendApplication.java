@@ -23,6 +23,21 @@ public class FrontendApplication {
     private java.util.Scanner inputScanner; // Shared scanner for console input, never closed
     private boolean gameOverMessagePrinted = false; // Track if we've printed the game over message
     
+    // Mouse state
+    private double mouseX = 0;
+    private double mouseY = 0;
+    private int hoveredGridX = -1;
+    private int hoveredGridY = -1;
+    private long hoverStartTime = 0;
+    private static final long TOOLTIP_DELAY_MS = 500;
+    
+    // Selection state
+    private Integer selectedArmyId = null;
+    
+    // Game log (circular buffer)
+    private java.util.LinkedList<String> gameLog = new java.util.LinkedList<>();
+    private static final int MAX_LOG_ENTRIES = 10;
+    
     public void run() {
         init();
         loop();
@@ -48,6 +63,20 @@ public class FrontendApplication {
         if (window == NULL) {
             throw new RuntimeException("Failed to create the GLFW window");
         }
+        
+        // Mouse position callback
+        glfwSetCursorPosCallback(window, (window, xpos, ypos) -> {
+            mouseX = xpos;
+            mouseY = ypos;
+            updateHoveredTile();
+        });
+        
+        // Mouse button callback
+        glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
+            if (action == GLFW_PRESS) {
+                handleMouseClick(button);
+            }
+        });
         
         glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
@@ -75,8 +104,13 @@ public class FrontendApplication {
             if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
                 // Send a tick command
                 if (client != null) {
+                    GameState previousState = gameState;
                     gameState = client.tick();
-                    System.out.println("Tick sent. Current tick: " + (gameState != null ? gameState.getTickCount() : "null"));
+                    if (gameState != null && previousState != null) {
+                        // Add log message for tick
+                        addLogMessage("Tick " + gameState.getTickCount());
+                        System.out.println("Tick sent. Current tick: " + gameState.getTickCount());
+                    }
                 }
             }
             if (key == GLFW_KEY_M && action == GLFW_RELEASE) {
@@ -258,11 +292,23 @@ public class FrontendApplication {
         float cellWidth = 2.0f / gridWidth;
         float cellHeight = 2.0f / gridHeight;
         
+        // Adjust rendering to account for HUD space
+        // Main game area: from -1 to 0.7 (horizontal), -0.7 to 0.85 (vertical)
+        float gameLeft = -1.0f;
+        float gameRight = 0.7f;
+        float gameBottom = -0.7f;
+        float gameTop = 0.85f;
+        float gameWidth = gameRight - gameLeft;
+        float gameHeight = gameTop - gameBottom;
+        
+        cellWidth = gameWidth / gridWidth;
+        cellHeight = gameHeight / gridHeight;
+        
         // Draw tiles
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
-                float x1 = -1.0f + x * cellWidth;
-                float y1 = -1.0f + y * cellHeight;
+                float x1 = gameLeft + x * cellWidth;
+                float y1 = gameBottom + y * cellHeight;
                 float x2 = x1 + cellWidth;
                 float y2 = y1 + cellHeight;
                 
@@ -396,8 +442,8 @@ public class FrontendApplication {
                         int destX = army.getDestinationX();
                         int destY = army.getDestinationY();
                         
-                        float destCenterX = -1.0f + destX * cellWidth + cellWidth / 2;
-                        float destCenterY = -1.0f + destY * cellHeight + cellHeight / 2;
+                        float destCenterX = gameLeft + destX * cellWidth + cellWidth / 2;
+                        float destCenterY = gameBottom + destY * cellHeight + cellHeight / 2;
                         
                         // Draw destination square (lighter color based on player)
                         if (army.getPlayerId() == 1) {
@@ -415,8 +461,8 @@ public class FrontendApplication {
                         glEnd();
                     }
                     
-                    float centerX = -1.0f + armyX * cellWidth + cellWidth / 2 + offsetX;
-                    float centerY = -1.0f + armyY * cellHeight + cellHeight / 2 + offsetY;
+                    float centerX = gameLeft + armyX * cellWidth + cellWidth / 2 + offsetX;
+                    float centerY = gameBottom + armyY * cellHeight + cellHeight / 2 + offsetY;
                     float radius = cellWidth / 4;
                     
                     // Color based on player
@@ -482,6 +528,18 @@ public class FrontendApplication {
                 }
             }
         }
+        
+        // Render selection highlight
+        renderSelectionHighlight();
+        
+        // Render movement preview
+        renderMovementPreview();
+        
+        // Render HUD
+        renderHUD();
+        
+        // Render tooltip
+        renderTooltip();
         
         // Draw win/loss overlay if game is over
         if (gameState.isGameOver()) {
@@ -574,6 +632,595 @@ public class FrontendApplication {
                 gameOverMessagePrinted = true;
             }
         }
+    }
+    
+    private void updateHoveredTile() {
+        if (gameState == null || gameState.getGrid() == null) {
+            return;
+        }
+        
+        // Get window size
+        int[] width = new int[1];
+        int[] height = new int[1];
+        glfwGetWindowSize(window, width, height);
+        
+        // Convert mouse position to normalized coordinates
+        float normX = (float) (mouseX / width[0] * 2 - 1);
+        float normY = (float) (1 - mouseY / height[0] * 2);
+        
+        // Game area boundaries
+        float gameLeft = -1.0f;
+        float gameRight = 0.7f;
+        float gameBottom = -0.7f;
+        float gameTop = 0.85f;
+        
+        // Check if mouse is in game area
+        if (normX < gameLeft || normX > gameRight || normY < gameBottom || normY > gameTop) {
+            hoveredGridX = -1;
+            hoveredGridY = -1;
+            return;
+        }
+        
+        // Convert to grid coordinates
+        int gridWidth = gameState.getGrid().length;
+        int gridHeight = gameState.getGrid()[0].length;
+        
+        float gameWidth = gameRight - gameLeft;
+        float gameHeight = gameTop - gameBottom;
+        
+        int newGridX = (int) ((normX - gameLeft) / gameWidth * gridWidth);
+        int newGridY = (int) ((normY - gameBottom) / gameHeight * gridHeight);
+        
+        // Check if hovered tile changed
+        if (newGridX != hoveredGridX || newGridY != hoveredGridY) {
+            hoveredGridX = newGridX;
+            hoveredGridY = newGridY;
+            hoverStartTime = System.currentTimeMillis();
+        }
+    }
+    
+    private void handleMouseClick(int button) {
+        if (gameState == null || gameState.getGrid() == null) {
+            return;
+        }
+        
+        // Ignore clicks when game is over
+        if (gameState.isGameOver()) {
+            return;
+        }
+        
+        int gridWidth = gameState.getGrid().length;
+        int gridHeight = gameState.getGrid()[0].length;
+        
+        if (hoveredGridX < 0 || hoveredGridX >= gridWidth || hoveredGridY < 0 || hoveredGridY >= gridHeight) {
+            return;
+        }
+        
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            // Check if clicking on an army to select it
+            Army clickedArmy = getArmyAt(hoveredGridX, hoveredGridY);
+            
+            if (clickedArmy != null && clickedArmy.getPlayerId() == 1) {
+                // Select Player 1 army
+                selectedArmyId = clickedArmy.getId();
+                addLogMessage("Selected army #" + selectedArmyId + " (" + clickedArmy.getSoldiers() + " soldiers)");
+                System.out.println("Selected army ID " + selectedArmyId + " at (" + hoveredGridX + "," + hoveredGridY + ")");
+            } else if (selectedArmyId != null) {
+                // Move selected army to clicked tile
+                Command cmd = new Command("MOVE", selectedArmyId, hoveredGridX, hoveredGridY);
+                gameState = client.sendCommand(cmd);
+                addLogMessage("Army #" + selectedArmyId + " moving to (" + hoveredGridX + "," + hoveredGridY + ")");
+                System.out.println("Move command sent for army ID " + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
+            }
+        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            // Right-click to deselect
+            if (selectedArmyId != null) {
+                addLogMessage("Deselected army #" + selectedArmyId);
+                System.out.println("Deselected army");
+                selectedArmyId = null;
+            }
+        }
+    }
+    
+    private Army getArmyAt(int x, int y) {
+        if (gameState == null || gameState.getArmies() == null) {
+            return null;
+        }
+        
+        // Return first army at this position (prioritize Player 1 armies)
+        Army player1Army = null;
+        for (Army army : gameState.getArmies()) {
+            if (army.getX() == x && army.getY() == y) {
+                if (army.getPlayerId() == 1) {
+                    player1Army = army;
+                }
+            }
+        }
+        
+        // If no Player 1 army, return any army at this position
+        if (player1Army != null) {
+            return player1Army;
+        }
+        
+        for (Army army : gameState.getArmies()) {
+            if (army.getX() == x && army.getY() == y) {
+                return army;
+            }
+        }
+        
+        return null;
+    }
+    
+    private Army getSelectedArmy() {
+        if (selectedArmyId == null || gameState == null || gameState.getArmies() == null) {
+            return null;
+        }
+        
+        for (Army army : gameState.getArmies()) {
+            if (army.getId() == selectedArmyId) {
+                return army;
+            }
+        }
+        
+        return null;
+    }
+    
+    private void addLogMessage(String message) {
+        gameLog.addFirst(message);
+        if (gameLog.size() > MAX_LOG_ENTRIES) {
+            gameLog.removeLast();
+        }
+    }
+    
+    private boolean shouldShowTooltip() {
+        return System.currentTimeMillis() - hoverStartTime >= TOOLTIP_DELAY_MS;
+    }
+    
+    private void renderHUD() {
+        if (gameState == null) {
+            return;
+        }
+        
+        int[] width = new int[1];
+        int[] height = new int[1];
+        glfwGetWindowSize(window, width, height);
+        
+        // Render top bar (dark background)
+        glColor3f(0.1f, 0.1f, 0.1f);
+        glBegin(GL_QUADS);
+        glVertex2f(-1.0f, 0.85f);
+        glVertex2f(1.0f, 0.85f);
+        glVertex2f(1.0f, 1.0f);
+        glVertex2f(-1.0f, 1.0f);
+        glEnd();
+        
+        // Top bar border
+        glColor3f(0.5f, 0.5f, 0.5f);
+        glBegin(GL_LINES);
+        glVertex2f(-1.0f, 0.85f);
+        glVertex2f(1.0f, 0.85f);
+        glEnd();
+        
+        // Count territories for display
+        int player1Armies = 0;
+        int player2Armies = 0;
+        if (gameState.getArmies() != null) {
+            for (Army army : gameState.getArmies()) {
+                if (army.getPlayerId() == 1) player1Armies++;
+                else if (army.getPlayerId() == 2) player2Armies++;
+            }
+        }
+        
+        int player1Castles = 0;
+        int player2Castles = 0;
+        int player1Villages = 0;
+        int player2Villages = 0;
+        
+        if (gameState.getGrid() != null) {
+            Tile[][] grid = gameState.getGrid();
+            for (int x = 0; x < grid.length; x++) {
+                for (int y = 0; y < grid[0].length; y++) {
+                    Tile tile = grid[x][y];
+                    if (tile.getType() == TileType.CASTLE) {
+                        if (tile.getOwnerId() == 1) player1Castles++;
+                        else if (tile.getOwnerId() == 2) player2Castles++;
+                    } else if (tile.getType() == TileType.VILLAGE) {
+                        if (tile.getOwnerId() == 1) player1Villages++;
+                        else if (tile.getOwnerId() == 2) player2Villages++;
+                    }
+                }
+            }
+        }
+        
+        // Render side panel (right side, dark background)
+        glColor3f(0.1f, 0.1f, 0.1f);
+        glBegin(GL_QUADS);
+        glVertex2f(0.7f, -1.0f);
+        glVertex2f(1.0f, -1.0f);
+        glVertex2f(1.0f, 0.85f);
+        glVertex2f(0.7f, 0.85f);
+        glEnd();
+        
+        // Side panel border
+        glColor3f(0.5f, 0.5f, 0.5f);
+        glBegin(GL_LINES);
+        glVertex2f(0.7f, -1.0f);
+        glVertex2f(0.7f, 0.85f);
+        glEnd();
+        
+        // Render selected army info in side panel
+        Army selectedArmy = getSelectedArmy();
+        if (selectedArmy != null) {
+            // Title bar for selected army
+            glColor3f(0.2f, 0.2f, 0.3f);
+            glBegin(GL_QUADS);
+            glVertex2f(0.7f, 0.75f);
+            glVertex2f(1.0f, 0.75f);
+            glVertex2f(1.0f, 0.85f);
+            glVertex2f(0.7f, 0.85f);
+            glEnd();
+            
+            // Visual indicator of selected army
+            if (selectedArmy.getPlayerId() == 1) {
+                glColor3f(0.0f, 0.0f, 1.0f); // Blue
+            } else {
+                glColor3f(1.0f, 0.0f, 0.0f); // Red
+            }
+            
+            // Draw army indicator circle
+            float circleX = 0.75f;
+            float circleY = 0.8f;
+            float circleRadius = 0.03f;
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2f(circleX, circleY);
+            for (int i = 0; i <= 20; i++) {
+                float angle = (float) (2 * Math.PI * i / 20);
+                float x = circleX + circleRadius * (float) Math.cos(angle);
+                float y = circleY + circleRadius * (float) Math.sin(angle);
+                glVertex2f(x, y);
+            }
+            glEnd();
+            
+            // Draw soldier count bars
+            float barY = 0.68f;
+            float barHeight = 0.03f;
+            int displaySoldiers = Math.min(selectedArmy.getSoldiers(), 20);
+            for (int i = 0; i < displaySoldiers; i++) {
+                if (selectedArmy.getPlayerId() == 1) {
+                    glColor3f(0.3f, 0.3f, 0.8f);
+                } else {
+                    glColor3f(0.8f, 0.3f, 0.3f);
+                }
+                
+                glBegin(GL_QUADS);
+                glVertex2f(0.72f, barY - i * 0.032f);
+                glVertex2f(0.98f, barY - i * 0.032f);
+                glVertex2f(0.98f, barY - i * 0.032f - barHeight);
+                glVertex2f(0.72f, barY - i * 0.032f - barHeight);
+                glEnd();
+            }
+            
+            // Show destination if moving
+            if (selectedArmy.isMoving()) {
+                glColor3f(0.3f, 0.8f, 0.3f);
+                float destBoxY = -0.2f;
+                glBegin(GL_QUADS);
+                glVertex2f(0.72f, destBoxY);
+                glVertex2f(0.98f, destBoxY);
+                glVertex2f(0.98f, destBoxY + 0.08f);
+                glVertex2f(0.72f, destBoxY + 0.08f);
+                glEnd();
+            }
+        }
+        
+        // Render bottom bar (game log)
+        glColor3f(0.1f, 0.1f, 0.1f);
+        glBegin(GL_QUADS);
+        glVertex2f(-1.0f, -1.0f);
+        glVertex2f(0.7f, -1.0f);
+        glVertex2f(0.7f, -0.7f);
+        glVertex2f(-1.0f, -0.7f);
+        glEnd();
+        
+        // Bottom bar border
+        glColor3f(0.5f, 0.5f, 0.5f);
+        glBegin(GL_LINES);
+        glVertex2f(-1.0f, -0.7f);
+        glVertex2f(0.7f, -0.7f);
+        glEnd();
+        
+        // Draw game log entries as colored bars (can't render text in basic OpenGL)
+        float logY = -0.72f;
+        float logHeight = 0.025f;
+        for (int i = 0; i < Math.min(gameLog.size(), 10); i++) {
+            // Alternate colors for visibility
+            if (i % 2 == 0) {
+                glColor3f(0.3f, 0.3f, 0.4f);
+            } else {
+                glColor3f(0.25f, 0.25f, 0.35f);
+            }
+            
+            glBegin(GL_QUADS);
+            glVertex2f(-0.98f, logY - i * 0.028f);
+            glVertex2f(0.68f, logY - i * 0.028f);
+            glVertex2f(0.68f, logY - i * 0.028f - logHeight);
+            glVertex2f(-0.98f, logY - i * 0.028f - logHeight);
+            glEnd();
+        }
+    }
+    
+    private void renderTooltip() {
+        if (!shouldShowTooltip() || gameState == null || gameState.getGrid() == null) {
+            return;
+        }
+        
+        int gridWidth = gameState.getGrid().length;
+        int gridHeight = gameState.getGrid()[0].length;
+        
+        if (hoveredGridX < 0 || hoveredGridX >= gridWidth || hoveredGridY < 0 || hoveredGridY >= gridHeight) {
+            return;
+        }
+        
+        // Get mouse position in normalized coords
+        int[] width = new int[1];
+        int[] height = new int[1];
+        glfwGetWindowSize(window, width, height);
+        
+        float normX = (float) (mouseX / width[0] * 2 - 1);
+        float normY = (float) (1 - mouseY / height[0] * 2);
+        
+        // Don't show tooltip if hovering over HUD areas
+        if (normY > 0.85f || normX > 0.7f || normY < -0.7f) {
+            return;
+        }
+        
+        // Draw tooltip box
+        float tooltipWidth = 0.3f;
+        float tooltipHeight = 0.15f;
+        float tooltipX = normX + 0.05f;
+        float tooltipY = normY - 0.05f;
+        
+        // Keep tooltip on screen
+        if (tooltipX + tooltipWidth > 0.7f) tooltipX = normX - tooltipWidth - 0.05f;
+        if (tooltipY - tooltipHeight < -0.7f) tooltipY = normY + tooltipHeight + 0.05f;
+        
+        // Tooltip background
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glColor4f(0.0f, 0.0f, 0.0f, 0.8f);
+        glBegin(GL_QUADS);
+        glVertex2f(tooltipX, tooltipY);
+        glVertex2f(tooltipX + tooltipWidth, tooltipY);
+        glVertex2f(tooltipX + tooltipWidth, tooltipY - tooltipHeight);
+        glVertex2f(tooltipX, tooltipY - tooltipHeight);
+        glEnd();
+        
+        // Tooltip border
+        glColor4f(1.0f, 1.0f, 1.0f, 0.9f);
+        glBegin(GL_LINE_LOOP);
+        glVertex2f(tooltipX, tooltipY);
+        glVertex2f(tooltipX + tooltipWidth, tooltipY);
+        glVertex2f(tooltipX + tooltipWidth, tooltipY - tooltipHeight);
+        glVertex2f(tooltipX, tooltipY - tooltipHeight);
+        glEnd();
+        glDisable(GL_BLEND);
+        
+        // Get tile info
+        Tile tile = gameState.getGrid()[hoveredGridX][hoveredGridY];
+        Army army = getArmyAt(hoveredGridX, hoveredGridY);
+        
+        // Draw info indicators (colored bars representing different properties)
+        float barY = tooltipY - 0.02f;
+        float barHeight = 0.02f;
+        float barSpacing = 0.025f;
+        
+        // Tile type indicator
+        switch (tile.getType()) {
+            case CASTLE:
+                glColor3f(0.5f, 0.5f, 0.5f); // Gray
+                break;
+            case VILLAGE:
+                glColor3f(0.6f, 0.3f, 0.0f); // Brown
+                break;
+            case EMPTY:
+                glColor3f(0.0f, 0.5f, 0.0f); // Green
+                break;
+        }
+        glBegin(GL_QUADS);
+        glVertex2f(tooltipX + 0.01f, barY);
+        glVertex2f(tooltipX + 0.1f, barY);
+        glVertex2f(tooltipX + 0.1f, barY - barHeight);
+        glVertex2f(tooltipX + 0.01f, barY - barHeight);
+        glEnd();
+        barY -= barSpacing;
+        
+        // Ownership indicator
+        if (tile.getOwnerId() == 1) {
+            glColor3f(0.0f, 0.0f, 1.0f); // Blue - Player 1
+        } else if (tile.getOwnerId() == 2) {
+            glColor3f(1.0f, 0.0f, 0.0f); // Red - Player 2
+        } else {
+            glColor3f(0.5f, 0.5f, 0.5f); // Gray - Neutral
+        }
+        glBegin(GL_QUADS);
+        glVertex2f(tooltipX + 0.01f, barY);
+        glVertex2f(tooltipX + 0.1f, barY);
+        glVertex2f(tooltipX + 0.1f, barY - barHeight);
+        glVertex2f(tooltipX + 0.01f, barY - barHeight);
+        glEnd();
+        barY -= barSpacing;
+        
+        // Army info if present
+        if (army != null) {
+            // Army player indicator
+            if (army.getPlayerId() == 1) {
+                glColor3f(0.0f, 0.0f, 1.0f);
+            } else {
+                glColor3f(1.0f, 0.0f, 0.0f);
+            }
+            glBegin(GL_QUADS);
+            glVertex2f(tooltipX + 0.01f, barY);
+            glVertex2f(tooltipX + 0.1f, barY);
+            glVertex2f(tooltipX + 0.1f, barY - barHeight);
+            glVertex2f(tooltipX + 0.01f, barY - barHeight);
+            glEnd();
+            barY -= barSpacing;
+            
+            // Soldier count indicator (bars)
+            int displaySoldiers = Math.min(army.getSoldiers(), 10);
+            float soldierBarWidth = 0.015f;
+            for (int i = 0; i < displaySoldiers; i++) {
+                if (army.getPlayerId() == 1) {
+                    glColor3f(0.3f, 0.3f, 0.8f);
+                } else {
+                    glColor3f(0.8f, 0.3f, 0.3f);
+                }
+                glBegin(GL_QUADS);
+                glVertex2f(tooltipX + 0.01f + i * soldierBarWidth, barY);
+                glVertex2f(tooltipX + 0.01f + (i + 1) * soldierBarWidth - 0.002f, barY);
+                glVertex2f(tooltipX + 0.01f + (i + 1) * soldierBarWidth - 0.002f, barY - barHeight);
+                glVertex2f(tooltipX + 0.01f + i * soldierBarWidth, barY - barHeight);
+                glEnd();
+            }
+            barY -= barSpacing;
+            
+            // Movement status indicator
+            if (army.isMoving()) {
+                glColor3f(0.0f, 0.8f, 0.0f); // Green - moving
+                glBegin(GL_QUADS);
+                glVertex2f(tooltipX + 0.01f, barY);
+                glVertex2f(tooltipX + 0.1f, barY);
+                glVertex2f(tooltipX + 0.1f, barY - barHeight);
+                glVertex2f(tooltipX + 0.01f, barY - barHeight);
+                glEnd();
+            }
+        }
+    }
+    
+    private void renderSelectionHighlight() {
+        if (selectedArmyId == null || gameState == null || gameState.getGrid() == null) {
+            return;
+        }
+        
+        Army selectedArmy = getSelectedArmy();
+        if (selectedArmy == null) {
+            return;
+        }
+        
+        int gridWidth = gameState.getGrid().length;
+        int gridHeight = gameState.getGrid()[0].length;
+        
+        // Game area boundaries
+        float gameLeft = -1.0f;
+        float gameRight = 0.7f;
+        float gameBottom = -0.7f;
+        float gameTop = 0.85f;
+        float gameWidth = gameRight - gameLeft;
+        float gameHeight = gameTop - gameBottom;
+        
+        float cellWidth = gameWidth / gridWidth;
+        float cellHeight = gameHeight / gridHeight;
+        
+        int armyX = selectedArmy.getX();
+        int armyY = selectedArmy.getY();
+        
+        float x1 = gameLeft + armyX * cellWidth;
+        float y1 = gameBottom + armyY * cellHeight;
+        float x2 = x1 + cellWidth;
+        float y2 = y1 + cellHeight;
+        
+        // Draw glowing border effect
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+        // Pulsing effect
+        float pulse = (float) (0.5f + 0.3f * Math.sin(System.currentTimeMillis() / 200.0));
+        
+        if (selectedArmy.getPlayerId() == 1) {
+            glColor4f(0.0f, 0.5f, 1.0f, pulse); // Light blue
+        } else {
+            glColor4f(1.0f, 0.5f, 0.0f, pulse); // Orange
+        }
+        
+        glLineWidth(4.0f);
+        glBegin(GL_LINE_LOOP);
+        glVertex2f(x1, y1);
+        glVertex2f(x2, y1);
+        glVertex2f(x2, y2);
+        glVertex2f(x1, y2);
+        glEnd();
+        glLineWidth(1.0f);
+        
+        glDisable(GL_BLEND);
+    }
+    
+    private void renderMovementPreview() {
+        if (selectedArmyId == null || hoveredGridX < 0 || hoveredGridY < 0) {
+            return;
+        }
+        
+        if (gameState == null || gameState.getGrid() == null) {
+            return;
+        }
+        
+        Army selectedArmy = getSelectedArmy();
+        if (selectedArmy == null) {
+            return;
+        }
+        
+        // Don't show preview if hovering over HUD
+        int[] width = new int[1];
+        int[] height = new int[1];
+        glfwGetWindowSize(window, width, height);
+        float normX = (float) (mouseX / width[0] * 2 - 1);
+        float normY = (float) (1 - mouseY / height[0] * 2);
+        if (normY > 0.85f || normX > 0.7f || normY < -0.7f) {
+            return;
+        }
+        
+        int gridWidth = gameState.getGrid().length;
+        int gridHeight = gameState.getGrid()[0].length;
+        
+        if (hoveredGridX >= gridWidth || hoveredGridY >= gridHeight) {
+            return;
+        }
+        
+        // Game area boundaries
+        float gameLeft = -1.0f;
+        float gameRight = 0.7f;
+        float gameBottom = -0.7f;
+        float gameTop = 0.85f;
+        float gameWidth = gameRight - gameLeft;
+        float gameHeight = gameTop - gameBottom;
+        
+        float cellWidth = gameWidth / gridWidth;
+        float cellHeight = gameHeight / gridHeight;
+        
+        float centerX = gameLeft + hoveredGridX * cellWidth + cellWidth / 2;
+        float centerY = gameBottom + hoveredGridY * cellHeight + cellHeight / 2;
+        float radius = cellWidth / 4;
+        
+        // Draw faint circle preview
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+        if (selectedArmy.getPlayerId() == 1) {
+            glColor4f(0.0f, 0.0f, 1.0f, 0.3f); // Faint blue
+        } else {
+            glColor4f(1.0f, 0.0f, 0.0f, 0.3f); // Faint red
+        }
+        
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex2f(centerX, centerY);
+        for (int i = 0; i <= 20; i++) {
+            float angle = (float) (2 * Math.PI * i / 20);
+            float x = centerX + radius * (float) Math.cos(angle);
+            float y = centerY + radius * (float) Math.sin(angle);
+            glVertex2f(x, y);
+        }
+        glEnd();
+        
+        glDisable(GL_BLEND);
     }
     
     public static void main(String[] args) {
