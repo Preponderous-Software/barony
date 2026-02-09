@@ -138,11 +138,24 @@ Server will start on http://localhost:8080
   - **Armies**:
     - Blue circles: Player 1 armies
     - Red circles: Player 2 armies
+- **Mouse Controls**: Click to select and move armies with visual feedback
+- **HUD Display**: Real-time game statistics, selected army info, and game event log
+- **Tooltips**: Hover over tiles and armies to see detailed information
 - **Territory Statistics Display**: Window title shows castles owned, villages owned, and income per tick for each player
 - HTTP client with proper timeouts and error handling
 - UTF-8 encoding for all network communication
 
 ### Controls
+
+**Mouse Controls:**
+- `Left Click` on army - Select Player 1 army (shows glowing highlight)
+- `Left Click` on tile (with army selected) - Move selected army to that location
+- `Right Click` - Deselect currently selected army
+- `Hover` over tile/army - Show tooltip after 0.5s delay with:
+  - Tile type and ownership (color-coded bars)
+  - Army information (player, soldier count, movement status)
+
+**Keyboard Controls:**
 - `SPACE` - Send tick command to server
 - `M` - Move first army to position (5,5) using its unique ID
 - `1` - Move first army to Player 1 castle (0,0)
@@ -152,6 +165,29 @@ Server will start on http://localhost:8080
 - `S` - Split first army (prompts for soldier count in console)
 - `R` - Play again (reset game) - only available when game is over
 - `ESC` - Close window
+
+### UI Elements
+
+**HUD Layout:**
+- **Top Bar** (dark background, 15% of screen height):
+  - Displays game statistics for both players
+  - Shows tick count, castles, villages, and income
+  
+- **Side Panel** (right side, 30% of screen width):
+  - Shows selected army details when an army is selected
+  - Visual indicators for soldier count (bars)
+  - Displays army destination if moving (green box)
+  
+- **Bottom Bar** (30% of screen height):
+  - Game event log showing last 10 actions
+  - Color-coded entries (alternating for visibility)
+  - Messages include: army selections, movement commands, tick events
+  
+- **Game Area** (center):
+  - Main grid display (70% width, 55% height)
+  - Selection highlight: Pulsing colored border around selected army
+  - Movement preview: Faint circle showing where army will move on click
+  - Tooltips: Semi-transparent box with colored bars representing tile/army info
 
 ### Running the Frontend
 
