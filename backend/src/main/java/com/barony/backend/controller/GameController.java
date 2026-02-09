@@ -29,4 +29,10 @@ public class GameController {
         gameService.executeCommand(command);
         return gameService.getState();
     }
+    
+    @PostMapping("/api/reset")
+    public GameState reset() {
+        gameService.resetGame();
+        return gameService.getState();
+    }
 }

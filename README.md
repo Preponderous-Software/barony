@@ -21,9 +21,10 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 - **Army Movement System**: Armies move 1 tile per tick using Manhattan distance pathfinding
 
 ### REST Endpoints
-- `GET /state` - Get current game state (returns JSON with grid, armies, tick count)
+- `GET /state` - Get current game state (returns JSON with grid, armies, tick count, gameOver, winnerId)
 - `POST /tick` - Advance game by one tick (executes game loop, returns updated state)
 - `POST /command` - Send a command (currently supports MOVE command with army ID and target coordinates)
+- `POST /api/reset` - Reset the game to initial state (useful after game over)
 
 ### Command Structure
 ```json
@@ -47,7 +48,7 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 ### State Response Structure
 ```json
 {
-  "grid": [[{"type": "CASTLE", "ownerId": 1}, ...], ...],
+  "grid": [[{"type": "CASTLE", "ownerId": 1, "occupationTicks": 0}, ...], ...],
   "armies": [
     {
       "id": 1, 
@@ -62,13 +63,18 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
   ],
   "tickCount": 0,
   "width": 10,
-  "height": 10
+  "height": 10,
+  "gameOver": false,
+  "winnerId": null
 }
 ```
 
 **Note**: 
 - `destinationX` and `destinationY` are optional fields. When set, they indicate the army is moving toward that destination.
 - `ownerId` indicates tile ownership: 0=neutral, 1=player1, 2=player2
+- `occupationTicks` indicates castle capture progress (0-3, only relevant for castles)
+- `gameOver` is true when the game has ended
+- `winnerId` is null during play, set to winning player ID (1 or 2) when game ends
 
 ### Running the Backend
 
@@ -107,7 +113,12 @@ Server will start on http://localhost:8080
 ### Controls
 - `SPACE` - Send tick command to server
 - `M` - Move first army to position (5,5) using its unique ID
+- `1` - Move first army to Player 1 castle (0,0)
+- `2` - Move first army to Player 2 castle (9,9)
+- `3` - Move first army to village (3,3)
+- `4` - Move first army to village (6,6)
 - `S` - Split first army (prompts for soldier count in console)
+- `R` - Play again (reset game) - only available when game is over
 - `ESC` - Close window
 
 ### Running the Frontend
@@ -193,6 +204,18 @@ curl -X POST http://localhost:8080/tick
 curl http://localhost:8080/state
 ```
 
+### Reset Game
+```bash
+curl -X POST http://localhost:8080/api/reset
+```
+
+**Note:** The reset endpoint reinitializes the entire game state, including:
+- Resets tick count to 0
+- Restores initial armies at starting positions
+- Resets castle ownership (Player 1 at (0,0), Player 2 at (9,9))
+- Clears game over status
+- Useful after a game ends to start a new match
+
 ## Development
 
 Both projects use Maven and Java 17. Maven Wrapper (mvnw) is included, so Maven installation is optional.
@@ -211,11 +234,11 @@ cd frontend
 
 ### Run Tests
 ```bash
-# Backend tests (33 tests)
+# Backend tests (77 tests)
 cd backend
 ./mvnw test  # or: mvn test
 
-# Frontend tests (12 tests)
+# Frontend tests (15 tests)
 cd frontend
 ./mvnw test  # or: mvn test
 ```
@@ -223,13 +246,13 @@ cd frontend
 ### Continuous Integration
 GitHub Actions workflow automatically runs on pull requests to `main` or `develop`:
 - Builds both backend and frontend
-- Runs all unit tests (72 total: 58 backend + 14 frontend - including ownership and capture tests)
+- Runs all unit tests (92 total: 77 backend + 15 frontend - including castle capture and win condition tests)
 - Packages applications
 - Uses JDK 17 with Maven caching for faster builds
 
 Test coverage includes:
-- **Backend**: Model tests (Army, Command, Tile with ownership, GameState), Service tests (GameService with game mechanics, movement system, and territory control including post-combat capture)
-- **Frontend**: Model tests (Army, Command, Tile with ownerId, GameState)
+- **Backend**: Model tests (Army, Command, Tile with ownership and occupationTicks, GameState with gameOver/winnerId), Service tests (GameService with game mechanics, movement system, territory control including castle capture and win conditions)
+- **Frontend**: Model tests (Army, Command, Tile with ownerId and occupationTicks, GameState with gameOver/winnerId)
 
 ## Game Rules
 
@@ -242,6 +265,9 @@ Test coverage includes:
 7. **Combat:** When armies of different players occupy the same tile, combat occurs
 8. **Combat Resolution:** Each army's soldier count is reduced by the opponent's soldier count (simultaneous damage)
 9. **Army Removal:** Armies with 0 or fewer soldiers are removed from the game
+10. **Castle Capture:** Enemy army must occupy a castle for 3 consecutive ticks to capture it
+11. **Win Condition:** Player wins by capturing all enemy castles
+12. **Loss Condition:** Player loses when they have no castles remaining
 
 ## Territory Control
 
@@ -259,6 +285,13 @@ The game features a territory control system where tiles can be owned by players
   - **Contested Villages**: If multiple armies from different players occupy the same village after combat, the village becomes neutral (ownerId = 0)
   - **Ownership Persistence**: Villages retain their ownership when abandoned (no army present)
   - No capture timer - ownership changes immediately based on post-combat occupation
+
+- **Castle Capture:**
+  - Castles require **3 consecutive ticks** of enemy occupation to capture
+  - If enemy army leaves or friendly army arrives, capture progress resets to 0
+  - Capture progress is visible via `occupationTicks` field on castle tiles
+  - Once captured, ownership transfers to the occupying player
+  - Capture progress bar is displayed above contested castles in the frontend
   
 - **Soldier Generation:**
   - Only villages owned by a player generate soldiers
@@ -269,8 +302,19 @@ The game features a territory control system where tiles can be owned by players
   - A player's income per tick equals the number of villages they own
   - Use `getPlayerIncome(playerId)` to calculate total soldier generation potential
 
+### Win/Loss Conditions
+- **Victory:** Capture all enemy castles to win the game
+- **Defeat:** Lose all your castles to lose the game
+- When game ends:
+  - `gameOver` flag is set to true in game state
+  - `winnerId` indicates the winning player (1 or 2)
+  - Commands are ignored (except for reset)
+  - Win/loss overlay is displayed in the frontend
+  - Press `R` to reset and play again
+
 ### Visual Indicators
 - **Castles**: Gray base with colored outline (blue=Player 1, red=Player 2)
+  - Capture progress bar shown above castles being contested (0-3 ticks)
 - **Villages**:
   - Neutral: Brown
   - Player 1 owned: Brown with blue tint
@@ -279,12 +323,17 @@ The game features a territory control system where tiles can be owned by players
   - XC = castles owned
   - YV = villages owned
   - +Z/tick = income (soldiers generated per tick)
+- **Game Over**: Win/loss overlay displayed when game ends
+  - Green overlay for Player 1 victory
+  - Red overlay for Player 2 victory (player loss)
+  - Press `R` to play again
 
 ### Strategic Implications
 - Controlling more villages increases your army growth rate
 - Capturing enemy villages reduces their income while increasing yours
 - Villages are key strategic objectives for long-term advantage
-- Castle ownership is initialized at game start (castle capture mechanics will be added in future tickets)
+- **Castles are critical:** Losing all castles results in immediate defeat
+- Castle capture requires sustained occupation - defend your castles!
 
 ## Army Movement System
 

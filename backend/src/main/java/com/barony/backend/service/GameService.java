@@ -38,11 +38,16 @@ public class GameService {
             snapshot.incrementTick();
         }
         
+        // Copy game over status
+        snapshot.setGameOver(gameState.isGameOver());
+        snapshot.setWinnerId(gameState.getWinnerId());
+        
         // Deep copy the grid
         for (int x = 0; x < gameState.getWidth(); x++) {
             for (int y = 0; y < gameState.getHeight(); y++) {
                 snapshot.getGrid()[x][y].setType(gameState.getGrid()[x][y].getType());
                 snapshot.getGrid()[x][y].setOwnerId(gameState.getGrid()[x][y].getOwnerId());
+                snapshot.getGrid()[x][y].setOccupationTicks(gameState.getGrid()[x][y].getOccupationTicks());
             }
         }
         
@@ -55,6 +60,11 @@ public class GameService {
     }
     
     public synchronized void tick() {
+        // Don't process ticks if game is over
+        if (gameState.isGameOver()) {
+            return;
+        }
+        
         gameState.incrementTick();
         
         // Process army movement
@@ -114,6 +124,12 @@ public class GameService {
                 }
             }
         }
+        
+        // Process castle capture
+        processCastleCapture();
+        
+        // Check win condition
+        checkWinCondition();
     }
     
     private void processMovement() {
@@ -188,6 +204,11 @@ public class GameService {
     }
     
     public synchronized void executeCommand(Command command) {
+        // Prevent commands when game is over
+        if (gameState.isGameOver()) {
+            return;
+        }
+        
         if ("MOVE".equals(command.getType())) {
             int armyId = command.getArmyId();
             
@@ -311,5 +332,79 @@ public class GameService {
             }
         }
         return income;
+    }
+    
+    private void processCastleCapture() {
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.CASTLE) {
+                    // Find all armies at this location
+                    Integer occupyingPlayer = null;
+                    boolean multiplePlayersPresent = false;
+                    
+                    for (Army army : gameState.getArmiesInternal()) {
+                        if (army.getX() == x && army.getY() == y) {
+                            if (occupyingPlayer == null) {
+                                occupyingPlayer = army.getPlayerId();
+                            } else if (occupyingPlayer != army.getPlayerId()) {
+                                multiplePlayersPresent = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Update castle occupation
+                    if (multiplePlayersPresent || occupyingPlayer == null) {
+                        // Reset occupation ticks if no army or multiple players present
+                        tile.setOccupationTicks(0);
+                    } else if (occupyingPlayer == tile.getOwnerId()) {
+                        // Friendly army - reset occupation ticks
+                        tile.setOccupationTicks(0);
+                    } else {
+                        // Enemy army present - increment occupation ticks
+                        tile.setOccupationTicks(tile.getOccupationTicks() + 1);
+                        
+                        // Capture castle after 3 consecutive ticks
+                        if (tile.getOccupationTicks() >= 3) {
+                            tile.setOwnerId(occupyingPlayer);
+                            tile.setOccupationTicks(0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private void checkWinCondition() {
+        // Count castles owned by each player
+        int player1Castles = 0;
+        int player2Castles = 0;
+        
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.CASTLE) {
+                    if (tile.getOwnerId() == 1) {
+                        player1Castles++;
+                    } else if (tile.getOwnerId() == 2) {
+                        player2Castles++;
+                    }
+                }
+            }
+        }
+        
+        // Check if any player has lost all castles
+        if (player1Castles == 0 && player2Castles > 0) {
+            gameState.setGameOver(true);
+            gameState.setWinnerId(2);
+        } else if (player2Castles == 0 && player1Castles > 0) {
+            gameState.setGameOver(true);
+            gameState.setWinnerId(1);
+        }
+    }
+    
+    public synchronized void resetGame() {
+        initializeGame();
     }
 }

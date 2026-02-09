@@ -3,15 +3,18 @@ package com.barony.backend.model;
 public class Tile {
     private TileType type;
     private int ownerId; // 0=neutral, 1=player1, 2=player2
+    private int occupationTicks; // For castle capture progress
     
     public Tile(TileType type) {
         this.type = type;
         this.ownerId = 0; // Default to neutral
+        this.occupationTicks = 0;
     }
     
     public Tile(TileType type, int ownerId) {
         this.type = type;
         this.ownerId = ownerId;
+        this.occupationTicks = 0;
     }
     
     public TileType getType() {
@@ -28,5 +31,13 @@ public class Tile {
     
     public void setOwnerId(int ownerId) {
         this.ownerId = ownerId;
+    }
+    
+    public int getOccupationTicks() {
+        return occupationTicks;
+    }
+    
+    public void setOccupationTicks(int occupationTicks) {
+        this.occupationTicks = occupationTicks;
     }
 }
