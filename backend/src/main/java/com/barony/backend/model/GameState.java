@@ -10,6 +10,7 @@ public class GameState {
     private int tickCount;
     private boolean gameOver;
     private Integer winnerId; // null if game not over, player ID if game over
+    private boolean aiEnabled; // AI opponent enabled/disabled
     
     public GameState(int width, int height) {
         this.grid = new Tile[width][height];
@@ -17,6 +18,7 @@ public class GameState {
         this.tickCount = 0;
         this.gameOver = false;
         this.winnerId = null;
+        this.aiEnabled = true; // AI enabled by default
         
         // Initialize grid with empty tiles
         for (int x = 0; x < width; x++) {
@@ -71,5 +73,13 @@ public class GameState {
     
     public void setWinnerId(Integer winnerId) {
         this.winnerId = winnerId;
+    }
+    
+    public boolean isAiEnabled() {
+        return aiEnabled;
+    }
+    
+    public void setAiEnabled(boolean aiEnabled) {
+        this.aiEnabled = aiEnabled;
     }
 }
