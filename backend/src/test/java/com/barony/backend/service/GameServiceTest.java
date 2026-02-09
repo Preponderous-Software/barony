@@ -1725,13 +1725,13 @@ class GameServiceTest {
     void aiDefendsThreatenedVillage() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
-        GameState state = gameService.getState();
         
         // Set up: AI owns village at (6,6), move P1 army close to it
-        state.getGrid()[6][6].setOwnerId(2);
+        GameState internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[6][6].setOwnerId(2);
         
-        // Get P1 army and move it close to the village
-        Army p1Army = state.getArmies().stream()
+        // Get P1 army ID and move it close to the village
+        Army p1Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
@@ -1749,7 +1749,7 @@ class GameServiceTest {
         }
         
         // Check that AI army has moved toward the threatened village
-        state = gameService.getState();
+        GameState state = gameService.getState();
         boolean aiArmyMovingToVillage = state.getArmies().stream()
             .filter(a -> a.getPlayerId() == 2)
             .anyMatch(a -> a.isMoving() && 
@@ -1796,10 +1796,10 @@ class GameServiceTest {
     void aiDoesNotMakeSuicidalAttacks() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
-        GameState state = gameService.getState();
         
         // Set up: Give P1 a very strong army near AI castle
-        Army p1Army = state.getArmies().stream()
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p1Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
@@ -1813,7 +1813,7 @@ class GameServiceTest {
         }
         
         // AI should not move weak armies toward P1's strong army
-        state = gameService.getState();
+        GameState state = gameService.getState();
         
         // Check that no AI army is moving directly to P1's position
         boolean aiMovingToStrongEnemy = state.getArmies().stream()
@@ -1830,20 +1830,20 @@ class GameServiceTest {
     void aiAttacksWeakEnemyVillage() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
-        GameState state = gameService.getState();
         
         // Set up: P1 owns a village with no defense
-        state.getGrid()[6][6].setOwnerId(1);
+        GameState internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[6][6].setOwnerId(1);
         
         // Give AI a strong army at its starting position
-        Army aiArmy = state.getArmies().stream()
+        Army aiArmy = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
             .findFirst()
             .get();
         aiArmy.setSoldiers(50);
         
         // Move P1 army far away
-        Army p1Army = state.getArmies().stream()
+        Army p1Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
@@ -1857,7 +1857,7 @@ class GameServiceTest {
         }
         
         // AI should eventually target or capture the weak enemy village
-        state = gameService.getState();
+        GameState state = gameService.getState();
         
         // Check if AI captured the village OR is moving toward it
         boolean aiCapturedVillage = state.getGrid()[6][6].getOwnerId() == 2;
@@ -1874,17 +1874,17 @@ class GameServiceTest {
     void aiAttacksCastleWithOverwhelmingForce() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
-        GameState state = gameService.getState();
         
         // Give AI overwhelming force
-        Army aiArmy = state.getArmies().stream()
+        GameState internalState = gameService.getInternalStateForTest();
+        Army aiArmy = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
             .findFirst()
             .get();
         aiArmy.setSoldiers(100);
         
         // Weaken P1
-        Army p1Army = state.getArmies().stream()
+        Army p1Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
@@ -1898,7 +1898,7 @@ class GameServiceTest {
         }
         
         // AI should move toward or capture P1 castle with overwhelming force
-        state = gameService.getState();
+        GameState state = gameService.getState();
         
         // Check if AI captured castle OR a strong army is at/moving to it
         boolean aiCapturedCastle = state.getGrid()[0][0].getOwnerId() == 2;
@@ -1915,17 +1915,17 @@ class GameServiceTest {
     void aiDoesNotAttackCastleWithoutOverwhelmingForce() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
-        GameState state = gameService.getState();
         
         // Give AI moderate force (not overwhelming)
-        Army aiArmy = state.getArmies().stream()
+        GameState internalState = gameService.getInternalStateForTest();
+        Army aiArmy = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
             .findFirst()
             .get();
         aiArmy.setSoldiers(20);
         
         // P1 has similar force at castle
-        Army p1Army = state.getArmies().stream()
+        Army p1Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
@@ -1939,7 +1939,7 @@ class GameServiceTest {
         }
         
         // AI should NOT target castle without overwhelming force
-        state = gameService.getState();
+        GameState state = gameService.getState();
         boolean aiTargetedCastle = state.getArmies().stream()
             .filter(a -> a.getPlayerId() == 2)
             .anyMatch(a -> a.isMoving() && a.getDestinationX() == 0 && a.getDestinationY() == 0);
@@ -1951,25 +1951,25 @@ class GameServiceTest {
     void aiBuildsForcesWhenNoGoodTargets() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
-        GameState state = gameService.getState();
         
         // Remove all villages to force AI to build up
-        for (int x = 0; x < state.getWidth(); x++) {
-            for (int y = 0; y < state.getHeight(); y++) {
-                if (state.getGrid()[x][y].getType() == TileType.VILLAGE) {
-                    state.getGrid()[x][y].setType(TileType.EMPTY);
+        GameState internalState = gameService.getInternalStateForTest();
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
                 }
             }
         }
         
         // Give P1 overwhelming force to make attacks unsafe
-        Army p1Army = state.getArmies().stream()
+        Army p1Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
         p1Army.setSoldiers(200);
         
-        int initialSoldiers = state.getArmies().stream()
+        int initialSoldiers = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
             .mapToInt(Army::getSoldiers)
             .sum();
@@ -1979,7 +1979,7 @@ class GameServiceTest {
             gameService.tick();
         }
         
-        state = gameService.getState();
+        GameState state = gameService.getState();
         int finalSoldiers = state.getArmies().stream()
             .filter(a -> a.getPlayerId() == 2)
             .mapToInt(Army::getSoldiers)

@@ -68,11 +68,6 @@ public class GameService {
         
         gameState.incrementTick();
         
-        // Execute AI for Player 2 if enabled
-        if (gameState.isAiEnabled()) {
-            executeAI();
-        }
-        
         // Process army movement
         processMovement();
         
@@ -90,6 +85,11 @@ public class GameService {
                     army.setSoldiers(army.getSoldiers() + 1);
                 }
             }
+        }
+        
+        // Execute AI for Player 2 if enabled (after village generation, before combat)
+        if (gameState.isAiEnabled()) {
+            executeAI();
         }
         
         // Process combat
@@ -418,6 +418,12 @@ public class GameService {
         gameState.setAiEnabled(enabled);
     }
     
+    // Package-private test helper to access internal state for test setup
+    // This allows tests to configure scenarios without relying on snapshot mutations
+    synchronized GameState getInternalStateForTest() {
+        return gameState;
+    }
+    
     // AI Methods
     
     private void executeAI() {
@@ -498,7 +504,8 @@ public class GameService {
         }
         
         // Priority 4: Attack enemy castle (if overwhelming force, e.g., 2x enemy strength)
-        int[] enemyCastle = findPlayerCastle(AI_PLAYER_ID == 1 ? 2 : 1);
+        int enemyPlayerId = (AI_PLAYER_ID == 1 ? 2 : 1);
+        int[] enemyCastle = findPlayerCastle(enemyPlayerId);
         if (enemyCastle != null && hasOverwhelmingForce(army, enemyCastle[0], enemyCastle[1])) {
             army.setDestinationX(enemyCastle[0]);
             army.setDestinationY(enemyCastle[1]);
