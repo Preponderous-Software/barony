@@ -170,26 +170,31 @@ Server will start on http://localhost:8080
 
 **HUD Layout:**
 - **Top Bar** (dark background, 15% screen height):
-  - Displays proportional bars showing army, castle, and village counts for both players
-  - Color-coded segments: Player 1 (blue/green shades), Player 2 (red/yellow shades)
-  - Visual representation replaces text due to no text rendering library
+  - Displays tick count, armies, castles, and villages for both players
+  - Text labels show exact counts for Player 1 and Player 2
+  - Proportional colored bars visualize distribution between players
+  - Income per tick displayed (based on village count)
   
 - **Side Panel** (right side, 30% screen width):
   - Shows selected army details when an army is selected
-  - Visual indicators for soldier count (bars)
-  - Displays army destination if moving (green box)
+  - Displays: Army ID, Player, Soldier count, Position
+  - Shows destination coordinates if army is moving
+  - Visual bars indicate soldier count
   
 - **Bottom Bar** (30% screen height):
-  - Game event log showing last 10 actions
-  - Color-coded bars (alternating for visibility) representing recent events
-  - Each bar represents an event: army selections, movement commands, tick events
-  - Events tracked internally but displayed as visual bars (no text rendering)
+  - Game event log showing last 10 actions with text messages
+  - Color-coded entry bars (alternating for visibility)
+  - Events include: army selections, movement commands, tick updates
+  - Real-time text updates show game actions
   
 - **Game Area** (center):
   - Main grid display (70% screen width, 55% screen height)
   - Selection highlight: Pulsing colored border around selected army
   - Movement preview: Faint circle showing where army will move on click
-  - Tooltips: Semi-transparent box with colored bars representing tile/army info
+  - Tooltips: Semi-transparent box with text labels showing:
+    - Tile position, type, and ownership
+    - Army ID, player, soldier count, and movement status
+    - Village income information
 
 ### Running the Frontend
 

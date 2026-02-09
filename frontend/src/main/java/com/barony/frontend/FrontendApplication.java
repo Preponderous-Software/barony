@@ -2,6 +2,7 @@ package com.barony.frontend;
 
 import com.barony.frontend.client.GameClient;
 import com.barony.frontend.model.*;
+import com.barony.frontend.ui.SimpleTextRenderer;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.*;
@@ -924,6 +925,36 @@ public class FrontendApplication {
             glEnd();
         }
         
+        // Add text labels to the top HUD
+        float labelScale = 0.012f;
+        float labelX = hudLeft;
+        
+        // Tick count at the far left
+        SimpleTextRenderer.drawText("TICK: " + gameState.getTickCount(), labelX, hudTop + 0.005f, labelScale, 1.0f, 1.0f, 1.0f);
+        
+        // Armies label
+        SimpleTextRenderer.drawText("ARMIES", labelX, hudTop - 0.005f, labelScale * 0.7f, 0.8f, 0.8f, 0.8f);
+        SimpleTextRenderer.drawText("P1:" + player1Armies, labelX, hudTop - 0.025f, labelScale * 0.7f, 0.3f, 0.7f, 1.0f);
+        SimpleTextRenderer.drawText("P2:" + player2Armies, labelX + 0.15f, hudTop - 0.025f, labelScale * 0.7f, 1.0f, 0.4f, 0.4f);
+        
+        // Castles label
+        float castlesY = hudTop - (barHeight + barSpacing) - 0.005f;
+        SimpleTextRenderer.drawText("CASTLES", labelX, castlesY, labelScale * 0.7f, 0.8f, 0.8f, 0.8f);
+        SimpleTextRenderer.drawText("P1:" + player1Castles, labelX, castlesY - 0.02f, labelScale * 0.7f, 0.2f, 0.9f, 0.5f);
+        SimpleTextRenderer.drawText("P2:" + player2Castles, labelX + 0.15f, castlesY - 0.02f, labelScale * 0.7f, 1.0f, 0.9f, 0.3f);
+        
+        // Villages label
+        float villagesY = hudTop - 2 * (barHeight + barSpacing) - 0.005f;
+        SimpleTextRenderer.drawText("VILLAGES", labelX, villagesY, labelScale * 0.7f, 0.8f, 0.8f, 0.8f);
+        SimpleTextRenderer.drawText("P1:" + player1Villages, labelX, villagesY - 0.02f, labelScale * 0.7f, 0.6f, 0.6f, 1.0f);
+        SimpleTextRenderer.drawText("P2:" + player2Villages, labelX + 0.15f, villagesY - 0.02f, labelScale * 0.7f, 1.0f, 0.6f, 0.6f);
+        
+        // Income display (villages = income per tick)
+        float incomeX = hudRight - 0.3f;
+        SimpleTextRenderer.drawText("INCOME/TICK", incomeX, hudTop + 0.005f, labelScale * 0.7f, 0.8f, 0.8f, 0.8f);
+        SimpleTextRenderer.drawText("P1: +" + player1Villages, incomeX, hudTop - 0.02f, labelScale * 0.8f, 0.3f, 1.0f, 0.3f);
+        SimpleTextRenderer.drawText("P2: +" + player2Villages, incomeX, hudTop - 0.045f, labelScale * 0.8f, 1.0f, 0.3f, 0.3f);
+        
         // Render side panel (right side, dark background)
         glColor3f(0.1f, 0.1f, 0.1f);
         glBegin(GL_QUADS);
@@ -1003,6 +1034,34 @@ public class FrontendApplication {
                 glVertex2f(0.72f, destBoxY + 0.08f);
                 glEnd();
             }
+            
+            // Add text labels for selected army panel
+            float panelTextScale = 0.01f;
+            
+            // Title
+            SimpleTextRenderer.drawText("SELECTED ARMY", 0.72f, 0.84f, panelTextScale, 1.0f, 1.0f, 1.0f);
+            
+            // Army ID and Player
+            String playerText = selectedArmy.getPlayerId() == 1 ? "P1" : "P2";
+            SimpleTextRenderer.drawText("ID: " + selectedArmyId, 0.82f, 0.805f, panelTextScale * 0.8f, 0.9f, 0.9f, 0.9f);
+            SimpleTextRenderer.drawText(playerText, 0.72f, 0.805f, panelTextScale * 0.8f, 
+                selectedArmy.getPlayerId() == 1 ? 0.3f : 1.0f, 
+                selectedArmy.getPlayerId() == 1 ? 0.3f : 0.3f,
+                selectedArmy.getPlayerId() == 1 ? 1.0f : 0.3f);
+            
+            // Soldier count label
+            SimpleTextRenderer.drawText("SOLDIERS: " + selectedArmy.getSoldiers(), 0.72f, 0.70f, panelTextScale * 0.9f, 1.0f, 1.0f, 0.0f);
+            
+            // Position
+            SimpleTextRenderer.drawText("POS: (" + selectedArmy.getX() + "," + selectedArmy.getY() + ")", 
+                0.72f, 0.65f, panelTextScale * 0.8f, 0.8f, 0.8f, 0.8f);
+            
+            // Destination if moving
+            if (selectedArmy.isMoving()) {
+                SimpleTextRenderer.drawText("MOVING TO:", 0.72f, -0.15f, panelTextScale * 0.8f, 0.3f, 1.0f, 0.3f);
+                SimpleTextRenderer.drawText("(" + selectedArmy.getDestinationX() + "," + selectedArmy.getDestinationY() + ")", 
+                    0.72f, -0.18f, panelTextScale * 0.9f, 0.5f, 1.0f, 0.5f);
+            }
         }
         
         // Render bottom bar (game log)
@@ -1024,6 +1083,11 @@ public class FrontendApplication {
         // Draw game log entries as colored bars representing events
         float logY = -0.72f;
         float logHeight = 0.025f;
+        float logTextScale = 0.0065f;
+        
+        // Add title for game log
+        SimpleTextRenderer.drawText("GAME LOG:", -0.98f, GAME_BOTTOM + 0.005f, 0.01f, 1.0f, 1.0f, 1.0f);
+        
         for (int i = 0; i < Math.min(gameLog.size(), MAX_LOG_ENTRIES); i++) {
             // Alternate colors for visibility
             if (i % 2 == 0) {
@@ -1038,6 +1102,10 @@ public class FrontendApplication {
             glVertex2f(0.68f, logY - i * 0.028f - logHeight);
             glVertex2f(-0.98f, logY - i * 0.028f - logHeight);
             glEnd();
+            
+            // Draw the log message text
+            String logMessage = gameLog.get(i);
+            SimpleTextRenderer.drawText(logMessage, -0.97f, logY - i * 0.028f - 0.003f, logTextScale, 1.0f, 1.0f, 1.0f);
         }
     }
     
@@ -1106,90 +1174,65 @@ public class FrontendApplication {
         Tile tile = gameState.getGrid()[hoveredGridX][hoveredGridY];
         Army army = getArmyAt(hoveredGridX, hoveredGridY);
         
-        // Draw info indicators (colored bars representing different properties)
-        float barY = tooltipY - 0.02f;
-        float barHeight = 0.02f;
-        float barSpacing = 0.025f;
+        // Add text labels to tooltip
+        float tooltipTextScale = 0.008f;
+        float textY = tooltipY - 0.015f;
         
-        // Tile type indicator
+        // Position
+        SimpleTextRenderer.drawText("TILE: (" + hoveredGridX + "," + hoveredGridY + ")", tooltipX + 0.01f, textY, tooltipTextScale, 1.0f, 1.0f, 1.0f);
+        textY -= 0.025f;
+        
+        // Tile type
+        String tileTypeText = "TYPE: ";
         switch (tile.getType()) {
             case CASTLE:
-                glColor3f(0.5f, 0.5f, 0.5f); // Gray
+                tileTypeText += "CASTLE";
                 break;
             case VILLAGE:
-                glColor3f(0.6f, 0.3f, 0.0f); // Brown
+                tileTypeText += "VILLAGE";
                 break;
             case EMPTY:
-                glColor3f(0.0f, 0.5f, 0.0f); // Green
+                tileTypeText += "EMPTY";
                 break;
         }
-        glBegin(GL_QUADS);
-        glVertex2f(tooltipX + 0.01f, barY);
-        glVertex2f(tooltipX + 0.1f, barY);
-        glVertex2f(tooltipX + 0.1f, barY - barHeight);
-        glVertex2f(tooltipX + 0.01f, barY - barHeight);
-        glEnd();
-        barY -= barSpacing;
+        SimpleTextRenderer.drawText(tileTypeText, tooltipX + 0.01f, textY, tooltipTextScale, 0.9f, 0.9f, 0.9f);
+        textY -= 0.022f;
         
-        // Ownership indicator
+        // Ownership
+        String ownerText = "OWNER: ";
         if (tile.getOwnerId() == 1) {
-            glColor3f(0.0f, 0.0f, 1.0f); // Blue - Player 1
+            ownerText += "PLAYER 1";
+            SimpleTextRenderer.drawText(ownerText, tooltipX + 0.01f, textY, tooltipTextScale, 0.3f, 0.3f, 1.0f);
         } else if (tile.getOwnerId() == 2) {
-            glColor3f(1.0f, 0.0f, 0.0f); // Red - Player 2
+            ownerText += "PLAYER 2";
+            SimpleTextRenderer.drawText(ownerText, tooltipX + 0.01f, textY, tooltipTextScale, 1.0f, 0.3f, 0.3f);
         } else {
-            glColor3f(0.5f, 0.5f, 0.5f); // Gray - Neutral
+            ownerText += "NEUTRAL";
+            SimpleTextRenderer.drawText(ownerText, tooltipX + 0.01f, textY, tooltipTextScale, 0.7f, 0.7f, 0.7f);
         }
-        glBegin(GL_QUADS);
-        glVertex2f(tooltipX + 0.01f, barY);
-        glVertex2f(tooltipX + 0.1f, barY);
-        glVertex2f(tooltipX + 0.1f, barY - barHeight);
-        glVertex2f(tooltipX + 0.01f, barY - barHeight);
-        glEnd();
-        barY -= barSpacing;
+        textY -= 0.022f;
+        
+        // Income for villages
+        if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() > 0) {
+            SimpleTextRenderer.drawText("INCOME: +1/TICK", tooltipX + 0.01f, textY, tooltipTextScale, 0.3f, 1.0f, 0.3f);
+            textY -= 0.022f;
+        }
         
         // Army info if present
         if (army != null) {
-            // Army player indicator
-            if (army.getPlayerId() == 1) {
-                glColor3f(0.0f, 0.0f, 1.0f);
-            } else {
-                glColor3f(1.0f, 0.0f, 0.0f);
-            }
-            glBegin(GL_QUADS);
-            glVertex2f(tooltipX + 0.01f, barY);
-            glVertex2f(tooltipX + 0.1f, barY);
-            glVertex2f(tooltipX + 0.1f, barY - barHeight);
-            glVertex2f(tooltipX + 0.01f, barY - barHeight);
-            glEnd();
-            barY -= barSpacing;
+            String armyText = "ARMY ID: " + army.getId() + " (P" + army.getPlayerId() + ")";
+            float armyR = army.getPlayerId() == 1 ? 0.3f : 1.0f;
+            float armyG = army.getPlayerId() == 1 ? 0.3f : 0.3f;
+            float armyB = army.getPlayerId() == 1 ? 1.0f : 0.3f;
+            SimpleTextRenderer.drawText(armyText, tooltipX + 0.01f, textY, tooltipTextScale, armyR, armyG, armyB);
+            textY -= 0.022f;
             
-            // Soldier count indicator (bars)
-            int displaySoldiers = Math.min(army.getSoldiers(), MAX_TOOLTIP_SOLDIERS);
-            float soldierBarWidth = 0.015f;
-            for (int i = 0; i < displaySoldiers; i++) {
-                if (army.getPlayerId() == 1) {
-                    glColor3f(0.3f, 0.3f, 0.8f);
-                } else {
-                    glColor3f(0.8f, 0.3f, 0.3f);
-                }
-                glBegin(GL_QUADS);
-                glVertex2f(tooltipX + 0.01f + i * soldierBarWidth, barY);
-                glVertex2f(tooltipX + 0.01f + (i + 1) * soldierBarWidth - 0.002f, barY);
-                glVertex2f(tooltipX + 0.01f + (i + 1) * soldierBarWidth - 0.002f, barY - barHeight);
-                glVertex2f(tooltipX + 0.01f + i * soldierBarWidth, barY - barHeight);
-                glEnd();
-            }
-            barY -= barSpacing;
+            SimpleTextRenderer.drawText("SOLDIERS: " + army.getSoldiers(), tooltipX + 0.01f, textY, tooltipTextScale, 1.0f, 1.0f, 0.0f);
+            textY -= 0.022f;
             
-            // Movement status indicator
             if (army.isMoving()) {
-                glColor3f(0.0f, 0.8f, 0.0f); // Green - moving
-                glBegin(GL_QUADS);
-                glVertex2f(tooltipX + 0.01f, barY);
-                glVertex2f(tooltipX + 0.1f, barY);
-                glVertex2f(tooltipX + 0.1f, barY - barHeight);
-                glVertex2f(tooltipX + 0.01f, barY - barHeight);
-                glEnd();
+                SimpleTextRenderer.drawText("MOVING TO: (" + army.getDestinationX() + "," + army.getDestinationY() + ")", 
+                    tooltipX + 0.01f, textY, tooltipTextScale * 0.9f, 0.3f, 1.0f, 0.3f);
             }
         }
     }

@@ -1,0 +1,151 @@
+package com.barony.frontend.ui;
+
+import static org.lwjgl.opengl.GL11.*;
+
+/**
+ * Simple bitmap-based text renderer for OpenGL.
+ * Uses a simple 5x7 pixel font for rendering ASCII characters.
+ */
+public class SimpleTextRenderer {
+    
+    // Simple 5x7 bitmap font data for basic ASCII characters (32-126)
+    // Each character is represented as 7 bytes, where each byte is a row of 5 pixels
+    private static final byte[][] FONT_DATA = new byte[95][7];
+    
+    static {
+        initFontData();
+    }
+    
+    private static void initFontData() {
+        // Space (32)
+        setChar(' ', new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+        
+        // Numbers 0-9
+        setChar('0', new byte[]{0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E});
+        setChar('1', new byte[]{0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E});
+        setChar('2', new byte[]{0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F});
+        setChar('3', new byte[]{0x0E, 0x11, 0x01, 0x0E, 0x01, 0x11, 0x0E});
+        setChar('4', new byte[]{0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02});
+        setChar('5', new byte[]{0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E});
+        setChar('6', new byte[]{0x0E, 0x10, 0x10, 0x1E, 0x11, 0x11, 0x0E});
+        setChar('7', new byte[]{0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08});
+        setChar('8', new byte[]{0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E});
+        setChar('9', new byte[]{0x0E, 0x11, 0x11, 0x0F, 0x01, 0x01, 0x0E});
+        
+        // Letters A-Z
+        setChar('A', new byte[]{0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11});
+        setChar('B', new byte[]{0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E});
+        setChar('C', new byte[]{0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E});
+        setChar('D', new byte[]{0x1E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1E});
+        setChar('E', new byte[]{0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F});
+        setChar('F', new byte[]{0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10});
+        setChar('G', new byte[]{0x0E, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0F});
+        setChar('H', new byte[]{0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11});
+        setChar('I', new byte[]{0x0E, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0E});
+        setChar('J', new byte[]{0x07, 0x02, 0x02, 0x02, 0x02, 0x12, 0x0C});
+        setChar('K', new byte[]{0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11});
+        setChar('L', new byte[]{0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F});
+        setChar('M', new byte[]{0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11});
+        setChar('N', new byte[]{0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11});
+        setChar('O', new byte[]{0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E});
+        setChar('P', new byte[]{0x1E, 0x11, 0x11, 0x1E, 0x10, 0x10, 0x10});
+        setChar('Q', new byte[]{0x0E, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0D});
+        setChar('R', new byte[]{0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11});
+        setChar('S', new byte[]{0x0E, 0x11, 0x10, 0x0E, 0x01, 0x11, 0x0E});
+        setChar('T', new byte[]{0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04});
+        setChar('U', new byte[]{0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E});
+        setChar('V', new byte[]{0x11, 0x11, 0x11, 0x11, 0x11, 0x0A, 0x04});
+        setChar('W', new byte[]{0x11, 0x11, 0x11, 0x15, 0x15, 0x1B, 0x11});
+        setChar('X', new byte[]{0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11});
+        setChar('Y', new byte[]{0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04});
+        setChar('Z', new byte[]{0x1F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1F});
+        
+        // Common punctuation
+        setChar(':', new byte[]{0x00, 0x0C, 0x0C, 0x00, 0x0C, 0x0C, 0x00});
+        setChar('.', new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C});
+        setChar(',', new byte[]{0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C, 0x08});
+        setChar('!', new byte[]{0x04, 0x04, 0x04, 0x04, 0x04, 0x00, 0x04});
+        setChar('?', new byte[]{0x0E, 0x11, 0x01, 0x02, 0x04, 0x00, 0x04});
+        setChar('-', new byte[]{0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00});
+        setChar('+', new byte[]{0x00, 0x04, 0x04, 0x1F, 0x04, 0x04, 0x00});
+        setChar('/', new byte[]{0x01, 0x01, 0x02, 0x04, 0x08, 0x10, 0x10});
+        setChar('(', new byte[]{0x02, 0x04, 0x08, 0x08, 0x08, 0x04, 0x02});
+        setChar(')', new byte[]{0x08, 0x04, 0x02, 0x02, 0x02, 0x04, 0x08});
+        setChar('#', new byte[]{0x0A, 0x0A, 0x1F, 0x0A, 0x1F, 0x0A, 0x0A});
+        setChar('|', new byte[]{0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04});
+    }
+    
+    private static void setChar(char c, byte[] data) {
+        int index = c - 32;
+        if (index >= 0 && index < FONT_DATA.length) {
+            FONT_DATA[index] = data;
+        }
+    }
+    
+    /**
+     * Renders text at the specified position in normalized device coordinates.
+     * 
+     * @param text The text to render
+     * @param x X position in normalized coordinates (-1 to 1)
+     * @param y Y position in normalized coordinates (-1 to 1)
+     * @param scale Scale factor for the text (0.01 is reasonable for NDC)
+     * @param r Red color component (0-1)
+     * @param g Green color component (0-1)
+     * @param b Blue color component (0-1)
+     */
+    public static void drawText(String text, float x, float y, float scale, float r, float g, float b) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        
+        glColor3f(r, g, b);
+        
+        float currentX = x;
+        float charWidth = scale * 6; // 5 pixels + 1 pixel spacing
+        float charHeight = scale * 7;
+        float pixelSize = scale;
+        
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            int index = c - 32;
+            
+            if (index >= 0 && index < FONT_DATA.length) {
+                byte[] charData = FONT_DATA[index];
+                
+                // Draw each pixel of the character
+                for (int row = 0; row < 7; row++) {
+                    byte rowData = charData[row];
+                    for (int col = 0; col < 5; col++) {
+                        if ((rowData & (1 << (4 - col))) != 0) {
+                            float px = currentX + col * pixelSize;
+                            float py = y - row * pixelSize;
+                            
+                            glBegin(GL_QUADS);
+                            glVertex2f(px, py);
+                            glVertex2f(px + pixelSize, py);
+                            glVertex2f(px + pixelSize, py - pixelSize);
+                            glVertex2f(px, py - pixelSize);
+                            glEnd();
+                        }
+                    }
+                }
+            }
+            
+            currentX += charWidth;
+        }
+    }
+    
+    /**
+     * Measures the width of text in normalized device coordinates.
+     * 
+     * @param text The text to measure
+     * @param scale Scale factor for the text
+     * @return Width in normalized coordinates
+     */
+    public static float measureText(String text, float scale) {
+        if (text == null || text.isEmpty()) {
+            return 0;
+        }
+        return text.length() * scale * 6;
+    }
+}
