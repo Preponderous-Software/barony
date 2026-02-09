@@ -97,10 +97,16 @@ The game features a rule-based AI that controls Player 2 armies with intelligent
 - Can coordinate multiple armies to capture different objectives simultaneously
 - Validates all moves to ensure they're within map bounds
 - Only controls Player 2 armies (Player 1 is controlled by the player)
+- **Note**: Army splitting functionality is not yet implemented in the AI decision engine (planned for future enhancement)
 
 **Configuration:**
 - AI is enabled by default but can be disabled via the `aiEnabled` flag in the game state
 - AI difficulty can be adjusted by modifying spawn rates, force multipliers, or decision priorities in `GameService.java`
+
+**Technical Details:**
+- AI execution occurs after village soldier generation and before combat resolution
+- This ensures AI decisions account for current turn's village income
+- Spawned armies are immediately available for AI decision-making
 
 ### Running the Backend
 
