@@ -169,22 +169,22 @@ Server will start on http://localhost:8080
 ### UI Elements
 
 **HUD Layout:**
-- **Top Bar** (dark background, 15% of screen height):
+- **Top Bar** (dark background, 15% screen height):
   - Displays game statistics for both players
   - Shows tick count, castles, villages, and income
   
-- **Side Panel** (right side, 30% of screen width):
+- **Side Panel** (right side, 30% screen width):
   - Shows selected army details when an army is selected
   - Visual indicators for soldier count (bars)
   - Displays army destination if moving (green box)
   
-- **Bottom Bar** (30% of screen height):
+- **Bottom Bar** (30% screen height):
   - Game event log showing last 10 actions
   - Color-coded entries (alternating for visibility)
   - Messages include: army selections, movement commands, tick events
   
 - **Game Area** (center):
-  - Main grid display (70% width, 55% height)
+  - Main grid display (70% screen width, 55% screen height)
   - Selection highlight: Pulsing colored border around selected army
   - Movement preview: Faint circle showing where army will move on click
   - Tooltips: Semi-transparent box with colored bars representing tile/army info

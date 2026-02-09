@@ -37,6 +37,8 @@ public class FrontendApplication {
     // Game log (circular buffer)
     private java.util.LinkedList<String> gameLog = new java.util.LinkedList<>();
     private static final int MAX_LOG_ENTRIES = 10;
+    private static final int MAX_PANEL_SOLDIERS = 20;
+    private static final int MAX_TOOLTIP_SOLDIERS = 10;
     
     public void run() {
         init();
@@ -104,9 +106,8 @@ public class FrontendApplication {
             if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
                 // Send a tick command
                 if (client != null) {
-                    GameState previousState = gameState;
                     gameState = client.tick();
-                    if (gameState != null && previousState != null) {
+                    if (gameState != null) {
                         // Add log message for tick
                         addLogMessage("Tick " + gameState.getTickCount());
                         System.out.println("Tick sent. Current tick: " + gameState.getTickCount());
@@ -727,28 +728,20 @@ public class FrontendApplication {
             return null;
         }
         
-        // Return first army at this position (prioritize Player 1 armies)
-        Army player1Army = null;
+        // Find armies at this position (prioritize Player 1 armies)
+        Army firstArmy = null;
         for (Army army : gameState.getArmies()) {
             if (army.getX() == x && army.getY() == y) {
                 if (army.getPlayerId() == 1) {
-                    player1Army = army;
+                    return army; // Return Player 1 army immediately
+                }
+                if (firstArmy == null) {
+                    firstArmy = army; // Store first army found
                 }
             }
         }
         
-        // If no Player 1 army, return any army at this position
-        if (player1Army != null) {
-            return player1Army;
-        }
-        
-        for (Army army : gameState.getArmies()) {
-            if (army.getX() == x && army.getY() == y) {
-                return army;
-            }
-        }
-        
-        return null;
+        return firstArmy;
     }
     
     private Army getSelectedArmy() {
@@ -884,7 +877,7 @@ public class FrontendApplication {
             // Draw soldier count bars
             float barY = 0.68f;
             float barHeight = 0.03f;
-            int displaySoldiers = Math.min(selectedArmy.getSoldiers(), 20);
+            int displaySoldiers = Math.min(selectedArmy.getSoldiers(), MAX_PANEL_SOLDIERS);
             for (int i = 0; i < displaySoldiers; i++) {
                 if (selectedArmy.getPlayerId() == 1) {
                     glColor3f(0.3f, 0.3f, 0.8f);
@@ -1067,7 +1060,7 @@ public class FrontendApplication {
             barY -= barSpacing;
             
             // Soldier count indicator (bars)
-            int displaySoldiers = Math.min(army.getSoldiers(), 10);
+            int displaySoldiers = Math.min(army.getSoldiers(), MAX_TOOLTIP_SOLDIERS);
             float soldierBarWidth = 0.015f;
             for (int i = 0; i < displaySoldiers; i++) {
                 if (army.getPlayerId() == 1) {
