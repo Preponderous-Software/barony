@@ -41,6 +41,7 @@ public class GameService {
         // Copy game over status
         snapshot.setGameOver(gameState.isGameOver());
         snapshot.setWinnerId(gameState.getWinnerId());
+        snapshot.setAiEnabled(gameState.isAiEnabled());
         
         // Deep copy the grid
         for (int x = 0; x < gameState.getWidth(); x++) {
@@ -66,6 +67,11 @@ public class GameService {
         }
         
         gameState.incrementTick();
+        
+        // Execute AI for Player 2 if enabled
+        if (gameState.isAiEnabled()) {
+            executeAI();
+        }
         
         // Process army movement
         processMovement();
@@ -406,5 +412,203 @@ public class GameService {
     
     public synchronized void resetGame() {
         initializeGame();
+    }
+    
+    public synchronized void setAiEnabled(boolean enabled) {
+        gameState.setAiEnabled(enabled);
+    }
+    
+    // AI Methods
+    
+    private void executeAI() {
+        final int AI_PLAYER_ID = 2;
+        
+        // AI spawning: spawn 10 soldiers at P2 castle every 5 ticks
+        if (gameState.getTickCount() % 5 == 0) {
+            spawnAIArmy();
+        }
+        
+        // Get all AI armies
+        java.util.List<Army> aiArmies = new java.util.ArrayList<>();
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getPlayerId() == AI_PLAYER_ID && !army.isMoving()) {
+                aiArmies.add(army);
+            }
+        }
+        
+        // Make decisions for each idle AI army
+        for (Army army : aiArmies) {
+            makeAIDecision(army);
+        }
+    }
+    
+    private void spawnAIArmy() {
+        final int AI_PLAYER_ID = 2;
+        
+        // Find Player 2's castle
+        int[] castlePos = findPlayerCastle(AI_PLAYER_ID);
+        if (castlePos == null) {
+            return; // No castle found
+        }
+        
+        // Check if there's already an army at the castle location
+        Army existingArmy = null;
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getX() == castlePos[0] && army.getY() == castlePos[1] && army.getPlayerId() == AI_PLAYER_ID) {
+                existingArmy = army;
+                break;
+            }
+        }
+        
+        if (existingArmy != null) {
+            // Add soldiers to existing army
+            existingArmy.setSoldiers(existingArmy.getSoldiers() + 10);
+        } else {
+            // Create new army at castle
+            gameState.getArmiesInternal().add(new Army(castlePos[0], castlePos[1], 10, AI_PLAYER_ID));
+        }
+    }
+    
+    private void makeAIDecision(Army army) {
+        final int AI_PLAYER_ID = 2;
+        
+        // Priority 1: Defend owned villages under threat (enemy within 3 tiles)
+        int[] threatenedVillage = findThreatenedVillage(AI_PLAYER_ID);
+        if (threatenedVillage != null) {
+            army.setDestinationX(threatenedVillage[0]);
+            army.setDestinationY(threatenedVillage[1]);
+            return;
+        }
+        
+        // Priority 2: Capture nearest neutral village (if safe to do so)
+        int[] neutralVillage = findNearestNeutralVillage(army.getX(), army.getY());
+        if (neutralVillage != null && isSafeToCapture(army, neutralVillage[0], neutralVillage[1])) {
+            army.setDestinationX(neutralVillage[0]);
+            army.setDestinationY(neutralVillage[1]);
+            return;
+        }
+        
+        // Priority 3: Attack weakly-defended enemy villages (if superior force)
+        int[] weakVillage = findWeakEnemyVillage(army, AI_PLAYER_ID);
+        if (weakVillage != null) {
+            army.setDestinationX(weakVillage[0]);
+            army.setDestinationY(weakVillage[1]);
+            return;
+        }
+        
+        // Priority 4: Attack enemy castle (if overwhelming force, e.g., 2x enemy strength)
+        int[] enemyCastle = findPlayerCastle(AI_PLAYER_ID == 1 ? 2 : 1);
+        if (enemyCastle != null && hasOverwhelmingForce(army, enemyCastle[0], enemyCastle[1])) {
+            army.setDestinationX(enemyCastle[0]);
+            army.setDestinationY(enemyCastle[1]);
+            return;
+        }
+        
+        // Priority 5: Build up forces in villages (stay put, no action needed)
+        // Do nothing - army stays at current position
+    }
+    
+    private int[] findPlayerCastle(int playerId) {
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.CASTLE && tile.getOwnerId() == playerId) {
+                    return new int[]{x, y};
+                }
+            }
+        }
+        return null;
+    }
+    
+    private int[] findThreatenedVillage(int playerId) {
+        // Find AI-owned villages that have enemy armies within 3 tiles
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == playerId) {
+                    // Check if any enemy army is within 3 tiles
+                    for (Army army : gameState.getArmiesInternal()) {
+                        if (army.getPlayerId() != playerId) {
+                            int distance = Math.abs(army.getX() - x) + Math.abs(army.getY() - y);
+                            if (distance <= 3) {
+                                return new int[]{x, y};
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    private int[] findNearestNeutralVillage(int x, int y) {
+        int[] nearest = null;
+        int minDistance = Integer.MAX_VALUE;
+        
+        for (int vx = 0; vx < gameState.getWidth(); vx++) {
+            for (int vy = 0; vy < gameState.getHeight(); vy++) {
+                Tile tile = gameState.getGrid()[vx][vy];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == 0) {
+                    int distance = Math.abs(vx - x) + Math.abs(vy - y);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearest = new int[]{vx, vy};
+                    }
+                }
+            }
+        }
+        return nearest;
+    }
+    
+    private boolean isSafeToCapture(Army army, int targetX, int targetY) {
+        // Check if there are enemy armies near the target
+        for (Army enemyArmy : gameState.getArmiesInternal()) {
+            if (enemyArmy.getPlayerId() != army.getPlayerId()) {
+                int distance = Math.abs(enemyArmy.getX() - targetX) + Math.abs(enemyArmy.getY() - targetY);
+                // If enemy is close and stronger, it's not safe
+                if (distance <= 2 && enemyArmy.getSoldiers() >= army.getSoldiers()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    private int[] findWeakEnemyVillage(Army army, int playerId) {
+        // Find enemy villages that this army can defeat
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() != 0 && tile.getOwnerId() != playerId) {
+                    // Calculate total enemy force at this village
+                    int enemyForce = 0;
+                    for (Army enemyArmy : gameState.getArmiesInternal()) {
+                        if (enemyArmy.getX() == x && enemyArmy.getY() == y && enemyArmy.getPlayerId() != playerId) {
+                            enemyForce += enemyArmy.getSoldiers();
+                        }
+                    }
+                    
+                    // Attack if we have superior force (at least 1.5x)
+                    if (army.getSoldiers() >= enemyForce * 1.5) {
+                        return new int[]{x, y};
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    private boolean hasOverwhelmingForce(Army army, int targetX, int targetY) {
+        // Calculate total enemy force at target
+        int enemyForce = 0;
+        for (Army enemyArmy : gameState.getArmiesInternal()) {
+            if (enemyArmy.getPlayerId() != army.getPlayerId() && 
+                enemyArmy.getX() == targetX && enemyArmy.getY() == targetY) {
+                enemyForce += enemyArmy.getSoldiers();
+            }
+        }
+        
+        // Require 2x force to attack castle
+        return army.getSoldiers() >= enemyForce * 2;
     }
 }
