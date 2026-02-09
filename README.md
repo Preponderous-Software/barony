@@ -19,6 +19,7 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 - Thread-safe game state management with synchronized access
 - Stable army identification using unique IDs (not list indices)
 - **Army Movement System**: Armies move 1 tile per tick using Manhattan distance pathfinding
+- **AI Opponent System**: Rule-based AI controls Player 2 armies with intelligent decision-making
 
 ### REST Endpoints
 - `GET /state` - Get current game state (returns JSON with grid, armies, tick count, gameOver, winnerId)
@@ -75,6 +76,31 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 - `occupationTicks` indicates castle capture progress (0-3, only relevant for castles)
 - `gameOver` is true when the game has ended
 - `winnerId` is null during play, set to winning player ID (1 or 2) when game ends
+- `aiEnabled` is a boolean indicating whether the AI opponent is active (true by default)
+
+### AI Opponent
+
+The game features a rule-based AI that controls Player 2 armies with intelligent decision-making:
+
+**AI Behavior:**
+- **Automatic Spawning**: Spawns 10 soldiers at Player 2's castle every 5 ticks as a catch-up mechanism
+- **Priority-Based Decision Making**: The AI evaluates all idle armies each tick and assigns them actions based on the following priorities:
+  1. **Defend Territory** (Priority 1): Moves armies to defend owned villages if enemy forces are within 3 tiles
+  2. **Capture Neutral Villages** (Priority 2): Targets the nearest neutral village if it's safe to do so (no strong enemy forces nearby)
+  3. **Attack Weak Positions** (Priority 3): Attacks enemy-owned villages when the AI has superior force (1.5x enemy strength)
+  4. **Attack Enemy Castle** (Priority 4): Moves to attack the enemy castle only with overwhelming force (2x enemy strength)
+  5. **Build Up Forces** (Priority 5): If no better action is available, armies stay put to accumulate soldiers from village generation
+
+**AI Strategy:**
+- Never makes suicidal attacks against superior enemy forces
+- Considers both army strength and positioning when making decisions
+- Can coordinate multiple armies to capture different objectives simultaneously
+- Validates all moves to ensure they're within map bounds
+- Only controls Player 2 armies (Player 1 is controlled by the player)
+
+**Configuration:**
+- AI is enabled by default but can be disabled via the `aiEnabled` flag in the game state
+- AI difficulty can be adjusted by modifying spawn rates, force multipliers, or decision priorities in `GameService.java`
 
 ### Running the Backend
 
