@@ -152,8 +152,8 @@ Server will start on http://localhost:8080
 - `Left Click` on tile (with army selected) - Move selected army to that location
 - `Right Click` - Deselect currently selected army
 - `Hover` over tile/army - Show tooltip after 0.5s delay with:
-  - Tile type and ownership (color-coded bars)
-  - Army information (player, soldier count, movement status)
+  - Tile type and ownership (displayed with color-coded text labels)
+  - Army information (player, soldier count, movement status with text labels)
 
 **Keyboard Controls:**
 - `SPACE` - Send tick command to server
@@ -195,6 +195,8 @@ Server will start on http://localhost:8080
     - Tile position, type, and ownership
     - Army ID, player, soldier count, and movement status
     - Village income information
+
+> **Note:** UI screenshots require a running display server (X11/Wayland) for rendering. The application uses LWJGL for OpenGL rendering, which requires a graphical environment. In headless environments, the UI cannot be displayed or captured.
 
 ### Running the Frontend
 
