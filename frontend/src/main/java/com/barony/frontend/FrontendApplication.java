@@ -888,6 +888,23 @@ public class FrontendApplication {
         return null;
     }
     
+    private String formatPolicyName(String policy) {
+        if (policy == null) return "None";
+        // Convert HEAVY_TAXATION -> Heavy Tax
+        String[] parts = policy.split("_");
+        if (parts.length == 0) return policy;
+        
+        // Take first word and capitalize
+        String result = parts[0].charAt(0) + parts[0].substring(1).toLowerCase();
+        
+        // Add abbreviated second word if exists
+        if (parts.length > 1) {
+            result += " " + parts[1].substring(0, Math.min(3, parts[1].length()));
+        }
+        
+        return result;
+    }
+    
     private void addLogMessage(String message) {
         gameLog.addFirst(message);
         if (gameLog.size() > MAX_LOG_ENTRIES) {
@@ -1148,6 +1165,103 @@ public class FrontendApplication {
                 SimpleTextRenderer.drawText("(" + selectedArmy.getDestinationX() + "," + selectedArmy.getDestinationY() + ")", 
                     panelLeft + 0.01f, destInfoY + 0.008f, panelTextScale, 0.1f, 0.3f, 0.1f);
             }
+        }
+        
+        // Render ruler stats panel (below selected army or at top if no selection)
+        float statsY = selectedArmy != null ? 0.35f : GAME_TOP - 0.02f;
+        float panelLeft = GAME_RIGHT + 0.02f;
+        float panelTextScale = 0.004f;
+        
+        // Title for ruler stats
+        SimpleTextRenderer.drawText("RULER STATS (P1)", panelLeft, statsY, panelTextScale, 1.0f, 0.8f, 0.2f);
+        statsY -= 0.05f;
+        
+        // Display morale, loyalty, stability info from army/village data
+        if (gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
+            // Calculate averages for Player 1
+            int p1ArmyCount = 0;
+            int totalMorale = 0;
+            int totalLoyalty = 0;
+            
+            for (Army army : gameState.getArmies()) {
+                if (army.getPlayerId() == 1) {
+                    p1ArmyCount++;
+                    totalMorale += army.getMorale();
+                    totalLoyalty += army.getLoyalty();
+                }
+            }
+            
+            if (p1ArmyCount > 0) {
+                int avgMorale = totalMorale / p1ArmyCount;
+                int avgLoyalty = totalLoyalty / p1ArmyCount;
+                
+                // Morale (color based on value)
+                float moraleColor = avgMorale >= 100 ? 0.2f : 1.0f;
+                SimpleTextRenderer.drawText("Avg Morale: " + avgMorale + "%", panelLeft, statsY, panelTextScale, 
+                    moraleColor, 0.8f, moraleColor);
+                statsY -= 0.04f;
+                
+                // Loyalty (color based on value)
+                float loyaltyColor = avgLoyalty >= 80 ? 0.2f : 1.0f;
+                SimpleTextRenderer.drawText("Avg Loyalty: " + avgLoyalty + "%", panelLeft, statsY, panelTextScale, 
+                    loyaltyColor, 0.8f, loyaltyColor);
+                statsY -= 0.04f;
+            }
+        }
+        
+        // Display village stability if Player 1 owns villages
+        if (gameState.getGrid() != null) {
+            int villageCount = 0;
+            int totalStability = 0;
+            
+            for (int x = 0; x < gameState.getGrid().length; x++) {
+                for (int y = 0; y < gameState.getGrid()[x].length; y++) {
+                    Tile tile = gameState.getGrid()[x][y];
+                    if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == 1) {
+                        villageCount++;
+                        totalStability += tile.getStability();
+                    }
+                }
+            }
+            
+            if (villageCount > 0) {
+                int avgStability = totalStability / villageCount;
+                
+                // Stability (color based on value)
+                float stabilityColor = avgStability >= 70 ? 0.2f : 1.0f;
+                SimpleTextRenderer.drawText("Avg Stability: " + avgStability + "%", panelLeft, statsY, panelTextScale, 
+                    stabilityColor, 0.8f, stabilityColor);
+                statsY -= 0.04f;
+            }
+        }
+        
+        // Display current policies
+        statsY -= 0.02f;
+        SimpleTextRenderer.drawText("POLICIES:", panelLeft, statsY, panelTextScale, 0.8f, 0.8f, 0.8f);
+        statsY -= 0.04f;
+        
+        String economicPolicy = gameState.getEconomicPolicy() != null ? 
+            formatPolicyName(gameState.getEconomicPolicy()) : "Balanced";
+        SimpleTextRenderer.drawText("Econ: " + economicPolicy, panelLeft, statsY, panelTextScale, 0.7f, 0.7f, 0.7f);
+        statsY -= 0.035f;
+        
+        String militaryPolicy = gameState.getMilitaryPolicy() != null ? 
+            formatPolicyName(gameState.getMilitaryPolicy()) : "Standard";
+        SimpleTextRenderer.drawText("Mil: " + militaryPolicy, panelLeft, statsY, panelTextScale, 0.7f, 0.7f, 0.7f);
+        statsY -= 0.035f;
+        
+        String populationPolicy = gameState.getPopulationPolicy() != null ? 
+            formatPolicyName(gameState.getPopulationPolicy()) : "Stable";
+        SimpleTextRenderer.drawText("Pop: " + populationPolicy, panelLeft, statsY, panelTextScale, 0.7f, 0.7f, 0.7f);
+        statsY -= 0.04f;
+        
+        // Policy cooldown
+        int ticksSinceLastChange = gameState.getTickCount() - gameState.getLastPolicyChangeTick();
+        int ticksUntilNext = Math.max(0, 15 - ticksSinceLastChange);
+        if (ticksUntilNext > 0) {
+            SimpleTextRenderer.drawText("Cooldown: " + ticksUntilNext + " ticks", panelLeft, statsY, panelTextScale, 1.0f, 0.5f, 0.5f);
+        } else {
+            SimpleTextRenderer.drawText("Policy ready!", panelLeft, statsY, panelTextScale, 0.2f, 1.0f, 0.2f);
         }
         
         // Render bottom bar (game log)
