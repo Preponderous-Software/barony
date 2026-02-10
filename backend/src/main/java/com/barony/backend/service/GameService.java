@@ -429,12 +429,6 @@ public class GameService {
     private void executeAI() {
         final int AI_PLAYER_ID = 2;
         
-        // AI spawning: spawn 10 soldiers at P2 castle every 5 ticks
-        // Spawns when tickCount is exactly divisible by 5 (i.e., at tickCount 5, 10, 15, ...)
-        if (gameState.getTickCount() % 5 == 0) {
-            spawnAIArmy();
-        }
-        
         // Get all AI armies
         java.util.List<Army> aiArmies = new java.util.ArrayList<>();
         for (Army army : gameState.getArmiesInternal()) {
@@ -446,33 +440,6 @@ public class GameService {
         // Make decisions for each idle AI army
         for (Army army : aiArmies) {
             makeAIDecision(army);
-        }
-    }
-    
-    private void spawnAIArmy() {
-        final int AI_PLAYER_ID = 2;
-        
-        // Find Player 2's castle
-        int[] castlePos = findPlayerCastle(AI_PLAYER_ID);
-        if (castlePos == null) {
-            return; // No castle found
-        }
-        
-        // Check if there's already an army at the castle location
-        Army existingArmy = null;
-        for (Army army : gameState.getArmiesInternal()) {
-            if (army.getX() == castlePos[0] && army.getY() == castlePos[1] && army.getPlayerId() == AI_PLAYER_ID) {
-                existingArmy = army;
-                break;
-            }
-        }
-        
-        if (existingArmy != null) {
-            // Add soldiers to existing army
-            existingArmy.setSoldiers(existingArmy.getSoldiers() + 10);
-        } else {
-            // Create new army at castle
-            gameState.getArmiesInternal().add(new Army(castlePos[0], castlePos[1], 10, AI_PLAYER_ID));
         }
     }
     

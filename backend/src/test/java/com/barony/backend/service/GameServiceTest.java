@@ -1667,7 +1667,7 @@ class GameServiceTest {
     }
     
     @Test
-    void aiSpawnsArmyEvery5Ticks() {
+    void aiDoesNotAutoSpawnArmies() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
         
@@ -1678,23 +1678,25 @@ class GameServiceTest {
             .mapToInt(Army::getSoldiers)
             .sum();
         
-        // Execute 5 ticks
+        // Execute 5 ticks (previously would have spawned +10 soldiers)
         for (int i = 0; i < 5; i++) {
             gameService.tick();
         }
         
-        // Check that 10 soldiers were added (total P2 army strength)
+        // Verify no automatic spawning occurred (soldier count should be same or only increased by village income)
         GameState state = gameService.getState();
         int currentSoldiers = state.getArmies().stream()
             .filter(a -> a.getPlayerId() == 2)
             .mapToInt(Army::getSoldiers)
             .sum();
         
-        assertEquals(initialSoldiers + 10, currentSoldiers);
+        // Should be same as initial (no auto-spawn), or slightly higher if AI captured villages
+        // Allow up to 5 extra soldiers (5 ticks * 1 soldier/tick if AI captured 1 village early)
+        assertTrue(currentSoldiers <= initialSoldiers + 5, "AI should not auto-spawn armies");
     }
     
     @Test
-    void aiSpawnsMultipleTimesOver10Ticks() {
+    void aiDoesNotAutoSpawnMultipleTimes() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
         
@@ -1704,7 +1706,7 @@ class GameServiceTest {
             .mapToInt(Army::getSoldiers)
             .sum();
         
-        // Execute 10 ticks (tickCount will become 5 and 10, triggering spawns)
+        // Execute 10 ticks (previously would trigger spawns at tick 5 and 10)
         for (int i = 0; i < 10; i++) {
             gameService.tick();
         }
@@ -1715,10 +1717,11 @@ class GameServiceTest {
             .mapToInt(Army::getSoldiers)
             .sum();
         
-        // Should have spawned twice: +10 at tick 5, +10 at tick 10
-        // AI may also capture villages and get additional soldiers, so check >= 20
-        assertTrue(currentSoldiers >= initialSoldiers + 20, 
-            "AI should have at least 20 more soldiers from spawning");
+        // Old system would have spawned +20 soldiers (tick 5 and 10). 
+        // New system only allows village income (max ~10 soldiers if AI captured both villages quickly).
+        // Using 20 as upper bound to verify no automatic spawning occurred.
+        assertTrue(currentSoldiers < initialSoldiers + 20, 
+            "AI should not auto-spawn multiple times");
     }
     
     @Test
@@ -1726,9 +1729,17 @@ class GameServiceTest {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
         
-        // Set up: AI owns village at (6,6), move P1 army close to it
+        // Set up: AI owns village at (6,6), place AI army closer to village for this test
         GameState internalState = gameService.getInternalStateForTest();
         internalState.getGrid()[6][6].setOwnerId(2);
+        
+        // Place AI army closer to village (7,7) so it can defend
+        Army aiArmy = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .get();
+        aiArmy.setX(7);
+        aiArmy.setY(7);
         
         // Get P1 army ID and move it close to the village
         Army p1Army = internalState.getArmiesInternal().stream()
@@ -1948,11 +1959,11 @@ class GameServiceTest {
     }
     
     @Test
-    void aiBuildsForcesWhenNoGoodTargets() {
+    void aiDoesNotMakeSuicidalAttacksWhenOutnumbered() {
         gameService.resetGame();
         gameService.setAiEnabled(true); // Enable AI for this test
         
-        // Remove all villages to force AI to build up
+        // Remove all villages to eliminate village income
         GameState internalState = gameService.getInternalStateForTest();
         for (int x = 0; x < internalState.getWidth(); x++) {
             for (int y = 0; y < internalState.getHeight(); y++) {
@@ -1969,24 +1980,27 @@ class GameServiceTest {
             .get();
         p1Army.setSoldiers(200);
         
-        int initialSoldiers = internalState.getArmiesInternal().stream()
+        // Get AI's initial position
+        Army aiArmy = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
-            .mapToInt(Army::getSoldiers)
-            .sum();
+            .findFirst()
+            .get();
+        int initialX = aiArmy.getX();
+        int initialY = aiArmy.getY();
         
-        // Execute ticks - AI should spawn armies but not attack
+        // Execute ticks - AI should not attack when outmatched
         for (int i = 0; i < 10; i++) {
             gameService.tick();
         }
         
         GameState state = gameService.getState();
-        int finalSoldiers = state.getArmies().stream()
-            .filter(a -> a.getPlayerId() == 2)
-            .mapToInt(Army::getSoldiers)
-            .sum();
         
-        // AI should have built up forces (spawned troops)
-        assertTrue(finalSoldiers > initialSoldiers, "AI should build up forces when no good targets");
+        // AI should not have moved toward the P1 castle (0,0) or the P1 army
+        boolean aiStayedSafe = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .noneMatch(a -> a.isMoving() && a.getDestinationX() == 0 && a.getDestinationY() == 0);
+        
+        assertTrue(aiStayedSafe, "AI should not make suicidal attacks when heavily outnumbered");
     }
     
     @Test
