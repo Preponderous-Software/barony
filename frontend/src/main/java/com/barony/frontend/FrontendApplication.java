@@ -98,11 +98,21 @@ public class FrontendApplication {
             }
         });
         
-        // Window size callback to update cached dimensions
-        glfwSetFramebufferSizeCallback(window, (window, width, height) -> {
-            windowWidth = width;
-            windowHeight = height;
-            glViewport(0, 0, width, height);
+        // Framebuffer size callback: update viewport with framebuffer size,
+        // and cache logical window size (in window coordinates) for input mapping.
+        glfwSetFramebufferSizeCallback(window, (win, fbWidth, fbHeight) -> {
+            // Query the window size in screen coordinates; this may differ from
+            // framebuffer size on HiDPI/retina displays.
+            try (MemoryStack stack = stackPush()) {
+                IntBuffer pw = stack.mallocInt(1);
+                IntBuffer ph = stack.mallocInt(1);
+                glfwGetWindowSize(win, pw, ph);
+                windowWidth = pw.get(0);
+                windowHeight = ph.get(0);
+            }
+
+            // Use framebuffer size for the OpenGL viewport.
+            glViewport(0, 0, fbWidth, fbHeight);
         });
         
         glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
@@ -146,9 +156,14 @@ public class FrontendApplication {
                 if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 5, 5);
-                    gameState = client.sendCommand(cmd);
-                    updateCachedCounts();
-                    System.out.println("Move command sent for army ID " + firstArmyId + " to (5,5)");
+                    GameState newState = client.sendCommand(cmd);
+                    if (newState != null) {
+                        gameState = newState;
+                        updateCachedCounts();
+                        System.out.println("Move command sent for army ID " + firstArmyId + " to (5,5)");
+                    } else {
+                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
+                    }
                 }
             }
             // Number keys for moving first army to strategic locations
@@ -157,9 +172,14 @@ public class FrontendApplication {
                 if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 0, 0);
-                    gameState = client.sendCommand(cmd);
-                    updateCachedCounts();
-                    System.out.println("Move command sent for army ID " + firstArmyId + " to Player 1 castle (0,0)");
+                    GameState newState = client.sendCommand(cmd);
+                    if (newState != null) {
+                        gameState = newState;
+                        updateCachedCounts();
+                        System.out.println("Move command sent for army ID " + firstArmyId + " to Player 1 castle (0,0)");
+                    } else {
+                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
+                    }
                 }
             }
             if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
@@ -167,9 +187,14 @@ public class FrontendApplication {
                 if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 9, 9);
-                    gameState = client.sendCommand(cmd);
-                    updateCachedCounts();
-                    System.out.println("Move command sent for army ID " + firstArmyId + " to Player 2 castle (9,9)");
+                    GameState newState = client.sendCommand(cmd);
+                    if (newState != null) {
+                        gameState = newState;
+                        updateCachedCounts();
+                        System.out.println("Move command sent for army ID " + firstArmyId + " to Player 2 castle (9,9)");
+                    } else {
+                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
+                    }
                 }
             }
             if (key == GLFW_KEY_3 && action == GLFW_RELEASE) {
@@ -177,9 +202,14 @@ public class FrontendApplication {
                 if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 3, 3);
-                    gameState = client.sendCommand(cmd);
-                    updateCachedCounts();
-                    System.out.println("Move command sent for army ID " + firstArmyId + " to village (3,3)");
+                    GameState newState = client.sendCommand(cmd);
+                    if (newState != null) {
+                        gameState = newState;
+                        updateCachedCounts();
+                        System.out.println("Move command sent for army ID " + firstArmyId + " to village (3,3)");
+                    } else {
+                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
+                    }
                 }
             }
             if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
@@ -187,9 +217,14 @@ public class FrontendApplication {
                 if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 6, 6);
-                    gameState = client.sendCommand(cmd);
-                    updateCachedCounts();
-                    System.out.println("Move command sent for army ID " + firstArmyId + " to village (6,6)");
+                    GameState newState = client.sendCommand(cmd);
+                    if (newState != null) {
+                        gameState = newState;
+                        updateCachedCounts();
+                        System.out.println("Move command sent for army ID " + firstArmyId + " to village (6,6)");
+                    } else {
+                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
+                    }
                 }
             }
             if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
@@ -219,9 +254,14 @@ public class FrontendApplication {
                                 
                                 if (splitAmount >= 1 && splitAmount < totalSoldiers) {
                                     Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
-                                    gameState = client.sendCommand(cmd);
-                                    updateCachedCounts();
-                                    System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
+                                    GameState newState = client.sendCommand(cmd);
+                                    if (newState != null) {
+                                        gameState = newState;
+                                        updateCachedCounts();
+                                        System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
+                                    } else {
+                                        System.out.println("Split command failed for army ID " + firstArmyId + "; no updated game state received.");
+                                    }
                                 } else {
                                     System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
                                 }
