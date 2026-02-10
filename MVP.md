@@ -244,6 +244,118 @@ The prototype currently supports:
 
 ---
 
+### 7. Ruler Decision System (CK-Lite)
+
+**Current:** Game focuses purely on military and territorial control  
+**MVP:** Add lightweight policy-based ruler decisions with delayed, indirect consequences
+
+#### Features
+- **Single Ruler Layer:** Player embodies a single ruler making policy decisions for their realm
+- **Policy-Based Decisions:** Choose from periodic policy options (every 10-20 ticks)
+- **Indirect Effects:** Decisions affect game mechanics, not narrative:
+  - Village population growth/decline rates
+  - Village stability (affects soldier generation efficiency)
+  - Army morale (affects combat effectiveness)
+  - Army loyalty (affects desertion risk)
+- **Delayed Consequences:** Policy effects take 5-10 ticks to manifest
+- **System-Driven Outcomes:** No dialogue, quests, or story events
+- **CK-Lite Scope:** Explicitly excludes:
+  - Dynasties, succession, or family management
+  - Diplomacy, negotiations, or character relationships
+  - Events with narrative text or choices
+  - Character skills, traits, or development
+
+#### Features in Detail
+
+**Policy Categories:**
+1. **Economic Policies** (affects village income and stability)
+   - Heavy Taxation: +20% income, -10% stability
+   - Balanced Budget: No change to income or stability
+   - Infrastructure Investment: -10% income, +10% stability
+
+2. **Military Policies** (affects army morale and loyalty)
+   - Aggressive Training: +10% morale, -5% loyalty
+   - Standard Service: No change to morale or loyalty
+   - Veteran Benefits: -10% morale, +10% loyalty
+
+3. **Population Policies** (affects village population growth)
+   - Growth Focus: +15% population growth, -5% stability
+   - Stable Population: No change
+   - Quality Over Quantity: -10% population growth, +10% stability
+
+**Decision Interface:**
+- Every 15 ticks, player is prompted with a policy choice
+- UI shows current policy in each category
+- UI displays current realm statistics:
+  - Average village stability (%)
+  - Average army morale (%)
+  - Average army loyalty (%)
+  - Total population across all owned villages
+- Policy changes apply to all owned villages/armies
+
+**Mechanical Effects:**
+
+*Village Stability:*
+- Base soldier generation: 1 per tick at 100% stability
+- Modified generation: `base * (stability / 100)`
+- Example: 70% stability = 0.7 soldiers/tick (rounded)
+- Stability recovers slowly over time toward 100% (2% per tick)
+
+*Army Morale:*
+- Base combat strength: 1 soldier kills 1 enemy soldier
+- Modified combat: `strength * (morale / 100)`
+- Example: 120% morale = 1.2x combat effectiveness
+- Morale decays slowly over time toward 100% (1% per tick)
+
+*Army Loyalty:*
+- Base desertion: 0% per tick
+- Modified desertion: `(100 - loyalty) / 20`% per tick
+- Example: 80% loyalty = 1% desertion per tick
+- Loyalty recovers slowly over time toward 100% (2% per tick)
+
+*Population Growth:*
+- Affects maximum soldiers that can be generated at villages
+- Villages have population cap (e.g., 50 soldiers)
+- Growth policies modify this cap over time
+- Higher population = more soldier generation potential
+
+#### Backend Changes
+- Add `RulerDecision` model with policy types and effects
+- Add policy state to `GameState` (current policy in each category)
+- Add `Village.stability`, `Village.population` fields
+- Add `Army.morale`, `Army.loyalty` fields
+- Implement policy effect calculation in `GameService.tick()`
+- Add `POST /api/decision` endpoint to change policies
+- Add `GET /api/ruler-stats` endpoint for realm statistics
+- Implement gradual stat recovery/decay logic
+
+#### Frontend Changes
+- Add policy selection UI (radio buttons or dropdown for each category)
+- Display current policies in HUD (top-right corner)
+- Show realm statistics panel (stability, morale, loyalty, population)
+- Add visual indicators for villages/armies affected by low stats:
+  - Unstable villages: yellow tint
+  - Low morale armies: dimmed color
+  - Disloyal armies: orange outline
+- Add policy change confirmation with preview of effects
+- Show tick countdown until next policy decision is available
+
+#### Tasks
+- [ ] Backend: Create RulerDecision model and policy types
+- [ ] Backend: Add stability/morale/loyalty/population fields to models
+- [ ] Backend: Implement policy effect calculations in tick()
+- [ ] Backend: Add decision and stats endpoints
+- [ ] Backend: Add unit tests for policy effects (10-12 tests)
+- [ ] Backend: Balance policy effects through playtesting
+- [ ] Frontend: Create policy selection UI
+- [ ] Frontend: Display realm statistics panel
+- [ ] Frontend: Add visual indicators for affected entities
+- [ ] Frontend: Test policy changes and effect visualization
+- [ ] Documentation: Update README with ruler decision mechanics
+- [ ] Documentation: Document policy types and effects
+
+---
+
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (Week 1-2)
@@ -263,9 +375,10 @@ The prototype currently supports:
 ### Phase 3: Engagement (Week 5-6)
 7. Basic AI opponent
 8. Enhanced UI & mouse controls
-9. Polish and balancing
+9. Ruler decision system (CK-lite layer)
+10. Polish and balancing
 
-**Milestone:** Full MVP with AI opponent and polished UI
+**Milestone:** Full MVP with AI opponent, strategic depth via ruler decisions, and polished UI
 
 ---
 
@@ -279,6 +392,8 @@ POST /command/move    - Move army to destination (queued movement)
 POST /command/split   - Split army into two armies
 POST /reset          - Reset game state to initial conditions
 GET /stats           - Get player statistics (income, territories, etc.)
+POST /api/decision   - Change ruler policy (requires policy type and choice)
+GET /api/ruler-stats - Get realm statistics (stability, morale, loyalty, population)
 ```
 
 #### Enhanced Models
@@ -287,15 +402,33 @@ GET /stats           - Get player statistics (income, territories, etc.)
 private int destinationX;
 private int destinationY;
 private boolean isMoving;
+private int morale;        // 0-200, default 100, affects combat effectiveness
+private int loyalty;       // 0-100, default 100, affects desertion rate
 
-// Tile.java additions
+// Tile.java additions (for villages)
 private int ownerId;           // 0=neutral, 1=player1, 2=player2
 private int occupationTicks;   // For castle capture
+private int stability;         // 0-100, default 100, affects soldier generation
+private int population;        // Current population, affects generation capacity
 
 // GameState.java additions
 private boolean gameOver;
 private int winnerId;
 private int ticksPerMove;      // Config: tiles per tick
+private Map<String, String> rulerPolicies;  // Maps policy category to current choice
+private int policyDecisionCooldown;         // Ticks until next policy change allowed
+
+// New RulerDecision.java
+class RulerDecision {
+    enum PolicyCategory { ECONOMIC, MILITARY, POPULATION }
+    enum EconomicPolicy { HEAVY_TAXATION, BALANCED_BUDGET, INFRASTRUCTURE_INVESTMENT }
+    enum MilitaryPolicy { AGGRESSIVE_TRAINING, STANDARD_SERVICE, VETERAN_BENEFITS }
+    enum PopulationPolicy { GROWTH_FOCUS, STABLE_POPULATION, QUALITY_OVER_QUANTITY }
+    
+    PolicyCategory category;
+    Object policyChoice;  // One of the policy enums
+    Map<String, Integer> effects;  // Maps stat names to percentage modifiers
+}
 
 // New PlayerStats.java
 class PlayerStats {
@@ -304,6 +437,17 @@ class PlayerStats {
     int villagesOwned;
     int totalIncome;
     int totalArmySize;
+}
+
+// New RulerStats.java
+class RulerStats {
+    int playerId;
+    double averageStability;   // Average across all owned villages
+    double averageMorale;      // Average across all armies
+    double averageLoyalty;     // Average across all armies
+    int totalPopulation;       // Sum of all village populations
+    Map<String, String> currentPolicies;  // Current policy in each category
+    int ticksUntilNextDecision;
 }
 ```
 
@@ -338,9 +482,10 @@ class PlayerStats {
 - Multi-army interactions
 
 ### Playtesting
-- Balance testing: AI difficulty, soldier generation rates
-- UX testing: Controls feel responsive, UI is clear
+- Balance testing: AI difficulty, soldier generation rates, ruler policy effects
+- UX testing: Controls feel responsive, UI is clear, policy decisions are intuitive
 - Performance testing: 60 FPS with 20+ armies
+- Strategy testing: Verify multiple viable policy combinations
 
 ---
 
@@ -350,15 +495,19 @@ An MVP is successful when:
 
 1. ✅ **Core Loop:** Player can play a complete game from start to victory/defeat
 2. ✅ **Engagement:** Games last 5-15 minutes with meaningful decisions
-3. ✅ **Polish:** UI is clear, controls are responsive, no major bugs
-4. ✅ **AI:** AI opponent provides reasonable challenge (wins ~30-40% vs new players)
-5. ✅ **Stability:** Zero crashes during 30-minute playtest session
+3. ✅ **Strategic Depth:** Ruler policies create observable gameplay differences (10-15% variance in outcomes)
+4. ✅ **Polish:** UI is clear, controls are responsive, no major bugs
+5. ✅ **AI:** AI opponent provides reasonable challenge (wins ~30-40% vs new players)
+6. ✅ **Stability:** Zero crashes during 30-minute playtest session
+7. ✅ **Decision Impact:** Player can correlate policy choices with visible stat changes within 10 ticks
 
 ---
 
 ## Out of Scope (Future Versions)
 
 These features are explicitly **NOT** in MVP:
+
+**Core Gameplay:**
 - ❌ Multiple unit types (knights, archers, etc.)
 - ❌ Terrain effects (mountains, rivers, forests)
 - ❌ Fog of war / limited visibility
@@ -372,16 +521,30 @@ These features are explicitly **NOT** in MVP:
 - ❌ Modding support
 - ❌ Localization / multiple languages
 
+**Ruler/Character Systems (CK-Lite Boundaries):**
+- ❌ Dynasties, family trees, or succession mechanics
+- ❌ Character development (skills, traits, education)
+- ❌ Diplomacy system (alliances, treaties, negotiations)
+- ❌ Relationship/opinion system between characters
+- ❌ Narrative events with story text or branching choices
+- ❌ Council members, advisors, or court management
+- ❌ Marriage, children, or inheritance
+- ❌ Character portraits, appearance, or customization
+- ❌ Multiple playable rulers or realm switching
+- ❌ Assassination, intrigue, or espionage mechanics
+- ❌ Religion, culture, or ideological systems
+- ❌ Feasts, tournaments, or social events
+
 ---
 
 ## Estimated Effort
 
-- **Backend Development:** ~60-80 hours
-- **Frontend Development:** ~40-60 hours
-- **Testing & Polish:** ~20-30 hours
+- **Backend Development:** ~70-90 hours (includes ruler decision system)
+- **Frontend Development:** ~50-70 hours (includes policy UI and stat displays)
+- **Testing & Polish:** ~25-35 hours
 - **Documentation:** ~10-15 hours
 
-**Total:** ~130-185 hours (4-6 weeks for solo developer, 2-3 weeks for small team)
+**Total:** ~155-210 hours (5-7 weeks for solo developer, 3-4 weeks for small team)
 
 ---
 
@@ -397,7 +560,9 @@ These features are explicitly **NOT** in MVP:
 
 ## Notes
 
-- This MVP focuses on **fun** over **scope** - better to have 6 polished features than 12 half-baked ones
+- This MVP focuses on **fun** over **scope** - better to have 7 polished features than 15 half-baked ones
 - Each feature should be fully tested before moving to the next
 - Regular playtesting (every 2-3 features) helps identify balance issues early
 - Consider streaming development or sharing builds for community feedback
+- **Ruler decisions add strategic depth without narrative complexity** - the system should feel like managing mechanics, not role-playing a character
+- Policy effects should be balanced so no single strategy dominates - encourage experimentation and adaptation
