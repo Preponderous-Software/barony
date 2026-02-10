@@ -309,7 +309,117 @@ Add mouse-based controls for army selection and movement, plus informative HUD e
 
 ---
 
-## Ticket 7: Polish, Balance, and Integration Testing
+## Ticket 7: Implement Ruler Decision System (CK-Lite Layer)
+
+**Priority:** Medium  
+**Estimate:** 3 agent sessions  
+**Dependencies:** Tickets 2, 3, 6 (requires territory control, army management, and UI foundation)
+
+### Description
+
+Add a lightweight policy-based ruler decision system that allows players to make strategic choices affecting their realm through mechanical modifiers. This system provides a "CK-lite" layer focused on system-driven outcomes without dynasties, diplomacy, or narrative elements.
+
+### Acceptance Criteria
+
+**Backend:**
+- Create `RulerDecision` model with policy categories and types:
+  - Economic policies: Heavy Taxation, Balanced Budget, Infrastructure Investment
+  - Military policies: Aggressive Training, Standard Service, Veteran Benefits
+  - Population policies: Growth Focus, Stable Population, Quality Over Quantity
+- Add policy state tracking to `GameState` (current policy in each category)
+- Add new fields to models:
+  - `Village.stability` (0-100, affects soldier generation efficiency)
+  - `Village.population` (current population, affects generation capacity)
+  - `Army.morale` (0-200, affects combat effectiveness)
+  - `Army.loyalty` (0-100, affects desertion rate)
+- Implement policy effect calculation system:
+  - Economic policies modify village stability and income
+  - Military policies modify army morale and loyalty
+  - Population policies modify village population growth and stability
+- Implement gradual stat recovery/decay in `tick()`:
+  - Stability recovers toward 100% at 2% per tick
+  - Morale decays toward 100% at 1% per tick
+  - Loyalty recovers toward 100% at 2% per tick
+- Implement modified game mechanics:
+  - Soldier generation: `base * (stability / 100)`
+  - Combat effectiveness: `strength * (morale / 100)`
+  - Army desertion: `(100 - loyalty) / 20`% per tick
+- Add `POST /api/decision` endpoint (change policy, requires category and choice)
+- Add `GET /api/ruler-stats` endpoint (returns realm statistics)
+- Add policy decision cooldown (15 ticks between policy changes)
+- Add 12+ unit tests for policy effects and stat calculations
+
+**Frontend:**
+- Create policy selection UI:
+  - Radio buttons or dropdown for each policy category
+  - Display current policy in each category
+  - Show policy effects preview (+10% morale, -5% loyalty, etc.)
+  - Add confirmation dialog for policy changes
+- Add realm statistics panel in HUD:
+  - Average village stability (%)
+  - Average army morale (%)
+  - Average army loyalty (%)
+  - Total population across owned villages
+  - Current policies in each category
+  - Ticks until next policy decision available
+- Add visual indicators for affected entities:
+  - Unstable villages (<70% stability): yellow tint
+  - Low morale armies (<80%): dimmed color
+  - Disloyal armies (<80%): orange outline
+- Display policy change cooldown timer
+- Test policy changes and verify stat changes over time
+
+**Documentation:**
+- Update README.md with ruler decision system explanation
+- Document each policy type and its effects
+- Add section explaining stat mechanics (stability, morale, loyalty, population)
+- Include examples of effective policy strategies
+- Clarify CK-lite scope (what's included and excluded)
+
+### Technical Notes
+
+- Policy effects are percentage modifiers applied to base mechanics
+- Effects are continuous (not one-time bonuses) and last until policy changes
+- Stats gradually return to baseline (100%) to prevent extreme scenarios
+- Policy cooldown prevents rapid policy switching exploits
+- All calculations use integer math with rounding for soldier generation
+- AI should not use ruler decisions in MVP (Player 1 only feature)
+- Balance policy effects during playtesting to ensure meaningful choices
+
+### Policy Effect Specifications
+
+**Economic Policies:**
+- Heavy Taxation: +20% income, -10% stability
+- Balanced Budget: No modifiers (baseline)
+- Infrastructure Investment: -10% income, +10% stability
+
+**Military Policies:**
+- Aggressive Training: +10% morale, -5% loyalty
+- Standard Service: No modifiers (baseline)
+- Veteran Benefits: -10% morale (less aggressive), +10% loyalty
+
+**Population Policies:**
+- Growth Focus: +15% population growth, -5% stability
+- Stable Population: No modifiers (baseline)
+- Quality Over Quantity: -10% population growth, +10% stability
+
+### Files to Modify
+
+- `backend/src/main/java/com/barony/backend/model/RulerDecision.java` (create)
+- `backend/src/main/java/com/barony/backend/model/Army.java`
+- `backend/src/main/java/com/barony/backend/model/Tile.java`
+- `backend/src/main/java/com/barony/backend/model/GameState.java`
+- `backend/src/main/java/com/barony/backend/model/RulerStats.java` (create)
+- `backend/src/main/java/com/barony/backend/service/GameService.java`
+- `backend/src/main/java/com/barony/backend/controller/GameController.java`
+- `backend/src/test/java/com/barony/backend/service/GameServiceTest.java`
+- `backend/src/test/java/com/barony/backend/model/RulerDecisionTest.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `README.md`
+
+---
+
+## Ticket 8: Polish, Balance, and Integration Testing
 
 **Priority:** Low  
 **Estimate:** 2 agent sessions  
@@ -325,6 +435,8 @@ Final polish pass including balance adjustments, comprehensive integration testi
 - Balance soldier generation rates (ensure games last 5-15 minutes)
 - Balance castle capture timer (adjust from 3 ticks if needed)
 - Balance AI difficulty (win rate around 30-40% vs new players)
+- Balance ruler policy effects (ensure no dominant strategy)
+- Verify stat recovery/decay rates feel appropriate
 - Add integration tests for complete game scenarios
 - Performance testing: verify 60 FPS with 20+ armies
 - Code review and cleanup (remove debug code, add comments)
@@ -346,6 +458,8 @@ Final polish pass including balance adjustments, comprehensive integration testi
 **Testing:**
 - Complete end-to-end playthrough (human vs AI)
 - Test all edge cases (empty armies, simultaneous captures, etc.)
+- Test policy changes and verify gradual stat effects
+- Test extreme scenarios (all policies at max modifiers)
 - Verify no memory leaks during long play sessions
 - Test all keyboard and mouse controls
 - Verify CI pipeline passes all tests
@@ -374,9 +488,10 @@ Final polish pass including balance adjustments, comprehensive integration testi
 4. Ticket 4 (Win Conditions) - Complete game loop
 5. Ticket 5 (AI Opponent) - Single-player experience
 6. Ticket 6 (UI/UX) - Enhanced player experience
-7. Ticket 7 (Polish) - Final refinement
+7. Ticket 7 (Ruler Decisions) - Strategic depth layer
+8. Ticket 8 (Polish) - Final refinement
 
-**Total estimated effort:** 16-20 agent sessions (compared to ~50 for granular tickets)
+**Total estimated effort:** 18-23 agent sessions (adds ruler decision system to original scope)
 
 ---
 
