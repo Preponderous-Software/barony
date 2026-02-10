@@ -560,7 +560,7 @@ These features are explicitly **NOT** in MVP:
 
 ## Notes
 
-- This MVP focuses on **fun** over **scope** - better to have 6 polished features than 12 half-baked ones
+- This MVP focuses on **fun** over **scope** - better to have 7 polished features than 15 half-baked ones
 - Each feature should be fully tested before moving to the next
 - Regular playtesting (every 2-3 features) helps identify balance issues early
 - Consider streaming development or sharing builds for community feedback
