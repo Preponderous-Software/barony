@@ -138,11 +138,24 @@ Server will start on http://localhost:8080
   - **Armies**:
     - Blue circles: Player 1 armies
     - Red circles: Player 2 armies
+- **Mouse Controls**: Click to select and move armies with visual feedback
+- **HUD Display**: Real-time game statistics, selected army info, and game event log
+- **Tooltips**: Hover over tiles and armies to see detailed information
 - **Territory Statistics Display**: Window title shows castles owned, villages owned, and income per tick for each player
 - HTTP client with proper timeouts and error handling
 - UTF-8 encoding for all network communication
 
 ### Controls
+
+**Mouse Controls:**
+- `Left Click` on army - Select Player 1 army (shows glowing highlight)
+- `Left Click` on tile (with army selected) - Move selected army to that location
+- `Right Click` - Deselect currently selected army
+- `Hover` over tile/army - Show tooltip after 0.5s delay with:
+  - Tile type and ownership (displayed with color-coded text labels)
+  - Army information (player, soldier count, movement status with text labels)
+
+**Keyboard Controls:**
 - `SPACE` - Send tick command to server
 - `M` - Move first army to position (5,5) using its unique ID
 - `1` - Move first army to Player 1 castle (0,0)
@@ -152,6 +165,38 @@ Server will start on http://localhost:8080
 - `S` - Split first army (prompts for soldier count in console)
 - `R` - Play again (reset game) - only available when game is over
 - `ESC` - Close window
+
+### UI Elements
+
+**HUD Layout:**
+- **Top Bar** (dark background, 15% screen height):
+  - Displays tick count, armies, castles, and villages for both players
+  - Text labels show exact counts for Player 1 and Player 2
+  - Proportional colored bars visualize distribution between players
+  - Income per tick displayed (based on village count)
+  
+- **Side Panel** (right side, 30% screen width):
+  - Shows selected army details when an army is selected
+  - Displays: Army ID, Player, Soldier count, Position
+  - Shows destination coordinates if army is moving
+  - Visual bars indicate soldier count
+  
+- **Bottom Bar** (30% screen height):
+  - Game event log showing last 10 actions with text messages
+  - Color-coded entry bars (alternating for visibility)
+  - Events include: army selections, movement commands, tick updates
+  - Real-time text updates show game actions
+  
+- **Game Area** (center):
+  - Main grid display (70% screen width, 55% screen height)
+  - Selection highlight: Pulsing colored border around selected army
+  - Movement preview: Faint circle showing where army will move on click
+  - Tooltips: Semi-transparent box with text labels showing:
+    - Tile position, type, and ownership
+    - Army ID, player, soldier count, and movement status
+    - Village income information
+
+> **Note:** UI screenshots require a running display server (X11/Wayland) for rendering. The application uses LWJGL for OpenGL rendering, which requires a graphical environment. In headless environments, the UI cannot be displayed or captured.
 
 ### Running the Frontend
 
