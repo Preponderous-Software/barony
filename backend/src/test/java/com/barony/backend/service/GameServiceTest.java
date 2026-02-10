@@ -1691,6 +1691,7 @@ class GameServiceTest {
             .sum();
         
         // Should be same as initial (no auto-spawn), or slightly higher if AI captured villages
+        // Allow up to 5 extra soldiers (5 ticks * 1 soldier/tick if AI captured 1 village early)
         assertTrue(currentSoldiers <= initialSoldiers + 5, "AI should not auto-spawn armies");
     }
     
@@ -1716,7 +1717,9 @@ class GameServiceTest {
             .mapToInt(Army::getSoldiers)
             .sum();
         
-        // Should not have spawned 20 soldiers. Allow for some village income growth.
+        // Old system would have spawned +20 soldiers (tick 5 and 10). 
+        // New system only allows village income (max ~10 soldiers if AI captured both villages quickly).
+        // Using 20 as upper bound to verify no automatic spawning occurred.
         assertTrue(currentSoldiers < initialSoldiers + 20, 
             "AI should not auto-spawn multiple times");
     }

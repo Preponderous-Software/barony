@@ -83,7 +83,6 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 The game features a rule-based AI that controls Player 2 armies with intelligent decision-making:
 
 **AI Behavior:**
-- **Automatic Spawning**: Spawns 10 soldiers at Player 2's castle every 5 ticks as a catch-up mechanism
 - **Priority-Based Decision Making**: The AI evaluates all idle armies each tick and assigns them actions based on the following priorities:
   1. **Defend Territory** (Priority 1): Moves armies to defend owned villages if enemy forces are within 3 tiles
   2. **Capture Neutral Villages** (Priority 2): Targets the nearest neutral village if it's safe to do so (no strong enemy forces nearby)
@@ -101,12 +100,12 @@ The game features a rule-based AI that controls Player 2 armies with intelligent
 
 **Configuration:**
 - AI is enabled by default but can be disabled via the `aiEnabled` flag in the game state
-- AI difficulty can be adjusted by modifying spawn rates, force multipliers, or decision priorities in `GameService.java`
+- AI difficulty can be adjusted by modifying force multipliers or decision priorities in `GameService.java`
 
 **Technical Details:**
 - AI execution occurs after village soldier generation and before combat resolution
 - This ensures AI decisions account for current turn's village income
-- Spawned armies are immediately available for AI decision-making
+- Both players have equal army spawning constraints (initial army + village income only)
 
 ### Running the Backend
 
