@@ -1024,20 +1024,20 @@ public class FrontendApplication {
         float barLabelX = hudRight + 0.02f;
         
         // Armies bar label (centered on bar)
-        SimpleTextRenderer.drawText("ARMIES  P1:" + player1Armies + "  P2:" + player2Armies, 
+        SimpleTextRenderer.drawText("ARMIES   P1: " + player1Armies + "  P2: " + player2Armies, 
             barLabelX, barsTop - barHeight / 2, smallLabelScale, 0.9f, 0.9f, 0.9f);
         
         // Castles bar label
-        SimpleTextRenderer.drawText("CASTLES P1:" + player1Castles + "  P2:" + player2Castles, 
+        SimpleTextRenderer.drawText("CASTLES  P1: " + player1Castles + "  P2: " + player2Castles, 
             barLabelX, barsTop - (barHeight + barSpacing) - barHeight / 2, smallLabelScale, 0.9f, 0.9f, 0.9f);
         
         // Villages bar label
-        SimpleTextRenderer.drawText("VILLAGES P1:" + player1Villages + "  P2:" + player2Villages, 
+        SimpleTextRenderer.drawText("VILLAGES P1: " + player1Villages + "  P2: " + player2Villages, 
             barLabelX, barsTop - 2 * (barHeight + barSpacing) - barHeight / 2, smallLabelScale, 0.9f, 0.9f, 0.9f);
         
         // Income display below the bars
         float incomeY = barsTop - 3 * (barHeight + barSpacing) - 0.025f;
-        SimpleTextRenderer.drawText("INCOME/TICK  P1:+" + player1Villages + "  P2:+" + player2Villages, 
+        SimpleTextRenderer.drawText("INCOME   P1: +" + player1Villages + "  P2: +" + player2Villages, 
             barLabelX, incomeY, smallLabelScale, 0.8f, 0.8f, 0.8f);
         
         // Render side panel (right side, dark background)
