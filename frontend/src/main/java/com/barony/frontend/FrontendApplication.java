@@ -39,13 +39,24 @@ public class FrontendApplication {
     private java.util.LinkedList<String> gameLog = new java.util.LinkedList<>();
     private static final int MAX_LOG_ENTRIES = 10;
     private static final int MAX_PANEL_SOLDIERS = 20;
-    private static final int MAX_TOOLTIP_SOLDIERS = 10;
     
     // HUD layout constants (centralized to avoid duplication)
     private static final float GAME_LEFT = -1.0f;
     private static final float GAME_RIGHT = 0.7f;
     private static final float GAME_BOTTOM = -0.7f;
     private static final float GAME_TOP = 0.85f;
+    
+    // Cached window size to avoid allocations every frame
+    private int windowWidth = 800;
+    private int windowHeight = 800;
+    
+    // Cached HUD counts to avoid recomputing every frame
+    private int cachedPlayer1Armies = 0;
+    private int cachedPlayer2Armies = 0;
+    private int cachedPlayer1Castles = 0;
+    private int cachedPlayer2Castles = 0;
+    private int cachedPlayer1Villages = 0;
+    private int cachedPlayer2Villages = 0;
     
     public void run() {
         init();
@@ -87,6 +98,13 @@ public class FrontendApplication {
             }
         });
         
+        // Window size callback to update cached dimensions
+        glfwSetFramebufferSizeCallback(window, (window, width, height) -> {
+            windowWidth = width;
+            windowHeight = height;
+            glViewport(0, 0, width, height);
+        });
+        
         glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
                 glfwSetWindowShouldClose(window, true);
@@ -100,6 +118,7 @@ public class FrontendApplication {
                         GameState newState = client.reset();
                         if (newState != null) {
                             gameState = newState;
+                            updateCachedCounts();
                             gameOverMessagePrinted = false; // Reset flag
                             System.out.println("Game reset!");
                         } else {
@@ -115,6 +134,7 @@ public class FrontendApplication {
                 if (client != null) {
                     gameState = client.tick();
                     if (gameState != null) {
+                        updateCachedCounts();
                         // Add log message for tick
                         addLogMessage("Tick " + gameState.getTickCount());
                         System.out.println("Tick sent. Current tick: " + gameState.getTickCount());
@@ -127,6 +147,7 @@ public class FrontendApplication {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 5, 5);
                     gameState = client.sendCommand(cmd);
+                    updateCachedCounts();
                     System.out.println("Move command sent for army ID " + firstArmyId + " to (5,5)");
                 }
             }
@@ -137,6 +158,7 @@ public class FrontendApplication {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 0, 0);
                     gameState = client.sendCommand(cmd);
+                    updateCachedCounts();
                     System.out.println("Move command sent for army ID " + firstArmyId + " to Player 1 castle (0,0)");
                 }
             }
@@ -146,6 +168,7 @@ public class FrontendApplication {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 9, 9);
                     gameState = client.sendCommand(cmd);
+                    updateCachedCounts();
                     System.out.println("Move command sent for army ID " + firstArmyId + " to Player 2 castle (9,9)");
                 }
             }
@@ -155,6 +178,7 @@ public class FrontendApplication {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 3, 3);
                     gameState = client.sendCommand(cmd);
+                    updateCachedCounts();
                     System.out.println("Move command sent for army ID " + firstArmyId + " to village (3,3)");
                 }
             }
@@ -164,6 +188,7 @@ public class FrontendApplication {
                     int firstArmyId = gameState.getArmies().get(0).getId();
                     Command cmd = new Command("MOVE", firstArmyId, 6, 6);
                     gameState = client.sendCommand(cmd);
+                    updateCachedCounts();
                     System.out.println("Move command sent for army ID " + firstArmyId + " to village (6,6)");
                 }
             }
@@ -195,6 +220,7 @@ public class FrontendApplication {
                                 if (splitAmount >= 1 && splitAmount < totalSoldiers) {
                                     Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
                                     gameState = client.sendCommand(cmd);
+                                    updateCachedCounts();
                                     System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
                                 } else {
                                     System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
@@ -236,6 +262,9 @@ public class FrontendApplication {
     private void loop() {
         GL.createCapabilities();
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        
+        // Initial count update
+        updateCachedCounts();
         
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -642,21 +671,16 @@ public class FrontendApplication {
             return;
         }
         
-        // Get window size
-        int[] width = new int[1];
-        int[] height = new int[1];
-        glfwGetWindowSize(window, width, height);
-        
         // Guard against minimized window (width/height could be 0)
-        if (width[0] <= 0 || height[0] <= 0) {
+        if (windowWidth <= 0 || windowHeight <= 0) {
             hoveredGridX = -1;
             hoveredGridY = -1;
             return;
         }
         
         // Convert mouse position to normalized coordinates
-        float normX = (float) (mouseX / width[0] * 2 - 1);
-        float normY = (float) (1 - mouseY / height[0] * 2);
+        float normX = (float) (mouseX / windowWidth * 2 - 1);
+        float normY = (float) (1 - mouseY / windowHeight * 2);
         
         // Check if mouse is in game area
         if (normX < GAME_LEFT || normX > GAME_RIGHT || normY < GAME_BOTTOM || normY > GAME_TOP) {
@@ -728,9 +752,13 @@ public class FrontendApplication {
                 GameState newState = client.sendCommand(cmd);
                 if (newState != null) {
                     gameState = newState;
+                    updateCachedCounts();
+                    addLogMessage("Army #" + selectedArmyId + " moving to (" + hoveredGridX + "," + hoveredGridY + ")");
+                    System.out.println("Move command sent for army ID " + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
+                } else {
+                    addLogMessage("Failed to move army #" + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
+                    System.err.println("Failed to send move command for army ID " + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
                 }
-                addLogMessage("Army #" + selectedArmyId + " moving to (" + hoveredGridX + "," + hoveredGridY + ")");
-                System.out.println("Move command sent for army ID " + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
             }
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             // Right-click to deselect
@@ -761,6 +789,49 @@ public class FrontendApplication {
         }
         
         return firstArmy;
+    }
+    
+    private void updateCachedCounts() {
+        if (gameState == null) {
+            cachedPlayer1Armies = 0;
+            cachedPlayer2Armies = 0;
+            cachedPlayer1Castles = 0;
+            cachedPlayer2Castles = 0;
+            cachedPlayer1Villages = 0;
+            cachedPlayer2Villages = 0;
+            return;
+        }
+        
+        // Count armies
+        cachedPlayer1Armies = 0;
+        cachedPlayer2Armies = 0;
+        if (gameState.getArmies() != null) {
+            for (Army army : gameState.getArmies()) {
+                if (army.getPlayerId() == 1) cachedPlayer1Armies++;
+                else if (army.getPlayerId() == 2) cachedPlayer2Armies++;
+            }
+        }
+        
+        // Count territories
+        cachedPlayer1Castles = 0;
+        cachedPlayer2Castles = 0;
+        cachedPlayer1Villages = 0;
+        cachedPlayer2Villages = 0;
+        if (gameState.getGrid() != null) {
+            Tile[][] grid = gameState.getGrid();
+            for (int x = 0; x < grid.length; x++) {
+                for (int y = 0; y < grid[0].length; y++) {
+                    Tile tile = grid[x][y];
+                    if (tile.getType() == TileType.CASTLE) {
+                        if (tile.getOwnerId() == 1) cachedPlayer1Castles++;
+                        else if (tile.getOwnerId() == 2) cachedPlayer2Castles++;
+                    } else if (tile.getType() == TileType.VILLAGE) {
+                        if (tile.getOwnerId() == 1) cachedPlayer1Villages++;
+                        else if (tile.getOwnerId() == 2) cachedPlayer2Villages++;
+                    }
+                }
+            }
+        }
     }
     
     private Army getSelectedArmy() {
@@ -809,36 +880,13 @@ public class FrontendApplication {
         glVertex2f(1.0f, GAME_TOP);
         glEnd();
         
-        // Count territories and armies for display
-        int player1Armies = 0;
-        int player2Armies = 0;
-        if (gameState.getArmies() != null) {
-            for (Army army : gameState.getArmies()) {
-                if (army.getPlayerId() == 1) player1Armies++;
-                else if (army.getPlayerId() == 2) player2Armies++;
-            }
-        }
-        
-        int player1Castles = 0;
-        int player2Castles = 0;
-        int player1Villages = 0;
-        int player2Villages = 0;
-        
-        if (gameState.getGrid() != null) {
-            Tile[][] grid = gameState.getGrid();
-            for (int x = 0; x < grid.length; x++) {
-                for (int y = 0; y < grid[0].length; y++) {
-                    Tile tile = grid[x][y];
-                    if (tile.getType() == TileType.CASTLE) {
-                        if (tile.getOwnerId() == 1) player1Castles++;
-                        else if (tile.getOwnerId() == 2) player2Castles++;
-                    } else if (tile.getType() == TileType.VILLAGE) {
-                        if (tile.getOwnerId() == 1) player1Villages++;
-                        else if (tile.getOwnerId() == 2) player2Villages++;
-                    }
-                }
-            }
-        }
+        // Use cached counts instead of recomputing every frame
+        int player1Armies = cachedPlayer1Armies;
+        int player2Armies = cachedPlayer2Armies;
+        int player1Castles = cachedPlayer1Castles;
+        int player2Castles = cachedPlayer2Castles;
+        int player1Villages = cachedPlayer1Villages;
+        int player2Villages = cachedPlayer2Villages;
         
         // Visualize stats in the top HUD as simple proportional bars
         float hudLeft = -0.95f;
@@ -977,10 +1025,10 @@ public class FrontendApplication {
             // Title bar for selected army
             glColor3f(0.2f, 0.2f, 0.3f);
             glBegin(GL_QUADS);
-            glVertex2f(0.7f, 0.75f);
+            glVertex2f(GAME_RIGHT, 0.75f);
             glVertex2f(1.0f, 0.75f);
             glVertex2f(1.0f, 0.85f);
-            glVertex2f(0.7f, 0.85f);
+            glVertex2f(GAME_RIGHT, 0.85f);
             glEnd();
             
             // Visual indicator of selected army
@@ -1121,18 +1169,14 @@ public class FrontendApplication {
             return;
         }
         
-        // Get mouse position in normalized coords
-        int[] width = new int[1];
-        int[] height = new int[1];
-        glfwGetWindowSize(window, width, height);
-        
         // Guard against minimized window
-        if (width[0] <= 0 || height[0] <= 0) {
+        if (windowWidth <= 0 || windowHeight <= 0) {
             return;
         }
         
-        float normX = (float) (mouseX / width[0] * 2 - 1);
-        float normY = (float) (1 - mouseY / height[0] * 2);
+        // Get mouse position in normalized coords (using cached window size)
+        float normX = (float) (mouseX / windowWidth * 2 - 1);
+        float normY = (float) (1 - mouseY / windowHeight * 2);
         
         // Don't show tooltip if hovering over HUD areas
         if (normY > GAME_TOP || normX > GAME_RIGHT || normY < GAME_BOTTOM) {
@@ -1304,17 +1348,14 @@ public class FrontendApplication {
         }
         
         // Don't show preview if hovering over HUD
-        int[] width = new int[1];
-        int[] height = new int[1];
-        glfwGetWindowSize(window, width, height);
-        
         // Guard against minimized window
-        if (width[0] <= 0 || height[0] <= 0) {
+        if (windowWidth <= 0 || windowHeight <= 0) {
             return;
         }
         
-        float normX = (float) (mouseX / width[0] * 2 - 1);
-        float normY = (float) (1 - mouseY / height[0] * 2);
+        // Get mouse position in normalized coords (using cached window size)
+        float normX = (float) (mouseX / windowWidth * 2 - 1);
+        float normY = (float) (1 - mouseY / windowHeight * 2);
         if (normY > GAME_TOP || normX > GAME_RIGHT || normY < GAME_BOTTOM) {
             return;
         }
