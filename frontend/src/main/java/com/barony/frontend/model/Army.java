@@ -8,6 +8,8 @@ public class Army {
     private int playerId;
     private Integer destinationX;
     private Integer destinationY;
+    private int morale; // 0-200, affects combat effectiveness (default 100)
+    private int loyalty; // 0-100, affects desertion rate (default 100)
     
     public int getId() {
         return id;
@@ -68,5 +70,21 @@ public class Army {
     public boolean isMoving() {
         return destinationX != null && destinationY != null 
             && (x != destinationX || y != destinationY);
+    }
+    
+    public int getMorale() {
+        return morale;
+    }
+    
+    public void setMorale(int morale) {
+        this.morale = morale;
+    }
+    
+    public int getLoyalty() {
+        return loyalty;
+    }
+    
+    public void setLoyalty(int loyalty) {
+        this.loyalty = loyalty;
     }
 }

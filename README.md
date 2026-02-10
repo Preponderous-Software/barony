@@ -107,6 +107,103 @@ The game features a rule-based AI that controls Player 2 armies with intelligent
 - This ensures AI decisions account for current turn's village income
 - Both players have equal army spawning constraints (initial army + village income only)
 
+### Ruler Decision System (CK-Lite Layer)
+
+The Ruler Decision System adds a lightweight policy-based strategic layer to the game, allowing Player 1 to make choices that affect their realm through mechanical modifiers. This "CK-lite" layer focuses on system-driven outcomes without dynasties, diplomacy, or narrative elements.
+
+**Policy Categories:**
+
+The system includes three policy categories, each with three options:
+
+1. **Economic Policies** (affects village income and stability):
+   - `HEAVY_TAXATION`: +20% income, -10% stability
+   - `BALANCED_BUDGET`: No modifiers (baseline)
+   - `INFRASTRUCTURE_INVESTMENT`: -10% income, +10% stability
+
+2. **Military Policies** (affects army morale and loyalty):
+   - `AGGRESSIVE_TRAINING`: +10% morale, -5% loyalty
+   - `STANDARD_SERVICE`: No modifiers (baseline)
+   - `VETERAN_BENEFITS`: -10% morale (less aggressive), +10% loyalty
+
+3. **Population Policies** (affects village population growth and stability):
+   - `GROWTH_FOCUS`: +15% population growth, -5% stability
+   - `STABLE_POPULATION`: No modifiers (baseline)
+   - `QUALITY_OVER_QUANTITY`: -10% population growth, +10% stability
+
+**Stat Mechanics:**
+
+The system tracks several new statistics for Player 1 entities:
+
+- **Villages:**
+  - `stability` (0-100): Affects soldier generation efficiency. Formula: `base generation * (stability / 100)`
+  - `population` (current population): Affects generation capacity (not yet fully implemented)
+  
+- **Armies:**
+  - `morale` (0-200): Affects combat effectiveness. Formula: `strength * (morale / 100)`
+  - `loyalty` (0-100): Affects desertion rate. Formula: `(100 - loyalty) / 20`% per tick
+
+**Stat Recovery/Decay:**
+
+Stats gradually return to baseline (100%) to prevent extreme scenarios:
+- Stability recovers toward 100% at 2% per tick
+- Morale decays toward 100% at 1% per tick
+- Loyalty recovers toward 100% at 2% per tick
+
+**Policy Mechanics:**
+
+- Policy effects are **continuous** (not one-time bonuses) and last until the policy changes
+- Policy effects apply **immediately** when a policy is changed
+- There is a **15-tick cooldown** between policy changes to prevent rapid switching exploits
+- All calculations use integer math with rounding for soldier generation
+- **AI (Player 2) does not use ruler decisions** - this is a Player 1 only feature
+
+**API Endpoints:**
+
+- `POST /api/decision` - Change a policy
+  ```json
+  {
+    "category": "ECONOMIC",
+    "choice": "HEAVY_TAXATION"
+  }
+  ```
+  Returns updated game state. Fails if cooldown is active.
+
+- `GET /api/ruler-stats` - Get realm statistics
+  ```json
+  {
+    "averageStability": 95.0,
+    "averageMorale": 110.0,
+    "averageLoyalty": 95.0,
+    "totalPopulation": 200,
+    "economicPolicy": "HEAVY_TAXATION",
+    "militaryPolicy": "AGGRESSIVE_TRAINING",
+    "populationPolicy": "STABLE_POPULATION",
+    "ticksUntilNextDecision": 5
+  }
+  ```
+
+**Strategy Examples:**
+
+- **Aggressive Expansion**: Use `AGGRESSIVE_TRAINING` for combat bonus, combine with `HEAVY_TAXATION` for rapid army growth. Monitor loyalty to prevent desertion.
+- **Defensive Consolidation**: Use `VETERAN_BENEFITS` for high loyalty, `INFRASTRUCTURE_INVESTMENT` for stable villages. Slower growth but very stable.
+- **Balanced Growth**: Keep default policies (`BALANCED_BUDGET`, `STANDARD_SERVICE`, `STABLE_POPULATION`) for steady, predictable gameplay.
+
+**Scope Clarification:**
+
+This is a "CK-lite" system focused on mechanical modifiers, **not** including:
+- ❌ Dynasties or family trees
+- ❌ Diplomacy or alliances
+- ❌ Characters with traits or skills
+- ❌ Events or narrative elements
+- ❌ Religion or culture systems
+
+It **does** include:
+- ✅ Policy-based strategic choices
+- ✅ Stat-driven mechanical effects
+- ✅ Economic and military trade-offs
+- ✅ Gradual stat changes and recovery
+- ✅ Cooldown-based decision pacing
+
 ### Running the Backend
 
 **Option 1: Using Maven Wrapper (no Maven installation required)**
