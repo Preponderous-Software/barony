@@ -43,12 +43,20 @@ public class GameService {
         snapshot.setWinnerId(gameState.getWinnerId());
         snapshot.setAiEnabled(gameState.isAiEnabled());
         
+        // Copy policy state
+        snapshot.setEconomicPolicy(gameState.getEconomicPolicy());
+        snapshot.setMilitaryPolicy(gameState.getMilitaryPolicy());
+        snapshot.setPopulationPolicy(gameState.getPopulationPolicy());
+        snapshot.setLastPolicyChangeTick(gameState.getLastPolicyChangeTick());
+        
         // Deep copy the grid
         for (int x = 0; x < gameState.getWidth(); x++) {
             for (int y = 0; y < gameState.getHeight(); y++) {
                 snapshot.getGrid()[x][y].setType(gameState.getGrid()[x][y].getType());
                 snapshot.getGrid()[x][y].setOwnerId(gameState.getGrid()[x][y].getOwnerId());
                 snapshot.getGrid()[x][y].setOccupationTicks(gameState.getGrid()[x][y].getOccupationTicks());
+                snapshot.getGrid()[x][y].setStability(gameState.getGrid()[x][y].getStability());
+                snapshot.getGrid()[x][y].setPopulation(gameState.getGrid()[x][y].getPopulation());
             }
         }
         
@@ -68,6 +76,9 @@ public class GameService {
         
         gameState.incrementTick();
         
+        // Apply gradual stat recovery/decay for Player 1 armies
+        applyStatRecovery();
+        
         // Process army movement
         processMovement();
         
@@ -75,17 +86,7 @@ public class GameService {
         mergeFriendlyArmies();
         
         // Villages generate soldiers only for their owner
-        for (Army army : gameState.getArmiesInternal()) {
-            int x = army.getX();
-            int y = army.getY();
-            if (x >= 0 && x < gameState.getWidth() && y >= 0 && y < gameState.getHeight()) {
-                Tile tile = gameState.getGrid()[x][y];
-                TileType tileType = tile.getType();
-                if (tileType == TileType.VILLAGE && tile.getOwnerId() == army.getPlayerId()) {
-                    army.setSoldiers(army.getSoldiers() + 1);
-                }
-            }
-        }
+        processVillageSoldierGeneration();
         
         // Execute AI for Player 2 if enabled (after village generation, before combat)
         if (gameState.isAiEnabled()) {
@@ -136,6 +137,9 @@ public class GameService {
         
         // Check win condition
         checkWinCondition();
+        
+        // Process army desertion for Player 1 armies
+        processDesertion();
     }
     
     private void processMovement() {
@@ -189,11 +193,19 @@ public class GameService {
                 if (army1.getX() == army2.getX() && army1.getY() == army2.getY()) {
                     // Different players -> combat
                     if (army1.getPlayerId() != army2.getPlayerId()) {
-                        int army1Soldiers = army1.getSoldiers();
-                        int army2Soldiers = army2.getSoldiers();
+                        // Apply morale modifier for Player 1 armies
+                        int army1Strength = army1.getSoldiers();
+                        int army2Strength = army2.getSoldiers();
                         
-                        army1.setSoldiers(Math.max(0, army1Soldiers - army2Soldiers));
-                        army2.setSoldiers(Math.max(0, army2Soldiers - army1Soldiers));
+                        if (army1.getPlayerId() == 1) {
+                            army1Strength = (int) Math.round(army1Strength * (army1.getMorale() / 100.0));
+                        }
+                        if (army2.getPlayerId() == 1) {
+                            army2Strength = (int) Math.round(army2Strength * (army2.getMorale() / 100.0));
+                        }
+                        
+                        army1.setSoldiers(Math.max(0, army1.getSoldiers() - army2Strength));
+                        army2.setSoldiers(Math.max(0, army2.getSoldiers() - army1Strength));
                     }
                 }
             }
@@ -416,6 +428,207 @@ public class GameService {
     
     public synchronized void setAiEnabled(boolean enabled) {
         gameState.setAiEnabled(enabled);
+    }
+    
+    // Ruler Decision System Methods
+    
+    private void applyStatRecovery() {
+        // Stability recovers toward 100% at 2% per tick for Player 1 villages
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == 1) {
+                    int stability = tile.getStability();
+                    if (stability < 100) {
+                        tile.setStability(Math.min(100, stability + 2));
+                    } else if (stability > 100) {
+                        tile.setStability(Math.max(100, stability - 2));
+                    }
+                }
+            }
+        }
+        
+        // Morale decays toward 100% at 1% per tick, loyalty recovers toward 100% at 2% per tick for Player 1 armies
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getPlayerId() == 1) {
+                int morale = army.getMorale();
+                if (morale < 100) {
+                    army.setMorale(Math.min(100, morale + 1));
+                } else if (morale > 100) {
+                    army.setMorale(Math.max(100, morale - 1));
+                }
+                
+                int loyalty = army.getLoyalty();
+                if (loyalty < 100) {
+                    army.setLoyalty(Math.min(100, loyalty + 2));
+                } else if (loyalty > 100) {
+                    army.setLoyalty(Math.max(100, loyalty - 2));
+                }
+            }
+        }
+    }
+    
+    private void processVillageSoldierGeneration() {
+        for (Army army : gameState.getArmiesInternal()) {
+            int x = army.getX();
+            int y = army.getY();
+            if (x >= 0 && x < gameState.getWidth() && y >= 0 && y < gameState.getHeight()) {
+                Tile tile = gameState.getGrid()[x][y];
+                TileType tileType = tile.getType();
+                if (tileType == TileType.VILLAGE && tile.getOwnerId() == army.getPlayerId()) {
+                    int baseGeneration = 1;
+                    
+                    // Apply stability modifier for Player 1 villages
+                    if (army.getPlayerId() == 1) {
+                        int effectiveGeneration = (int) Math.round(baseGeneration * (tile.getStability() / 100.0));
+                        army.setSoldiers(army.getSoldiers() + effectiveGeneration);
+                    } else {
+                        // Player 2 (AI) doesn't have policy effects
+                        army.setSoldiers(army.getSoldiers() + baseGeneration);
+                    }
+                }
+            }
+        }
+    }
+    
+    private void processDesertion() {
+        // Process desertion for Player 1 armies only
+        Iterator<Army> iterator = gameState.getArmiesInternal().iterator();
+        while (iterator.hasNext()) {
+            Army army = iterator.next();
+            if (army.getPlayerId() == 1) {
+                int desertionRate = (100 - army.getLoyalty()) / 20; // %
+                int desertions = (int) Math.round(army.getSoldiers() * (desertionRate / 100.0));
+                army.setSoldiers(Math.max(0, army.getSoldiers() - desertions));
+                
+                // Remove army if all soldiers deserted
+                if (army.getSoldiers() <= 0) {
+                    iterator.remove();
+                }
+            }
+        }
+    }
+    
+    public synchronized boolean canChangePolicy() {
+        int ticksSinceLastChange = gameState.getTickCount() - gameState.getLastPolicyChangeTick();
+        return ticksSinceLastChange >= 15;
+    }
+    
+    public synchronized void changePolicy(RulerDecision.PolicyCategory category, String choice) {
+        if (!canChangePolicy()) {
+            throw new IllegalStateException("Policy change on cooldown");
+        }
+        
+        switch (category) {
+            case ECONOMIC:
+                RulerDecision.EconomicPolicy economicPolicy = RulerDecision.EconomicPolicy.valueOf(choice);
+                gameState.setEconomicPolicy(choice);
+                applyEconomicPolicyEffects(economicPolicy);
+                break;
+            case MILITARY:
+                RulerDecision.MilitaryPolicy militaryPolicy = RulerDecision.MilitaryPolicy.valueOf(choice);
+                gameState.setMilitaryPolicy(choice);
+                applyMilitaryPolicyEffects(militaryPolicy);
+                break;
+            case POPULATION:
+                RulerDecision.PopulationPolicy populationPolicy = RulerDecision.PopulationPolicy.valueOf(choice);
+                gameState.setPopulationPolicy(choice);
+                applyPopulationPolicyEffects(populationPolicy);
+                break;
+        }
+        
+        gameState.setLastPolicyChangeTick(gameState.getTickCount());
+    }
+    
+    private void applyEconomicPolicyEffects(RulerDecision.EconomicPolicy policy) {
+        int stabilityMod = RulerDecision.getStabilityModifier(policy);
+        
+        // Apply to all Player 1 villages
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == 1) {
+                    tile.setStability(tile.getStability() + stabilityMod);
+                }
+            }
+        }
+    }
+    
+    private void applyMilitaryPolicyEffects(RulerDecision.MilitaryPolicy policy) {
+        int moraleMod = RulerDecision.getMoraleModifier(policy);
+        int loyaltyMod = RulerDecision.getLoyaltyModifier(policy);
+        
+        // Apply to all Player 1 armies
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getPlayerId() == 1) {
+                army.setMorale(army.getMorale() + moraleMod);
+                army.setLoyalty(army.getLoyalty() + loyaltyMod);
+            }
+        }
+    }
+    
+    private void applyPopulationPolicyEffects(RulerDecision.PopulationPolicy policy) {
+        int stabilityMod = RulerDecision.getPopulationStabilityModifier(policy);
+        
+        // Apply to all Player 1 villages
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == 1) {
+                    tile.setStability(tile.getStability() + stabilityMod);
+                }
+            }
+        }
+    }
+    
+    public synchronized RulerStats getRulerStats() {
+        RulerStats stats = new RulerStats();
+        
+        // Calculate average stability across Player 1 villages
+        int villageCount = 0;
+        int totalStability = 0;
+        int totalPopulation = 0;
+        
+        for (int x = 0; x < gameState.getWidth(); x++) {
+            for (int y = 0; y < gameState.getHeight(); y++) {
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == 1) {
+                    villageCount++;
+                    totalStability += tile.getStability();
+                    totalPopulation += tile.getPopulation();
+                }
+            }
+        }
+        
+        stats.setAverageStability(villageCount > 0 ? (double) totalStability / villageCount : 100.0);
+        stats.setTotalPopulation(totalPopulation);
+        
+        // Calculate average morale and loyalty across Player 1 armies
+        int armyCount = 0;
+        int totalMorale = 0;
+        int totalLoyalty = 0;
+        
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getPlayerId() == 1) {
+                armyCount++;
+                totalMorale += army.getMorale();
+                totalLoyalty += army.getLoyalty();
+            }
+        }
+        
+        stats.setAverageMorale(armyCount > 0 ? (double) totalMorale / armyCount : 100.0);
+        stats.setAverageLoyalty(armyCount > 0 ? (double) totalLoyalty / armyCount : 100.0);
+        
+        // Set current policies
+        stats.setEconomicPolicy(gameState.getEconomicPolicy());
+        stats.setMilitaryPolicy(gameState.getMilitaryPolicy());
+        stats.setPopulationPolicy(gameState.getPopulationPolicy());
+        
+        // Calculate ticks until next decision
+        int ticksSinceLastChange = gameState.getTickCount() - gameState.getLastPolicyChangeTick();
+        stats.setTicksUntilNextDecision(Math.max(0, 15 - ticksSinceLastChange));
+        
+        return stats;
     }
     
     // Package-private test helper to access internal state for test setup

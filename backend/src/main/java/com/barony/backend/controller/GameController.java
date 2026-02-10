@@ -2,6 +2,8 @@ package com.barony.backend.controller;
 
 import com.barony.backend.model.Command;
 import com.barony.backend.model.GameState;
+import com.barony.backend.model.RulerDecision;
+import com.barony.backend.model.RulerStats;
 import com.barony.backend.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -34,5 +36,16 @@ public class GameController {
     public GameState reset() {
         gameService.resetGame();
         return gameService.getState();
+    }
+    
+    @PostMapping("/api/decision")
+    public GameState decision(@RequestBody RulerDecision decision) {
+        gameService.changePolicy(decision.getCategory(), decision.getChoice());
+        return gameService.getState();
+    }
+    
+    @GetMapping("/api/ruler-stats")
+    public RulerStats rulerStats() {
+        return gameService.getRulerStats();
     }
 }
