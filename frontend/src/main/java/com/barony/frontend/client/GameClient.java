@@ -132,6 +132,37 @@ public class GameClient {
         }
     }
     
+    public GameState changePolicy(String category, String choice) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(baseUrl + "/api/decision");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setConnectTimeout(CONNECT_TIMEOUT);
+            conn.setReadTimeout(READ_TIMEOUT);
+            conn.setDoOutput(true);
+            
+            // Create JSON request body
+            String jsonRequest = String.format("{\"category\":\"%s\",\"choice\":\"%s\"}", category, choice);
+            
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonRequest.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+            
+            return readResponse(conn);
+        } catch (Exception e) {
+            System.err.println("Failed to change policy: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+    
     private GameState readResponse(HttpURLConnection conn) throws Exception {
         return readJsonResponse(conn, GameState.class);
     }

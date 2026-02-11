@@ -64,6 +64,10 @@ public class FrontendApplication {
     private int lastRulerStatsTickCount = -1; // Track tick count to detect changes
     private static final long RULER_STATS_UPDATE_INTERVAL_MS = 1000; // Update every second
     
+    // Policy selection UI state
+    private boolean policyMenuOpen = false;
+    private String selectedPolicyCategory = null; // "ECONOMIC", "MILITARY", or "POPULATION"
+    
     public void run() {
         init();
         loop();
@@ -278,6 +282,67 @@ public class FrontendApplication {
                         } catch (Exception e) {
                             System.out.println("Error processing split command: " + e.getMessage());
                         }
+                    }
+                }
+            }
+            
+            // P key - Toggle policy menu
+            if (key == GLFW_KEY_P && action == GLFW_RELEASE) {
+                if (policyMenuOpen) {
+                    // Close menu
+                    policyMenuOpen = false;
+                    selectedPolicyCategory = null;
+                    System.out.println("Policy menu closed");
+                } else {
+                    // Open menu
+                    policyMenuOpen = true;
+                    System.out.println("Policy menu opened - Press E (Economic), M (Military), or O (pOpulation) to select category");
+                }
+            }
+            
+            // Policy category selection when menu is open
+            if (policyMenuOpen && action == GLFW_RELEASE) {
+                if (key == GLFW_KEY_E) {
+                    selectedPolicyCategory = "ECONOMIC";
+                    System.out.println("Economic policy selected - Press 1 (Heavy Tax), 2 (Balanced), 3 (Infrastructure)");
+                } else if (key == GLFW_KEY_M) {
+                    selectedPolicyCategory = "MILITARY";
+                    System.out.println("Military policy selected - Press 1 (Aggressive), 2 (Standard), 3 (Veteran)");
+                } else if (key == GLFW_KEY_O) {
+                    selectedPolicyCategory = "POPULATION";
+                    System.out.println("Population policy selected - Press 1 (Growth), 2 (Stable), 3 (Quality)");
+                }
+                
+                // Policy choice selection (1, 2, 3) when category is selected
+                if (selectedPolicyCategory != null && client != null) {
+                    String choice = null;
+                    if (key == GLFW_KEY_1) {
+                        if (selectedPolicyCategory.equals("ECONOMIC")) choice = "HEAVY_TAXATION";
+                        else if (selectedPolicyCategory.equals("MILITARY")) choice = "AGGRESSIVE_TRAINING";
+                        else if (selectedPolicyCategory.equals("POPULATION")) choice = "GROWTH_FOCUS";
+                    } else if (key == GLFW_KEY_2) {
+                        if (selectedPolicyCategory.equals("ECONOMIC")) choice = "BALANCED_BUDGET";
+                        else if (selectedPolicyCategory.equals("MILITARY")) choice = "STANDARD_SERVICE";
+                        else if (selectedPolicyCategory.equals("POPULATION")) choice = "STABLE_POPULATION";
+                    } else if (key == GLFW_KEY_3) {
+                        if (selectedPolicyCategory.equals("ECONOMIC")) choice = "INFRASTRUCTURE_INVESTMENT";
+                        else if (selectedPolicyCategory.equals("MILITARY")) choice = "VETERAN_BENEFITS";
+                        else if (selectedPolicyCategory.equals("POPULATION")) choice = "QUALITY_OVER_QUANTITY";
+                    }
+                    
+                    if (choice != null) {
+                        System.out.println("Sending policy decision: " + selectedPolicyCategory + " -> " + choice);
+                        GameState newState = client.changePolicy(selectedPolicyCategory, choice);
+                        if (newState != null) {
+                            gameState = newState;
+                            updateCachedCounts();
+                            System.out.println("Policy changed successfully!");
+                        } else {
+                            System.out.println("Failed to change policy (check cooldown or server error)");
+                        }
+                        // Close menu after selection
+                        policyMenuOpen = false;
+                        selectedPolicyCategory = null;
                     }
                 }
             }
@@ -1264,6 +1329,129 @@ public class FrontendApplication {
             SimpleTextRenderer.drawText("Cooldown: " + ticksUntilNext + " ticks", panelLeft, statsY, panelTextScale, 1.0f, 0.5f, 0.5f);
         } else {
             SimpleTextRenderer.drawText("Policy ready!", panelLeft, statsY, panelTextScale, 0.2f, 1.0f, 0.2f);
+        }
+        statsY -= 0.04f;
+        
+        // Policy menu hint
+        SimpleTextRenderer.drawText("Press 'P' for policy menu", panelLeft, statsY, panelTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+        
+        // Render policy selection menu if open
+        if (policyMenuOpen) {
+            float menuCenterX = 0.0f;
+            float menuCenterY = 0.0f;
+            float menuWidth = 0.8f;
+            float menuHeight = 0.6f;
+            
+            // Semi-transparent background overlay
+            glColor4f(0.0f, 0.0f, 0.0f, 0.7f);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBegin(GL_QUADS);
+            glVertex2f(-1.0f, -1.0f);
+            glVertex2f(1.0f, -1.0f);
+            glVertex2f(1.0f, 1.0f);
+            glVertex2f(-1.0f, 1.0f);
+            glEnd();
+            
+            // Menu panel
+            glColor3f(0.15f, 0.15f, 0.2f);
+            glBegin(GL_QUADS);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY + menuHeight/2);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY + menuHeight/2);
+            glEnd();
+            
+            // Menu border
+            glColor3f(0.5f, 0.7f, 1.0f);
+            glLineWidth(2.0f);
+            glBegin(GL_LINE_LOOP);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY + menuHeight/2);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY + menuHeight/2);
+            glEnd();
+            glLineWidth(1.0f);
+            glDisable(GL_BLEND);
+            
+            // Menu content
+            float menuTextScale = 0.007f;
+            float menuTextY = menuCenterY + menuHeight/2 - 0.05f;
+            float menuTextX = menuCenterX - menuWidth/2 + 0.05f;
+            
+            SimpleTextRenderer.drawText("POLICY MENU", menuTextX, menuTextY, menuTextScale * 1.2f, 1.0f, 1.0f, 0.2f);
+            menuTextY -= 0.08f;
+            
+            if (selectedPolicyCategory == null) {
+                // Category selection
+                SimpleTextRenderer.drawText("Select a policy category:", menuTextX, menuTextY, menuTextScale, 0.9f, 0.9f, 0.9f);
+                menuTextY -= 0.08f;
+                
+                SimpleTextRenderer.drawText("[E] Economic Policies", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                menuTextY -= 0.05f;
+                SimpleTextRenderer.drawText("    Heavy Taxation / Balanced Budget / Infrastructure Investment", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                menuTextY -= 0.07f;
+                
+                SimpleTextRenderer.drawText("[M] Military Policies", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                menuTextY -= 0.05f;
+                SimpleTextRenderer.drawText("    Aggressive Training / Standard Service / Veteran Benefits", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                menuTextY -= 0.07f;
+                
+                SimpleTextRenderer.drawText("[O] Population Policies", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                menuTextY -= 0.05f;
+                SimpleTextRenderer.drawText("    Growth Focus / Stable Population / Quality Over Quantity", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+            } else {
+                // Policy choice selection
+                SimpleTextRenderer.drawText("Select a policy:", menuTextX, menuTextY, menuTextScale, 0.9f, 0.9f, 0.9f);
+                menuTextY -= 0.08f;
+                
+                if (selectedPolicyCategory.equals("ECONOMIC")) {
+                    SimpleTextRenderer.drawText("[1] Heavy Taxation", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    +20% income, -10% stability", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                    menuTextY -= 0.07f;
+                    
+                    SimpleTextRenderer.drawText("[2] Balanced Budget", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    No modifiers (baseline)", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                    menuTextY -= 0.07f;
+                    
+                    SimpleTextRenderer.drawText("[3] Infrastructure Investment", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    -10% income, +10% stability", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                } else if (selectedPolicyCategory.equals("MILITARY")) {
+                    SimpleTextRenderer.drawText("[1] Aggressive Training", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    +10% morale, -5% loyalty", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                    menuTextY -= 0.07f;
+                    
+                    SimpleTextRenderer.drawText("[2] Standard Service", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    No modifiers (baseline)", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                    menuTextY -= 0.07f;
+                    
+                    SimpleTextRenderer.drawText("[3] Veteran Benefits", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    -10% morale, +10% loyalty", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                } else if (selectedPolicyCategory.equals("POPULATION")) {
+                    SimpleTextRenderer.drawText("[1] Growth Focus", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    +15% population growth, -5% stability", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                    menuTextY -= 0.07f;
+                    
+                    SimpleTextRenderer.drawText("[2] Stable Population", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    No modifiers (baseline)", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                    menuTextY -= 0.07f;
+                    
+                    SimpleTextRenderer.drawText("[3] Quality Over Quantity", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+                    menuTextY -= 0.05f;
+                    SimpleTextRenderer.drawText("    -10% population growth, +10% stability", menuTextX, menuTextY, menuTextScale * 0.8f, 0.6f, 0.6f, 0.6f);
+                }
+            }
+            
+            menuTextY -= 0.1f;
+            SimpleTextRenderer.drawText("[P] Close Menu", menuTextX, menuTextY, menuTextScale, 1.0f, 0.5f, 0.5f);
         }
         
         // Render bottom bar (game log)

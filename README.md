@@ -188,6 +188,23 @@ Stats gradually drift toward policy-modified baselines (not always 100%):
 - **Defensive Consolidation**: Use `VETERAN_BENEFITS` for high loyalty, `INFRASTRUCTURE_INVESTMENT` for stable villages. Slower growth but very stable.
 - **Balanced Growth**: Keep default policies (`BALANCED_BUDGET`, `STANDARD_SERVICE`, `STABLE_POPULATION`) for steady, predictable gameplay.
 
+**How to Change Policies (In-Game UI):**
+
+1. **Press 'P'** to open the policy menu (displays in center of screen)
+2. **Select a category**:
+   - Press **'E'** for Economic policies
+   - Press **'M'** for Military policies
+   - Press **'O'** for pOpulation policies
+3. **Select a policy**:
+   - Press **'1'** for the first option (e.g., Heavy Taxation, Aggressive Training, Growth Focus)
+   - Press **'2'** for the second option (e.g., Balanced Budget, Standard Service, Stable Population)
+   - Press **'3'** for the third option (e.g., Infrastructure Investment, Veteran Benefits, Quality Over Quantity)
+4. The menu closes automatically after selection and the policy takes effect on the next tick
+5. Check the "Ruler Stats" panel on the right side to see current policies and cooldown status
+6. Wait for the 15-tick cooldown before changing policies again
+
+**Note:** The policy menu displays all available policies with their effects. Policies on cooldown cannot be changed until the timer expires.
+
 **Scope Clarification:**
 
 This is a "CK-lite" system focused on mechanical modifiers, **not** including:
