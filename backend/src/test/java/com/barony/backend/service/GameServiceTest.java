@@ -2456,13 +2456,11 @@ class GameServiceTest {
         
         state = gameService.getState();
         
-        // Find all Player 2 armies at the village location
-        long p2ArmiesAtVillage = state.getArmies().stream()
-            .filter(a -> a.getPlayerId() == 2 && a.getX() == 6 && a.getY() == 6)
+        // There should now be 2 Player 2 armies: the main army (moving) and a garrison
+        long p2ArmyCount = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
             .count();
-        
-        // There should be a garrison army left at the village
-        assertTrue(p2ArmiesAtVillage >= 1, "AI should leave at least one army at the captured village");
+        assertEquals(2, p2ArmyCount, "AI should have split into main army and garrison");
         
         // Find the garrison (non-moving army at the village)
         Army garrison = state.getArmies().stream()
@@ -2471,5 +2469,12 @@ class GameServiceTest {
             .orElse(null);
         assertNotNull(garrison, "AI should leave a garrison at the captured village");
         assertEquals(1, garrison.getSoldiers(), "Garrison should have 1 soldier");
+        
+        // Verify the main army is moving away from the village
+        Army mainArmy = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2 && a.isMoving())
+            .findFirst()
+            .orElse(null);
+        assertNotNull(mainArmy, "Main army should be moving to a new target");
     }
 }
