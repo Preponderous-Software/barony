@@ -11,6 +11,10 @@ public class GameState {
     private boolean gameOver;
     private Integer winnerId; // null if game not over, player ID if game over
     private boolean aiEnabled; // AI opponent enabled/disabled
+    private String economicPolicy; // Current economic policy (Player 1 only)
+    private String militaryPolicy; // Current military policy (Player 1 only)
+    private String populationPolicy; // Current population policy (Player 1 only)
+    private int lastPolicyChangeTick; // Tick when last policy was changed
     
     public GameState(int width, int height) {
         this.grid = new Tile[width][height];
@@ -19,6 +23,10 @@ public class GameState {
         this.gameOver = false;
         this.winnerId = null;
         this.aiEnabled = true; // AI enabled by default
+        this.economicPolicy = "BALANCED_BUDGET"; // Default policies
+        this.militaryPolicy = "STANDARD_SERVICE";
+        this.populationPolicy = "STABLE_POPULATION";
+        this.lastPolicyChangeTick = -15; // Allow immediate first policy change
         
         // Initialize grid with empty tiles
         for (int x = 0; x < width; x++) {
@@ -81,5 +89,37 @@ public class GameState {
     
     public void setAiEnabled(boolean aiEnabled) {
         this.aiEnabled = aiEnabled;
+    }
+    
+    public String getEconomicPolicy() {
+        return economicPolicy;
+    }
+    
+    public void setEconomicPolicy(String economicPolicy) {
+        this.economicPolicy = economicPolicy;
+    }
+    
+    public String getMilitaryPolicy() {
+        return militaryPolicy;
+    }
+    
+    public void setMilitaryPolicy(String militaryPolicy) {
+        this.militaryPolicy = militaryPolicy;
+    }
+    
+    public String getPopulationPolicy() {
+        return populationPolicy;
+    }
+    
+    public void setPopulationPolicy(String populationPolicy) {
+        this.populationPolicy = populationPolicy;
+    }
+    
+    public int getLastPolicyChangeTick() {
+        return lastPolicyChangeTick;
+    }
+    
+    public void setLastPolicyChangeTick(int lastPolicyChangeTick) {
+        this.lastPolicyChangeTick = lastPolicyChangeTick;
     }
 }

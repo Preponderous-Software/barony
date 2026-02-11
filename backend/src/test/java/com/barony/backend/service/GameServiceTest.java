@@ -2033,4 +2033,393 @@ class GameServiceTest {
         assertEquals(p1InitialY, p1Army.getY());
         assertFalse(p1Army.isMoving(), "AI should not control Player 1 armies");
     }
+    
+    // Ruler Decision System Tests
+    
+    @Test
+    void newArmiesStartWithDefaultMoraleAndLoyalty() {
+        GameState state = gameService.getState();
+        Army army = state.getArmies().get(0);
+        
+        assertEquals(100, army.getMorale());
+        assertEquals(100, army.getLoyalty());
+    }
+    
+    @Test
+    void newVillagesStartWithDefaultStabilityAndPopulation() {
+        GameState state = gameService.getState();
+        Tile village = state.getGrid()[3][3];
+        
+        assertEquals(100, village.getStability());
+        assertEquals(100, village.getPopulation());
+    }
+    
+    @Test
+    void stabilityAffectsSoldierGeneration() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set village at (3,3) to Player 1 with higher population
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(200); // 2 soldiers/tick baseline
+        
+        // Move Player 1 army to village
+        Army p1Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        p1Army.setX(3);
+        p1Army.setY(3);
+        p1Army.setSoldiers(10);
+        
+        // Test with 100% stability as control
+        internalState.getGrid()[3][3].setStability(100);
+        int initialSoldiers100 = p1Army.getSoldiers();
+        final int p1ArmyId = p1Army.getId(); // Store ID for lambda
+        
+        gameService.tick();
+        gameService.tick();
+        
+        GameState state100 = gameService.getState();
+        Army army100 = state100.getArmies().stream()
+            .filter(a -> a.getId() == p1ArmyId)
+            .findFirst()
+            .get();
+        int generated100 = army100.getSoldiers() - initialSoldiers100;
+        
+        // Reset and test with 50% stability
+        gameService.resetGame();
+        internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(200); // Same population
+        Army p1Army2 = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        p1Army2.setX(3);
+        p1Army2.setY(3);
+        p1Army2.setSoldiers(10);
+        internalState.getGrid()[3][3].setStability(50);
+        
+        int initialSoldiers50 = p1Army2.getSoldiers();
+        final int p1Army2Id = p1Army2.getId(); // Store ID for lambda
+        
+        gameService.tick();
+        gameService.tick();
+        
+        GameState state50 = gameService.getState();
+        Army army50 = state50.getArmies().stream()
+            .filter(a -> a.getId() == p1Army2Id)
+            .findFirst()
+            .get();
+        int generated50 = army50.getSoldiers() - initialSoldiers50;
+        
+        // With 50% stability should generate less than 100% stability
+        // At 200 population: base = 2, with 100% stability = 2, with 50% stability = 1
+        assertTrue(generated50 < generated100, 
+            "50% stability should generate fewer soldiers than 100% stability. Got: " + 
+            generated50 + " vs " + generated100);
+    }
+    
+    @Test
+    void moraleAffectsCombatEffectiveness() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Create two Player 1 armies with different morale
+        Army strongArmy = new Army(5, 5, 10, 1);
+        strongArmy.setMorale(150); // 150% morale = 50% bonus
+        internalState.getArmiesInternal().add(strongArmy);
+        
+        Army weakArmy = new Army(7, 7, 10, 1);
+        weakArmy.setMorale(50); // 50% morale = 50% penalty
+        internalState.getArmiesInternal().add(weakArmy);
+        
+        // Create Player 2 armies to fight
+        Army enemy1 = new Army(5, 5, 10, 2);
+        internalState.getArmiesInternal().add(enemy1);
+        
+        Army enemy2 = new Army(7, 7, 10, 2);
+        internalState.getArmiesInternal().add(enemy2);
+        
+        // Process combat
+        gameService.tick();
+        
+        GameState state = gameService.getState();
+        
+        // Strong army (150% morale) should deal 15 damage (10 * 1.5)
+        // Enemy1 should have 10 - 15 = -5 (dead)
+        boolean enemy1Survived = state.getArmies().stream()
+            .anyMatch(a -> a.getId() == enemy1.getId());
+        assertFalse(enemy1Survived, "Enemy facing high morale army should be defeated");
+        
+        // Weak army (50% morale) should deal 5 damage (10 * 0.5)
+        // Enemy2 should have 10 - 5 = 5 soldiers left
+        Army survivedEnemy2 = state.getArmies().stream()
+            .filter(a -> a.getId() == enemy2.getId())
+            .findFirst()
+            .orElse(null);
+        assertNotNull(survivedEnemy2, "Enemy facing low morale army should survive");
+        assertEquals(5, survivedEnemy2.getSoldiers(), "Enemy should have 5 soldiers left after facing weak army");
+    }
+    
+    @Test
+    void desertionOccursWithLowLoyalty() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Create Player 1 army with low loyalty
+        Army disloyalArmy = new Army(5, 5, 100, 1);
+        disloyalArmy.setLoyalty(0); // 0% loyalty = 5% desertion per tick
+        internalState.getArmiesInternal().add(disloyalArmy);
+        
+        int initialSoldiers = disloyalArmy.getSoldiers();
+        
+        // Process desertion over 3 ticks
+        gameService.tick();
+        gameService.tick();
+        gameService.tick();
+        
+        GameState state = gameService.getState();
+        Army updatedArmy = state.getArmies().stream()
+            .filter(a -> a.getId() == disloyalArmy.getId())
+            .findFirst()
+            .orElse(null);
+        
+        if (updatedArmy != null) {
+            // With 0% loyalty, desertion rate is (100-0)/20 = 5% per tick
+            // After 3 ticks: roughly 15% desertion
+            assertTrue(updatedArmy.getSoldiers() < initialSoldiers, "Low loyalty should cause desertion");
+        }
+        // Army might be completely removed if all soldiers deserted
+    }
+    
+    @Test
+    void stabilityRecoversTowardBaseline() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set village to Player 1 with low stability
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setStability(50);
+        
+        // Tick 10 times
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState state = gameService.getState();
+        int newStability = state.getGrid()[3][3].getStability();
+        
+        // Stability should recover at 2% per tick toward 100
+        // After 10 ticks: 50 + (2*10) = 70
+        assertTrue(newStability > 50, "Stability should recover toward 100");
+        assertTrue(newStability <= 100, "Stability should not exceed 100");
+    }
+    
+    @Test
+    void moraleDecaysTowardBaseline() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set Player 1 army with high morale
+        Army p1Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        p1Army.setMorale(150);
+        
+        // Tick 10 times
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState state = gameService.getState();
+        Army updatedArmy = state.getArmies().stream()
+            .filter(a -> a.getId() == p1Army.getId())
+            .findFirst()
+            .get();
+        
+        // Morale should decay at 1% per tick toward 100
+        // After 10 ticks: 150 - 10 = 140
+        assertTrue(updatedArmy.getMorale() < 150, "Morale should decay toward 100");
+        assertTrue(updatedArmy.getMorale() >= 100, "Morale should not go below 100 when decaying");
+    }
+    
+    @Test
+    void loyaltyRecoversTowardBaseline() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set Player 1 army with low loyalty
+        Army p1Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        p1Army.setLoyalty(50);
+        
+        // Tick 10 times
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState state = gameService.getState();
+        Army updatedArmy = state.getArmies().stream()
+            .filter(a -> a.getId() == p1Army.getId())
+            .findFirst()
+            .get();
+        
+        // Loyalty should recover at 2% per tick toward 100
+        // After 10 ticks: 50 + 20 = 70
+        assertTrue(updatedArmy.getLoyalty() > 50, "Loyalty should recover toward 100");
+        assertTrue(updatedArmy.getLoyalty() <= 100, "Loyalty should not exceed 100");
+    }
+    
+    @Test
+    void policyChangeCooldownWorks() {
+        gameService.resetGame();
+        
+        // Should allow immediate first change
+        assertTrue(gameService.canChangePolicy());
+        
+        // Change policy
+        gameService.changePolicy(RulerDecision.PolicyCategory.ECONOMIC, "HEAVY_TAXATION");
+        
+        // Should not allow immediate second change
+        assertFalse(gameService.canChangePolicy());
+        
+        // Tick 14 times (not enough)
+        for (int i = 0; i < 14; i++) {
+            gameService.tick();
+        }
+        assertFalse(gameService.canChangePolicy());
+        
+        // Tick once more (15 total)
+        gameService.tick();
+        assertTrue(gameService.canChangePolicy(), "Should allow policy change after 15 ticks");
+    }
+    
+    @Test
+    void economicPolicyAffectsStability() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set village to Player 1
+        internalState.getGrid()[3][3].setOwnerId(1);
+        
+        // Change to HEAVY_TAXATION (target stability = 100 - 10 = 90)
+        gameService.changePolicy(RulerDecision.PolicyCategory.ECONOMIC, "HEAVY_TAXATION");
+        
+        // Tick several times to allow stability to drift toward target
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState state = gameService.getState();
+        int finalStability = state.getGrid()[3][3].getStability();
+        
+        // Should have drifted toward 90 (target for heavy taxation)
+        assertTrue(finalStability <= 90, "Heavy taxation should reduce stability toward 90, got: " + finalStability);
+        assertTrue(finalStability >= 80, "Stability should be drifting toward 90, got: " + finalStability);
+    }
+    
+    @Test
+    void militaryPolicyAffectsMoraleAndLoyalty() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Get Player 1 army
+        Army p1Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        
+        // Change to AGGRESSIVE_TRAINING (target morale = 100 + 10 = 110, target loyalty = 100 - 5 = 95)
+        gameService.changePolicy(RulerDecision.PolicyCategory.MILITARY, "AGGRESSIVE_TRAINING");
+        
+        // Tick several times to allow morale/loyalty to drift toward target
+        for (int i = 0; i < 15; i++) {
+            gameService.tick();
+        }
+        
+        GameState state = gameService.getState();
+        Army updatedArmy = state.getArmies().stream()
+            .filter(a -> a.getId() == p1Army.getId())
+            .findFirst()
+            .get();
+        
+        // Should have drifted toward targets
+        assertTrue(updatedArmy.getMorale() >= 105, "Morale should drift toward 110, got: " + updatedArmy.getMorale());
+        assertTrue(updatedArmy.getLoyalty() <= 95, "Loyalty should drift toward 95, got: " + updatedArmy.getLoyalty());
+    }
+    
+    @Test
+    void getRulerStatsReturnsCorrectValues() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set village to Player 1
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setStability(80);
+        internalState.getGrid()[3][3].setPopulation(120);
+        
+        RulerStats stats = gameService.getRulerStats();
+        
+        assertEquals(80.0, stats.getAverageStability(), 0.01);
+        assertEquals(120, stats.getTotalPopulation());
+        assertEquals(100.0, stats.getAverageMorale(), 0.01);
+        assertEquals(100.0, stats.getAverageLoyalty(), 0.01);
+        assertEquals("BALANCED_BUDGET", stats.getEconomicPolicy());
+        assertEquals("STANDARD_SERVICE", stats.getMilitaryPolicy());
+        assertEquals("STABLE_POPULATION", stats.getPopulationPolicy());
+    }
+    
+    @Test
+    void populationPolicyAffectsGrowthRate() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set village to Player 1 with initial population
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(1000);
+        
+        // Capture initial population before changing policy
+        int initialPopGrowth = internalState.getGrid()[3][3].getPopulation();
+        
+        // Test GROWTH_FOCUS (+15% growth)
+        gameService.changePolicy(RulerDecision.PolicyCategory.POPULATION, "GROWTH_FOCUS");
+        
+        // Tick 10 times
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState stateGrowth = gameService.getState();
+        int finalPopGrowth = stateGrowth.getGrid()[3][3].getPopulation();
+        int growthWithBonus = finalPopGrowth - initialPopGrowth;
+        
+        // Reset and test QUALITY_OVER_QUANTITY (-10% growth)
+        gameService.resetGame();
+        internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(1000);
+        
+        gameService.changePolicy(RulerDecision.PolicyCategory.POPULATION, "QUALITY_OVER_QUANTITY");
+        
+        int initialPopQuality = internalState.getGrid()[3][3].getPopulation();
+        
+        // Tick 10 times
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState stateQuality = gameService.getState();
+        int finalPopQuality = stateQuality.getGrid()[3][3].getPopulation();
+        int growthWithPenalty = finalPopQuality - initialPopQuality;
+        
+        // Growth Focus should produce more population than Quality Over Quantity
+        assertTrue(growthWithBonus > growthWithPenalty, 
+            "GROWTH_FOCUS should increase population more than QUALITY_OVER_QUANTITY. Got: " + 
+            growthWithBonus + " vs " + growthWithPenalty);
+    }
 }

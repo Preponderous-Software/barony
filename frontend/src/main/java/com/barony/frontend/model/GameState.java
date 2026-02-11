@@ -8,6 +8,10 @@ public class GameState {
     private int tickCount;
     private boolean gameOver;
     private Integer winnerId; // null if game not over, player ID if game over
+    private String economicPolicy; // Current economic policy (Player 1 only)
+    private String militaryPolicy; // Current military policy (Player 1 only)
+    private String populationPolicy; // Current population policy (Player 1 only)
+    private int lastPolicyChangeTick; // Tick when last policy was changed
     
     public Tile[][] getGrid() {
         return grid;
@@ -47,5 +51,37 @@ public class GameState {
     
     public void setWinnerId(Integer winnerId) {
         this.winnerId = winnerId;
+    }
+    
+    public String getEconomicPolicy() {
+        return economicPolicy;
+    }
+    
+    public void setEconomicPolicy(String economicPolicy) {
+        this.economicPolicy = economicPolicy;
+    }
+    
+    public String getMilitaryPolicy() {
+        return militaryPolicy;
+    }
+    
+    public void setMilitaryPolicy(String militaryPolicy) {
+        this.militaryPolicy = militaryPolicy;
+    }
+    
+    public String getPopulationPolicy() {
+        return populationPolicy;
+    }
+    
+    public void setPopulationPolicy(String populationPolicy) {
+        this.populationPolicy = populationPolicy;
+    }
+    
+    public int getLastPolicyChangeTick() {
+        return lastPolicyChangeTick;
+    }
+    
+    public void setLastPolicyChangeTick(int lastPolicyChangeTick) {
+        this.lastPolicyChangeTick = lastPolicyChangeTick;
     }
 }

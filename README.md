@@ -107,6 +107,120 @@ The game features a rule-based AI that controls Player 2 armies with intelligent
 - This ensures AI decisions account for current turn's village income
 - Both players have equal army spawning constraints (initial army + village income only)
 
+### Ruler Decision System (CK-Lite Layer)
+
+The Ruler Decision System adds a lightweight policy-based strategic layer to the game, allowing Player 1 to make choices that affect their realm through mechanical modifiers. This "CK-lite" layer focuses on system-driven outcomes without dynasties, diplomacy, or narrative elements.
+
+**Policy Categories:**
+
+The system includes three policy categories, each with three options:
+
+1. **Economic Policies** (affects village income and stability):
+   - `HEAVY_TAXATION`: +20% income, -10% stability
+   - `BALANCED_BUDGET`: No modifiers (baseline)
+   - `INFRASTRUCTURE_INVESTMENT`: -10% income, +10% stability
+
+2. **Military Policies** (affects army morale and loyalty):
+   - `AGGRESSIVE_TRAINING`: +10% morale, -5% loyalty
+   - `STANDARD_SERVICE`: No modifiers (baseline)
+   - `VETERAN_BENEFITS`: -10% morale (less aggressive), +10% loyalty
+
+3. **Population Policies** (affects village population growth and stability):
+   - `GROWTH_FOCUS`: +15% population growth, -5% stability
+   - `STABLE_POPULATION`: No modifiers (baseline)
+   - `QUALITY_OVER_QUANTITY`: -10% population growth, +10% stability
+
+**Stat Mechanics:**
+
+The system tracks several new statistics for Player 1 entities:
+
+- **Villages:**
+  - `stability` (0-110, clamped): Affects soldier generation efficiency. Formula: `base generation * (stability / 100)`. Policies can raise stability above 100 (up to 110 cap).
+  - `population` (current population): Sets the base soldier generation rate. Baseline formula: `base_generation = population / 100` (before stability and policy modifiers)
+  
+- **Armies:**
+  - `morale` (0-200): Affects combat effectiveness. Formula: `strength * (morale / 100)`
+  - `loyalty` (0-110, clamped): Affects desertion rate. Formula: `max(0, (100 - loyalty) / 20)`% per tick, so any loyalty ≥ 100 results in 0% desertion
+
+**Stat Recovery/Decay:**
+
+Stats gradually drift toward policy-modified baselines (not always 100%):
+- Stability moves toward policy-modified target (100 + economic modifier + population modifier) at 2 points per tick, capped at 110
+- Morale moves toward policy-modified target (100 + military modifier) at 1 point per tick
+- Loyalty moves toward policy-modified target (100 + military modifier) at 2 points per tick, capped at 110
+
+**Policy Mechanics:**
+
+- Policy effects are **continuous** (not one-time bonuses) and last until the policy changes
+- Policy effects start influencing stats on the **next game tick** after a policy is changed (stats are updated during `tick()`, not instantly)
+- There is a **15-tick cooldown** between policy changes to prevent rapid switching exploits
+- All calculations use integer math with rounding for soldier generation
+- **AI (Player 2) does not use ruler decisions** - this is a Player 1 only feature
+
+**API Endpoints:**
+
+- `POST /api/decision` - Change a policy
+  ```json
+  {
+    "category": "ECONOMIC",
+    "choice": "HEAVY_TAXATION"
+  }
+  ```
+  Returns updated game state. Fails if cooldown is active.
+
+- `GET /api/ruler-stats` - Get realm statistics
+  ```json
+  {
+    "averageStability": 95.0,
+    "averageMorale": 110.0,
+    "averageLoyalty": 95.0,
+    "totalPopulation": 200,
+    "economicPolicy": "HEAVY_TAXATION",
+    "militaryPolicy": "AGGRESSIVE_TRAINING",
+    "populationPolicy": "STABLE_POPULATION",
+    "ticksUntilNextDecision": 5
+  }
+  ```
+
+**Strategy Examples:**
+
+- **Aggressive Expansion**: Use `AGGRESSIVE_TRAINING` for combat bonus, combine with `HEAVY_TAXATION` for rapid army growth. Monitor loyalty to prevent desertion.
+- **Defensive Consolidation**: Use `VETERAN_BENEFITS` for high loyalty, `INFRASTRUCTURE_INVESTMENT` for stable villages. Slower growth but very stable.
+- **Balanced Growth**: Keep default policies (`BALANCED_BUDGET`, `STANDARD_SERVICE`, `STABLE_POPULATION`) for steady, predictable gameplay.
+
+**How to Change Policies (In-Game UI):**
+
+1. **Press 'P'** to open the policy menu (displays in center of screen)
+2. **Select a category**:
+   - Press **'E'** for Economic policies
+   - Press **'M'** for Military policies
+   - Press **'O'** for pOpulation policies
+3. **Select a policy**:
+   - Press **'1'** for the first option (e.g., Heavy Taxation, Aggressive Training, Growth Focus)
+   - Press **'2'** for the second option (e.g., Balanced Budget, Standard Service, Stable Population)
+   - Press **'3'** for the third option (e.g., Infrastructure Investment, Veteran Benefits, Quality Over Quantity)
+4. The menu closes automatically after selection and the policy takes effect on the next tick
+5. Check the "Ruler Stats" panel on the right side to see current policies and cooldown status
+6. Wait for the 15-tick cooldown before changing policies again
+
+**Note:** The policy menu displays all available policies with their effects. Policies on cooldown cannot be changed until the timer expires.
+
+**Scope Clarification:**
+
+This is a "CK-lite" system focused on mechanical modifiers, **not** including:
+- ❌ Dynasties or family trees
+- ❌ Diplomacy or alliances
+- ❌ Characters with traits or skills
+- ❌ Events or narrative elements
+- ❌ Religion or culture systems
+
+It **does** include:
+- ✅ Policy-based strategic choices
+- ✅ Stat-driven mechanical effects
+- ✅ Economic and military trade-offs
+- ✅ Gradual stat changes and recovery
+- ✅ Cooldown-based decision pacing
+
 ### Running the Backend
 
 **Option 1: Using Maven Wrapper (no Maven installation required)**
