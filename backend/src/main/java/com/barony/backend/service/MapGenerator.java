@@ -8,8 +8,8 @@ import java.util.Random;
 
 /**
  * Generates random maps of varying sizes with multiple villages and castles.
- * Map sizes range from 10x10 to 20x20. Player 1 castle is placed near (0,0)
- * and Player 2 castle near the opposite corner. Neutral villages are scattered
+ * Map sizes range from 10x10 to 20x20. Player 1 castle is placed at (0,0)
+ * and Player 2 castle at the opposite corner. Neutral villages are scattered
  * across the map, scaled by map area.
  */
 public class MapGenerator {

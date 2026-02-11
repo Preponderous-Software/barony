@@ -108,6 +108,8 @@ class MapGeneratorTest {
     void generateVillageCountScalesWithMapArea() {
         // Use seeded generators to control map sizes
         // Try many seeds and check that larger maps get more villages on average
+        final int smallMapAreaThreshold = 150;
+        final int largeMapAreaThreshold = 300;
         List<Integer> smallMapVillages = new ArrayList<>();
         List<Integer> largeMapVillages = new ArrayList<>();
         
@@ -116,9 +118,9 @@ class MapGeneratorTest {
             GameState state = gen.generate();
             int villages = countTiles(state, TileType.VILLAGE);
             int area = state.getWidth() * state.getHeight();
-            if (area <= 150) {
+            if (area <= smallMapAreaThreshold) {
                 smallMapVillages.add(villages);
-            } else if (area >= 300) {
+            } else if (area >= largeMapAreaThreshold) {
                 largeMapVillages.add(villages);
             }
         }
