@@ -30,4 +30,15 @@ class CommandTest {
         assertEquals(1, command.getArmyId());
         assertEquals(5, command.getSplitAmount());
     }
+    
+    @Test
+    void splitCommandCreatesWithAmountsFromOneToNine() {
+        for (int amount = 1; amount <= 9; amount++) {
+            Command command = new Command("SPLIT", 42, amount);
+            
+            assertEquals("SPLIT", command.getType());
+            assertEquals(42, command.getArmyId());
+            assertEquals(amount, command.getSplitAmount());
+        }
+    }
 }
