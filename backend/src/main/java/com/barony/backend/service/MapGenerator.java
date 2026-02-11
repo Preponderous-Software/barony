@@ -54,12 +54,15 @@ public class MapGenerator {
         specialTiles.add(new int[]{0, 0});
         specialTiles.add(new int[]{width - 1, height - 1});
 
-        for (int i = 0; i < numVillages; i++) {
+        int placedVillages = 0;
+        while (placedVillages < numVillages) {
             int[] pos = findVillagePosition(state, width, height, specialTiles);
-            if (pos != null) {
-                state.getGrid()[pos[0]][pos[1]].setType(TileType.VILLAGE);
-                specialTiles.add(pos);
+            if (pos == null) {
+                break;
             }
+            state.getGrid()[pos[0]][pos[1]].setType(TileType.VILLAGE);
+            specialTiles.add(pos);
+            placedVillages++;
         }
 
         // Place initial armies at castles
@@ -87,15 +90,6 @@ public class MapGenerator {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 if (state.getGrid()[x][y].getType() == TileType.EMPTY && hasMinDistance(x, y, specialTiles)) {
-                    return new int[]{x, y};
-                }
-            }
-        }
-
-        // Last resort: find any empty tile
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                if (state.getGrid()[x][y].getType() == TileType.EMPTY) {
                     return new int[]{x, y};
                 }
             }

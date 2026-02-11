@@ -143,8 +143,8 @@ class GameServiceTest {
         Command command = new Command();
         command.setType("MOVE");
         command.setArmyId(armyId);
-        command.setTargetX(25); // Out of bounds (> MAX_SIZE)
-        command.setTargetY(25);
+        command.setTargetX(stateBefore.getWidth() + 1); // Out of bounds
+        command.setTargetY(stateBefore.getHeight() + 1);
         
         gameService.executeCommand(command);
         
@@ -646,8 +646,8 @@ class GameServiceTest {
         Command command = new Command();
         command.setType("MOVE");
         command.setArmyId(armyId);
-        command.setTargetX(25);  // Out of bounds (> MAX_SIZE)
-        command.setTargetY(25);
+        command.setTargetX(state.getWidth() + 1);  // Out of bounds
+        command.setTargetY(state.getHeight() + 1);
         
         gameService.executeCommand(command);
         
