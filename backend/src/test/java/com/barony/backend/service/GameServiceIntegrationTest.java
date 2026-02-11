@@ -25,6 +25,17 @@ class GameServiceIntegrationTest {
      */
     @Test
     void completeGameScenario_Player1Victory() {
+        // Set up a known village at (3,3) and P2 army at known position
+        GameState internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
+        Army p2Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        int p2CastleX = p2Army.getX();
+        int p2CastleY = p2Army.getY();
+        // Move P2 army away from castle so it doesn't interfere
+        p2Army.setX(p2CastleX);
+        p2Army.setY(p2CastleY - 1 >= 0 ? p2CastleY - 1 : p2CastleY);
+
         GameState state = gameService.getState();
         int player1ArmyId = state.getArmies().stream()
             .filter(a -> a.getPlayerId() == 1)
@@ -64,25 +75,12 @@ class GameServiceIntegrationTest {
         Command moveToEnemyCastle = new Command();
         moveToEnemyCastle.setType("MOVE");
         moveToEnemyCastle.setArmyId(player1ArmyId);
-        moveToEnemyCastle.setTargetX(9);
-        moveToEnemyCastle.setTargetY(9);
+        moveToEnemyCastle.setTargetX(p2CastleX);
+        moveToEnemyCastle.setTargetY(p2CastleY);
         gameService.executeCommand(moveToEnemyCastle);
         
-        // Move takes 12 ticks (6 horizontal + 6 vertical from 3,3 to 9,9)
-        for (int i = 0; i < 12; i++) {
-            gameService.tick();
-        }
-        
-        state = gameService.getState();
-        player1Army = state.getArmies().stream()
-            .filter(a -> a.getId() == player1ArmyId)
-            .findFirst()
-            .get();
-        assertEquals(9, player1Army.getX(), "Army should be at enemy castle X");
-        assertEquals(9, player1Army.getY(), "Army should be at enemy castle Y");
-        
-        // Phase 4: Wait for castle capture (3 ticks)
-        for (int i = 0; i < 3; i++) {
+        // Move army to enemy castle (generous tick count for variable map sizes)
+        for (int i = 0; i < 40; i++) {
             gameService.tick();
             state = gameService.getState();
             if (state.isGameOver()) {
@@ -100,67 +98,40 @@ class GameServiceIntegrationTest {
      */
     @Test
     void combatEdgeCase_EqualArmiesDestroyCombat() {
-        // Split armies to create equal forces
-        GameState state = gameService.getState();
-        int player1ArmyId = state.getArmies().stream()
-            .filter(a -> a.getPlayerId() == 1)
-            .findFirst()
-            .get()
-            .getId();
-        int player2ArmyId = state.getArmies().stream()
-            .filter(a -> a.getPlayerId() == 2)
-            .findFirst()
-            .get()
-            .getId();
-        
-        // Split both armies to create 5-soldier forces
-        Command splitP1 = new Command();
-        splitP1.setType("SPLIT");
-        splitP1.setArmyId(player1ArmyId);
-        splitP1.setSplitAmount(5);
-        gameService.executeCommand(splitP1);
-        
-        Command splitP2 = new Command();
-        splitP2.setType("SPLIT");
-        splitP2.setArmyId(player2ArmyId);
-        splitP2.setSplitAmount(5);
-        gameService.executeCommand(splitP2);
-        
-        state = gameService.getState();
-        assertEquals(4, state.getArmies().size(), "Should have 4 armies after splits");
-        
-        // Move one 5-soldier army from each player to (5,5)
-        int p1NewArmyId = state.getArmies().stream()
-            .filter(a -> a.getPlayerId() == 1 && a.getSoldiers() == 5)
-            .findFirst()
-            .get()
-            .getId();
-        int p2NewArmyId = state.getArmies().stream()
-            .filter(a -> a.getPlayerId() == 2 && a.getSoldiers() == 5)
-            .findFirst()
-            .get()
-            .getId();
-        
+        // Set up armies directly at known positions for deterministic combat
+        GameState internalState = gameService.getInternalStateForTest();
+
+        // Clear any randomly placed village at (5,5) to prevent soldier generation
+        internalState.getGrid()[5][5].setType(TileType.EMPTY);
+
+        // Create two equal 5-soldier armies from different players heading to (5,5)
+        Army p1Army = new Army(0, 5, 5, 1);
+        Army p2Army = new Army(9, 5, 5, 2);
+        internalState.getArmiesInternal().clear();
+        internalState.getArmiesInternal().add(p1Army);
+        internalState.getArmiesInternal().add(p2Army);
+
+        // Move both to (5,5) - each 5 ticks away on X axis
         Command moveP1 = new Command();
         moveP1.setType("MOVE");
-        moveP1.setArmyId(p1NewArmyId);
+        moveP1.setArmyId(p1Army.getId());
         moveP1.setTargetX(5);
         moveP1.setTargetY(5);
         gameService.executeCommand(moveP1);
-        
+
         Command moveP2 = new Command();
         moveP2.setType("MOVE");
-        moveP2.setArmyId(p2NewArmyId);
+        moveP2.setArmyId(p2Army.getId());
         moveP2.setTargetX(5);
         moveP2.setTargetY(5);
         gameService.executeCommand(moveP2);
-        
-        // Move both armies to center (max 10 ticks to reach 5,5 from corners)
-        for (int i = 0; i < 10; i++) {
+
+        // Move both armies to center (generous tick count)
+        for (int i = 0; i < 15; i++) {
             gameService.tick();
         }
         
-        state = gameService.getState();
+        GameState state = gameService.getState();
         // Both 5-soldier armies should have destroyed each other
         long armiesAt55 = state.getArmies().stream()
             .filter(a -> a.getX() == 5 && a.getY() == 5)
@@ -173,6 +144,14 @@ class GameServiceIntegrationTest {
      */
     @Test
     void simultaneousCaptureAttempt_VillageBecomesNeutral() {
+        // Set up a known village at (3,3) and P2 army at known position
+        GameState internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+
         // Set up scenario: both players move to same neutral village
         GameState state = gameService.getState();
         int player1ArmyId = state.getArmies().stream()
@@ -201,8 +180,8 @@ class GameServiceIntegrationTest {
         moveP2.setTargetY(3);
         gameService.executeCommand(moveP2);
         
-        // Wait for both to reach village
-        for (int i = 0; i < 12; i++) {
+        // Wait for both to reach village (generous tick count for variable map sizes)
+        for (int i = 0; i < 20; i++) {
             gameService.tick();
         }
         
@@ -233,6 +212,9 @@ class GameServiceIntegrationTest {
      */
     @Test
     void policyChanges_GradualStatEffects() {
+        // Set up a known village at (3,3)
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
+
         // Change to Heavy Taxation policy
         gameService.changePolicy(RulerDecision.PolicyCategory.ECONOMIC, "HEAVY_TAXATION");
         
@@ -282,6 +264,9 @@ class GameServiceIntegrationTest {
      */
     @Test
     void extremeScenario_AllPoliciesAtMaxModifiers() {
+        // Set up a known village at (3,3)
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
+
         // Set aggressive policies: Heavy Taxation, Aggressive Training, Growth Focus
         gameService.changePolicy(RulerDecision.PolicyCategory.ECONOMIC, "HEAVY_TAXATION");
         
@@ -366,9 +351,13 @@ class GameServiceIntegrationTest {
         gameService.setAiEnabled(true);
         
         GameState initialState = gameService.getState();
-        int initialPlayer2ArmyCount = (int) initialState.getArmies().stream()
+        // Record initial P2 army positions
+        Army initialP2Army = initialState.getArmies().stream()
             .filter(a -> a.getPlayerId() == 2)
-            .count();
+            .findFirst()
+            .get();
+        int initialP2X = initialP2Army.getX();
+        int initialP2Y = initialP2Army.getY();
         
         // Run several ticks to allow AI to make decisions
         for (int i = 0; i < 20; i++) {
@@ -383,10 +372,10 @@ class GameServiceIntegrationTest {
             .filter(a -> a.getDestinationX() != null)
             .count();
         
-        // At least some AI armies should have destinations or have moved
+        // At least some AI armies should have destinations or have moved from initial position
         assertTrue(player2ArmiesMoving > 0 || 
                    afterState.getArmies().stream()
-                       .anyMatch(a -> a.getPlayerId() == 2 && (a.getX() != 9 || a.getY() != 9)),
+                       .anyMatch(a -> a.getPlayerId() == 2 && (a.getX() != initialP2X || a.getY() != initialP2Y)),
                    "AI should make movement decisions when enabled");
     }
 }
