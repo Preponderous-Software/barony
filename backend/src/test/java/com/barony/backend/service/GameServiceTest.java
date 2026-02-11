@@ -20,8 +20,8 @@ class GameServiceTest {
     void gameServiceInitializesWithCorrectBoardSize() {
         GameState state = gameService.getState();
         
-        assertEquals(10, state.getWidth());
-        assertEquals(10, state.getHeight());
+        assertTrue(state.getWidth() >= MapGenerator.MIN_SIZE && state.getWidth() <= MapGenerator.MAX_SIZE);
+        assertTrue(state.getHeight() >= MapGenerator.MIN_SIZE && state.getHeight() <= MapGenerator.MAX_SIZE);
         assertEquals(0, state.getTickCount());
     }
     
@@ -37,15 +37,14 @@ class GameServiceTest {
         GameState state = gameService.getState();
         
         assertEquals(TileType.CASTLE, state.getGrid()[0][0].getType());
-        assertEquals(TileType.CASTLE, state.getGrid()[9][9].getType());
+        assertEquals(TileType.CASTLE, state.getGrid()[state.getWidth()-1][state.getHeight()-1].getType());
     }
     
     @Test
     void gameServiceInitializesWithVillages() {
         GameState state = gameService.getState();
         
-        assertEquals(TileType.VILLAGE, state.getGrid()[3][3].getType());
-        assertEquals(TileType.VILLAGE, state.getGrid()[6][6].getType());
+        assertTrue(countTilesOfType(state, TileType.VILLAGE) >= MapGenerator.MIN_VILLAGES);
     }
     
     @Test
@@ -61,6 +60,8 @@ class GameServiceTest {
     
     @Test
     void armyOnVillageGainsSoldiersDuringTick() {
+        // Ensure (3,3) is a village
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
         // Move an army to a village
         GameState state = gameService.getState();
         int armyId = state.getArmies().get(0).getId();
@@ -142,8 +143,8 @@ class GameServiceTest {
         Command command = new Command();
         command.setType("MOVE");
         command.setArmyId(armyId);
-        command.setTargetX(15); // Out of bounds
-        command.setTargetY(15);
+        command.setTargetX(25); // Out of bounds (> MAX_SIZE)
+        command.setTargetY(25);
         
         gameService.executeCommand(command);
         
@@ -160,6 +161,20 @@ class GameServiceTest {
     
     @Test
     void combatReducesBothArmiesSoldiers() {
+        // Set P2 army to known position (9,9) and clear villages on combat path
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+        
         GameState state = gameService.getState();
         int army1Id = state.getArmies().get(0).getId();
         int army2Id = state.getArmies().get(1).getId();
@@ -208,6 +223,20 @@ class GameServiceTest {
     
     @Test
     void defeatedArmiesAreRemoved() {
+        // Set P2 army to known position (9,9) and clear random villages
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+        
         GameState state = gameService.getState();
         int army1Id = state.getArmies().get(0).getId();
         int army2Id = state.getArmies().get(1).getId();
@@ -563,6 +592,13 @@ class GameServiceTest {
         int army1Id = state.getArmies().get(0).getId();
         int army2Id = state.getArmies().get(1).getId();
         
+        // Set P2 army to known position for predictable movement
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2Army.setX(9);
+        p2Army.setY(9);
+        
         // Set destinations for both armies
         Command command1 = new Command();
         command1.setType("MOVE");
@@ -610,8 +646,8 @@ class GameServiceTest {
         Command command = new Command();
         command.setType("MOVE");
         command.setArmyId(armyId);
-        command.setTargetX(15);  // Out of bounds
-        command.setTargetY(15);
+        command.setTargetX(25);  // Out of bounds (> MAX_SIZE)
+        command.setTargetY(25);
         
         gameService.executeCommand(command);
         
@@ -630,6 +666,8 @@ class GameServiceTest {
     
     @Test
     void armyMovingToVillageGeneratesSoldiers() {
+        // Ensure (3,3) is a village
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
         GameState state = gameService.getState();
         int armyId = state.getArmies().get(0).getId();
         
@@ -677,19 +715,28 @@ class GameServiceTest {
         GameState state = gameService.getState();
         
         assertEquals(1, state.getGrid()[0][0].getOwnerId()); // Player 1 castle
-        assertEquals(2, state.getGrid()[9][9].getOwnerId()); // Player 2 castle
+        int[] p2Castle = findPlayerCastle(state, 2);
+        assertNotNull(p2Castle);
+        assertEquals(2, state.getGrid()[p2Castle[0]][p2Castle[1]].getOwnerId()); // Player 2 castle
     }
     
     @Test
     void villagesInitializeAsNeutral() {
         GameState state = gameService.getState();
         
-        assertEquals(0, state.getGrid()[3][3].getOwnerId()); // Village is neutral
-        assertEquals(0, state.getGrid()[6][6].getOwnerId()); // Village is neutral
+        for (int x = 0; x < state.getWidth(); x++) {
+            for (int y = 0; y < state.getHeight(); y++) {
+                if (state.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    assertEquals(0, state.getGrid()[x][y].getOwnerId(), "Village at (" + x + "," + y + ") should be neutral");
+                }
+            }
+        }
     }
     
     @Test
     void armyCapturesVillageWhenOccupying() {
+        // Ensure (3,3) is a village
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
         GameState state = gameService.getState();
         int armyId = state.getArmies().get(0).getId();
         
@@ -714,6 +761,14 @@ class GameServiceTest {
     
     @Test
     void enemyArmyCapturesOwnedVillage() {
+        // Ensure (3,3) is a village and set P2 army to known position
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmyInternal = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmyInternal.setX(9);
+        p2ArmyInternal.setY(9);
+        
         GameState state = gameService.getState();
         int army1Id = state.getArmies().get(0).getId();
         int army2Id = state.getArmies().get(1).getId();
@@ -770,6 +825,8 @@ class GameServiceTest {
     
     @Test
     void neutralVillageDoesNotGenerateSoldiers() {
+        // Ensure (3,3) is a village
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
         GameState state = gameService.getState();
         int armyId = state.getArmies().get(0).getId();
         
@@ -825,6 +882,8 @@ class GameServiceTest {
     
     @Test
     void ownedVillageGeneratesSoldiersForOwner() {
+        // Ensure (3,3) is a village
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
         GameState state = gameService.getState();
         int armyId = state.getArmies().get(0).getId();
         
@@ -864,6 +923,16 @@ class GameServiceTest {
     
     @Test
     void getPlayerIncomeReturnsVillageCount() {
+        // Clear random villages and ensure only (3,3) is a village
+        GameState internalState = gameService.getInternalStateForTest();
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         GameState state = gameService.getState();
         
         // Initially, no villages are owned
@@ -890,6 +959,22 @@ class GameServiceTest {
     
     @Test
     void getPlayerIncomeCountsMultipleVillages() {
+        // Clear random villages and ensure only (3,3) and (6,6) are villages
+        GameState internalState = gameService.getInternalStateForTest();
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
+        internalState.getGrid()[6][6].setType(TileType.VILLAGE);
+        Army p2ArmyInternal = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmyInternal.setX(9);
+        p2ArmyInternal.setY(9);
+        
         GameState state = gameService.getState();
         int army1Id = state.getArmies().get(0).getId();
         int army2Id = state.getArmies().get(1).getId();
@@ -925,6 +1010,8 @@ class GameServiceTest {
     
     @Test
     void captureChangesVillageOwnership() {
+        // Ensure (3,3) is a village
+        gameService.getInternalStateForTest().getGrid()[3][3].setType(TileType.VILLAGE);
         GameState state = gameService.getState();
         Tile village = state.getGrid()[3][3];
         
@@ -1118,6 +1205,20 @@ class GameServiceTest {
         gameService = new GameService();
         gameService.setAiEnabled(false); // Disable AI for this test
         
+        // Set P2 army to known position (9,9) and clear random villages
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmyInternal = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmyInternal.setX(9);
+        p2ArmyInternal.setY(9);
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+        
         // Move both armies to same location
         GameState state = gameService.getState();
         Army p1Army = state.getArmies().get(0);
@@ -1238,6 +1339,13 @@ class GameServiceTest {
     
     @Test
     void castleCaptureRequiresThreeTicks() {
+        // Set P2 army to known position (9,9)
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2Army.setX(9);
+        p2Army.setY(9);
+        
         GameState state = gameService.getState();
         
         // Move Player 2 army to Player 1 castle at (0,0)
@@ -1281,6 +1389,13 @@ class GameServiceTest {
     
     @Test
     void castleOccupationResetsWhenEnemyLeaves() {
+        // Set P2 army to known position (9,9)
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        
         GameState state = gameService.getState();
         
         // Move Player 2 army to Player 1 castle
@@ -1333,6 +1448,13 @@ class GameServiceTest {
     
     @Test
     void castleOccupationResetsWhenFriendlyArmyPresent() {
+        // Set P2 army to known position (9,9)
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        
         GameState state = gameService.getState();
         
         // Move Player 2 army toward Player 1 castle
@@ -1372,6 +1494,13 @@ class GameServiceTest {
     
     @Test
     void playerLosesWhenAllCastlesCaptured() {
+        // Set P2 army to known position (9,9)
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        
         GameState state = gameService.getState();
         
         // Initial state - no game over
@@ -1409,15 +1538,23 @@ class GameServiceTest {
     
     @Test
     void playerWinsWhenEnemyHasNoCastles() {
+        // Set P2 army to known position and find P2 castle dynamically
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        
         GameState state = gameService.getState();
+        int[] p2Castle = findPlayerCastle(state, 2);
         
         // Move Player 1 army to Player 2 castle
         int army1Id = state.getArmies().get(0).getId();
         Command move = new Command();
         move.setType("MOVE");
         move.setArmyId(army1Id);
-        move.setTargetX(9);
-        move.setTargetY(9);
+        move.setTargetX(p2Castle[0]);
+        move.setTargetY(p2Castle[1]);
         gameService.executeCommand(move);
         
         // Move Player 2 army away
@@ -1429,8 +1566,8 @@ class GameServiceTest {
         moveAway.setTargetY(5);
         gameService.executeCommand(moveAway);
         
-        // Wait for Player 1 to capture Player 2's castle
-        for (int i = 0; i < 20; i++) {
+        // Wait for Player 1 to capture Player 2's castle (generous tick count for variable map sizes)
+        for (int i = 0; i < 40; i++) {
             gameService.tick();
         }
         
@@ -1442,15 +1579,23 @@ class GameServiceTest {
     
     @Test
     void commandsRejectedWhenGameOver() {
+        // Set P2 army to known position and find P2 castle dynamically
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        
         GameState state = gameService.getState();
+        int[] p2Castle = findPlayerCastle(state, 2);
         
         // Move Player 1 army to Player 2 castle to win
         int army1Id = state.getArmies().get(0).getId();
         Command move = new Command();
         move.setType("MOVE");
         move.setArmyId(army1Id);
-        move.setTargetX(9);
-        move.setTargetY(9);
+        move.setTargetX(p2Castle[0]);
+        move.setTargetY(p2Castle[1]);
         gameService.executeCommand(move);
         
         // Move Player 2 away
@@ -1462,8 +1607,8 @@ class GameServiceTest {
         moveAway.setTargetY(5);
         gameService.executeCommand(moveAway);
         
-        // Wait for game to end
-        for (int i = 0; i < 20; i++) {
+        // Wait for game to end (generous tick count for variable map sizes)
+        for (int i = 0; i < 40; i++) {
             gameService.tick();
         }
         
@@ -1528,7 +1673,9 @@ class GameServiceTest {
         
         // Verify castles are reset to original ownership
         assertEquals(1, state.getGrid()[0][0].getOwnerId());
-        assertEquals(2, state.getGrid()[9][9].getOwnerId());
+        int[] p2Castle = findPlayerCastle(state, 2);
+        assertNotNull(p2Castle);
+        assertEquals(2, state.getGrid()[p2Castle[0]][p2Castle[1]].getOwnerId());
         
         // Verify armies are at starting positions
         Army army1 = state.getArmies().stream()
@@ -1544,12 +1691,19 @@ class GameServiceTest {
         assertNotNull(army2);
         assertEquals(0, army1.getX());
         assertEquals(0, army1.getY());
-        assertEquals(9, army2.getX());
-        assertEquals(9, army2.getY());
+        assertEquals(p2Castle[0], army2.getX());
+        assertEquals(p2Castle[1], army2.getY());
     }
     
     @Test
     void castleOccupationTicksVisibleInState() {
+        // Set P2 army to known position (9,9)
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        
         GameState state = gameService.getState();
         
         // Move Player 2 to Player 1 castle
@@ -1605,6 +1759,13 @@ class GameServiceTest {
     
     @Test
     void castleCaptureResetsCaptureProgress() {
+        // Set P2 army to known position (9,9)
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p2ArmySetup = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        p2ArmySetup.setX(9);
+        p2ArmySetup.setY(9);
+        
         GameState state = gameService.getState();
         
         // Move Player 2 to Player 1 castle
@@ -1731,6 +1892,15 @@ class GameServiceTest {
         
         // Set up: AI owns village at (6,6), place AI army closer to village for this test
         GameState internalState = gameService.getInternalStateForTest();
+        // Clear random villages to avoid confusing AI
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+        internalState.getGrid()[6][6].setType(TileType.VILLAGE);
         internalState.getGrid()[6][6].setOwnerId(2);
         
         // Place AI army closer to village (7,7) so it can defend
@@ -1741,33 +1911,29 @@ class GameServiceTest {
         aiArmy.setX(7);
         aiArmy.setY(7);
         
-        // Get P1 army ID and move it close to the village
+        // Get P1 army and place it near the village to create threat immediately
         Army p1Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
+        p1Army.setX(5);
+        p1Army.setY(5);
         
-        Command moveCommand = new Command();
-        moveCommand.setType("MOVE");
-        moveCommand.setArmyId(p1Army.getId());
-        moveCommand.setTargetX(5);
-        moveCommand.setTargetY(5);
-        gameService.executeCommand(moveCommand);
-        
-        // Move P1 army to threatened position
-        for (int i = 0; i < 10; i++) {
+        // Tick to let AI detect threat and respond
+        for (int i = 0; i < 5; i++) {
             gameService.tick();
         }
         
-        // Check that AI army has moved toward the threatened village
+        // Check that AI army has moved toward or is already at the threatened village
         GameState state = gameService.getState();
-        boolean aiArmyMovingToVillage = state.getArmies().stream()
+        boolean aiArmyDefendingVillage = state.getArmies().stream()
             .filter(a -> a.getPlayerId() == 2)
-            .anyMatch(a -> a.isMoving() && 
+            .anyMatch(a -> (a.isMoving() && 
                            a.getDestinationX() == 6 && 
-                           a.getDestinationY() == 6);
+                           a.getDestinationY() == 6) ||
+                          (a.getX() == 6 && a.getY() == 6));
         
-        assertTrue(aiArmyMovingToVillage, "AI should defend threatened village");
+        assertTrue(aiArmyDefendingVillage, "AI should defend threatened village");
     }
     
     @Test
@@ -1844,14 +2010,25 @@ class GameServiceTest {
         
         // Set up: P1 owns a village with no defense
         GameState internalState = gameService.getInternalStateForTest();
+        // Clear random villages to avoid confusing AI
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+        internalState.getGrid()[6][6].setType(TileType.VILLAGE);
         internalState.getGrid()[6][6].setOwnerId(1);
         
-        // Give AI a strong army at its starting position
+        // Give AI a strong army near the village
         Army aiArmy = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
             .findFirst()
             .get();
         aiArmy.setSoldiers(50);
+        aiArmy.setX(9);
+        aiArmy.setY(9);
         
         // Move P1 army far away
         Army p1Army = internalState.getArmiesInternal().stream()
@@ -1888,11 +2065,21 @@ class GameServiceTest {
         
         // Give AI overwhelming force
         GameState internalState = gameService.getInternalStateForTest();
+        // Clear random villages to avoid AI getting distracted
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
         Army aiArmy = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
             .findFirst()
             .get();
         aiArmy.setSoldiers(100);
+        aiArmy.setX(9);
+        aiArmy.setY(9);
         
         // Weaken P1
         Army p1Army = internalState.getArmiesInternal().stream()
@@ -2047,9 +2234,18 @@ class GameServiceTest {
     
     @Test
     void newVillagesStartWithDefaultStabilityAndPopulation() {
+        Tile village = null;
         GameState state = gameService.getState();
-        Tile village = state.getGrid()[3][3];
-        
+        for (int x = 0; x < state.getWidth(); x++) {
+            for (int y = 0; y < state.getHeight(); y++) {
+                if (state.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    village = state.getGrid()[x][y];
+                    break;
+                }
+            }
+            if (village != null) break;
+        }
+        assertNotNull(village);
         assertEquals(100, village.getStability());
         assertEquals(100, village.getPopulation());
     }
@@ -2060,6 +2256,7 @@ class GameServiceTest {
         GameState internalState = gameService.getInternalStateForTest();
         
         // Set village at (3,3) to Player 1 with higher population
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         internalState.getGrid()[3][3].setOwnerId(1);
         internalState.getGrid()[3][3].setPopulation(200); // 2 soldiers/tick baseline
         
@@ -2090,6 +2287,7 @@ class GameServiceTest {
         // Reset and test with 50% stability
         gameService.resetGame();
         internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         internalState.getGrid()[3][3].setOwnerId(1);
         internalState.getGrid()[3][3].setPopulation(200); // Same population
         Army p1Army2 = internalState.getArmiesInternal().stream()
@@ -2200,6 +2398,7 @@ class GameServiceTest {
         GameState internalState = gameService.getInternalStateForTest();
         
         // Set village to Player 1 with low stability
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         internalState.getGrid()[3][3].setOwnerId(1);
         internalState.getGrid()[3][3].setStability(50);
         
@@ -2305,6 +2504,7 @@ class GameServiceTest {
         GameState internalState = gameService.getInternalStateForTest();
         
         // Set village to Player 1
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         internalState.getGrid()[3][3].setOwnerId(1);
         
         // Change to HEAVY_TAXATION (target stability = 100 - 10 = 90)
@@ -2359,6 +2559,7 @@ class GameServiceTest {
         GameState internalState = gameService.getInternalStateForTest();
         
         // Set village to Player 1
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         internalState.getGrid()[3][3].setOwnerId(1);
         internalState.getGrid()[3][3].setStability(80);
         internalState.getGrid()[3][3].setPopulation(120);
@@ -2380,6 +2581,7 @@ class GameServiceTest {
         GameState internalState = gameService.getInternalStateForTest();
         
         // Set village to Player 1 with initial population
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         internalState.getGrid()[3][3].setOwnerId(1);
         internalState.getGrid()[3][3].setPopulation(1000);
         
@@ -2401,6 +2603,7 @@ class GameServiceTest {
         // Reset and test QUALITY_OVER_QUANTITY (-10% growth)
         gameService.resetGame();
         internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
         internalState.getGrid()[3][3].setOwnerId(1);
         internalState.getGrid()[3][3].setPopulation(1000);
         
@@ -2421,5 +2624,29 @@ class GameServiceTest {
         assertTrue(growthWithBonus > growthWithPenalty, 
             "GROWTH_FOCUS should increase population more than QUALITY_OVER_QUANTITY. Got: " + 
             growthWithBonus + " vs " + growthWithPenalty);
+    }
+    
+    private int[] findPlayerCastle(GameState state, int playerId) {
+        for (int x = 0; x < state.getWidth(); x++) {
+            for (int y = 0; y < state.getHeight(); y++) {
+                Tile tile = state.getGrid()[x][y];
+                if (tile.getType() == TileType.CASTLE && tile.getOwnerId() == playerId) {
+                    return new int[]{x, y};
+                }
+            }
+        }
+        return null;
+    }
+
+    private int countTilesOfType(GameState state, TileType type) {
+        int count = 0;
+        for (int x = 0; x < state.getWidth(); x++) {
+            for (int y = 0; y < state.getHeight(); y++) {
+                if (state.getGrid()[x][y].getType() == type) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 }
