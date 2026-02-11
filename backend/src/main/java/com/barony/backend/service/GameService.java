@@ -140,6 +140,9 @@ public class GameService {
         
         // Process army desertion for Player 1 armies
         processDesertion();
+        
+        // Spawn a new army at the castle if a player has no armies remaining
+        spawnArmyIfNoneRemaining();
     }
     
     private void processMovement() {
@@ -576,6 +579,32 @@ public class GameService {
                 // Remove army if all soldiers deserted
                 if (army.getSoldiers() <= 0) {
                     iterator.remove();
+                }
+            }
+        }
+    }
+    
+    private void spawnArmyIfNoneRemaining() {
+        for (int playerId = 1; playerId <= 2; playerId++) {
+            boolean hasArmy = false;
+            for (Army army : gameState.getArmiesInternal()) {
+                if (army.getPlayerId() == playerId) {
+                    hasArmy = true;
+                    break;
+                }
+            }
+            
+            if (!hasArmy) {
+                // Find a castle owned by this player and spawn a new army there
+                boolean spawned = false;
+                for (int x = 0; x < gameState.getWidth() && !spawned; x++) {
+                    for (int y = 0; y < gameState.getHeight() && !spawned; y++) {
+                        Tile tile = gameState.getGrid()[x][y];
+                        if (tile.getType() == TileType.CASTLE && tile.getOwnerId() == playerId) {
+                            gameState.getArmiesInternal().add(new Army(x, y, 1, playerId));
+                            spawned = true;
+                        }
+                    }
                 }
             }
         }

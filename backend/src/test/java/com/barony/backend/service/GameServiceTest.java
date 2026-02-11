@@ -196,8 +196,11 @@ class GameServiceTest {
         
         // Both armies should have reduced soldiers
         if (soldiers1Before == soldiers2Before) {
-            // Equal strength - both eliminated
-            assertEquals(0, state.getArmies().size());
+            // Equal strength - both eliminated, then respawned at their castles
+            assertEquals(2, state.getArmies().size());
+            for (Army a : state.getArmies()) {
+                assertEquals(1, a.getSoldiers());
+            }
         } else {
             // One survives with reduced soldiers
             assertEquals(1, state.getArmies().size());
@@ -234,8 +237,8 @@ class GameServiceTest {
         
         state = gameService.getState();
         
-        // At least one army should be removed (if equal) or both reduced
-        assertTrue(state.getArmies().size() <= 1);
+        // At least one army should be removed (if equal) or both reduced, but respawned armies may appear
+        assertTrue(state.getArmies().size() <= 2);
     }
     
     @Test
@@ -1144,7 +1147,11 @@ class GameServiceTest {
         
         state = gameService.getState();
         // Enemy armies fight instead of merging, both should be destroyed (10 vs 10)
-        assertEquals(0, state.getArmies().size());
+        // then respawned at their respective castles with 1 soldier each
+        assertEquals(2, state.getArmies().size());
+        for (Army a : state.getArmies()) {
+            assertEquals(1, a.getSoldiers());
+        }
     }
     
     @Test
@@ -2421,5 +2428,80 @@ class GameServiceTest {
         assertTrue(growthWithBonus > growthWithPenalty, 
             "GROWTH_FOCUS should increase population more than QUALITY_OVER_QUANTITY. Got: " + 
             growthWithBonus + " vs " + growthWithPenalty);
+    }
+    
+    @Test
+    void playerArmyRespawnsAtCastleWhenAllArmiesLost() {
+        // Set up scenario where Player 1 loses all armies via combat
+        GameState state = gameService.getState();
+        int army1Id = state.getArmies().get(0).getId();
+        int army2Id = state.getArmies().get(1).getId();
+        
+        // Move both armies to collide - equal strength so both will be eliminated
+        Command move1 = new Command();
+        move1.setType("MOVE");
+        move1.setArmyId(army1Id);
+        move1.setTargetX(5);
+        move1.setTargetY(5);
+        gameService.executeCommand(move1);
+        
+        Command move2 = new Command();
+        move2.setType("MOVE");
+        move2.setArmyId(army2Id);
+        move2.setTargetX(5);
+        move2.setTargetY(5);
+        gameService.executeCommand(move2);
+        
+        // Move until combat occurs and both are destroyed
+        for (int i = 0; i < 15; i++) {
+            gameService.tick();
+        }
+        
+        state = gameService.getState();
+        
+        // Both players should have respawned armies at their castles
+        Army player1Army = null;
+        Army player2Army = null;
+        for (Army a : state.getArmies()) {
+            if (a.getPlayerId() == 1) player1Army = a;
+            if (a.getPlayerId() == 2) player2Army = a;
+        }
+        
+        assertNotNull(player1Army, "Player 1 should have a respawned army");
+        assertEquals(1, player1Army.getSoldiers());
+        assertEquals(0, player1Army.getX());
+        assertEquals(0, player1Army.getY());
+        
+        assertNotNull(player2Army, "Player 2 should have a respawned army");
+        assertEquals(1, player2Army.getSoldiers());
+        assertEquals(9, player2Army.getX());
+        assertEquals(9, player2Army.getY());
+    }
+    
+    @Test
+    void noRespawnWhenPlayerStillHasArmies() {
+        // Both players start with armies - no respawn should occur
+        GameState state = gameService.getState();
+        long player1Before = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .count();
+        long player2Before = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .count();
+        assertEquals(1, player1Before);
+        assertEquals(1, player2Before);
+        
+        // Tick and confirm no extra armies are spawned
+        gameService.tick();
+        
+        state = gameService.getState();
+        long player1After = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .count();
+        long player2After = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .count();
+        assertEquals(1, player1After);
+        assertEquals(1, player2After);
     }
 }
