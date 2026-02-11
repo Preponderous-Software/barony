@@ -140,7 +140,7 @@ The system tracks several new statistics for Player 1 entities:
   
 - **Armies:**
   - `morale` (0-200): Affects combat effectiveness. Formula: `strength * (morale / 100)`
-  - `loyalty` (0-100): Affects desertion rate. Formula: `(100 - loyalty) / 20`% per tick
+  - `loyalty` (0-110, clamped): Affects desertion rate. Formula: `max(0, (100 - loyalty) / 20)`% per tick, so any loyalty ≥ 100 results in 0% desertion
 
 **Stat Recovery/Decay:**
 

@@ -11,7 +11,7 @@ public class Army {
     private Integer destinationX;
     private Integer destinationY;
     private int morale; // 0-200, affects combat effectiveness (default 100)
-    private int loyalty; // 0-100, affects desertion rate (default 100)
+    private int loyalty; // 0-110, affects desertion rate (default 100, 100-110 is bonus)
     
     private static final AtomicInteger nextId = new AtomicInteger(1);
     

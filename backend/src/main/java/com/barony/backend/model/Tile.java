@@ -52,7 +52,7 @@ public class Tile {
     }
     
     public void setStability(int stability) {
-        this.stability = Math.max(0, Math.min(100, stability)); // Clamp between 0 and 100
+        this.stability = Math.max(0, Math.min(110, stability)); // Clamp between 0 and 110 (allow bonus)
     }
     
     public int getPopulation() {

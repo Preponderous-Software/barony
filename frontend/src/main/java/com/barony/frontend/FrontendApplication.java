@@ -61,6 +61,7 @@ public class FrontendApplication {
     // Cached ruler stats
     private RulerStats cachedRulerStats = null;
     private long lastRulerStatsUpdate = 0;
+    private int lastRulerStatsTickCount = -1; // Track tick count to detect changes
     private static final long RULER_STATS_UPDATE_INTERVAL_MS = 1000; // Update every second
     
     public void run() {
@@ -878,11 +879,20 @@ public class FrontendApplication {
             }
         }
         
-        // Update ruler stats periodically (not every frame)
-        long currentTime = System.currentTimeMillis();
-        if (client != null && (currentTime - lastRulerStatsUpdate) >= RULER_STATS_UPDATE_INTERVAL_MS) {
-            cachedRulerStats = client.getRulerStats();
-            lastRulerStatsUpdate = currentTime;
+        // Update ruler stats whenever cached counts are refreshed to avoid stale HUD data
+        if (client != null) {
+            long currentTime = System.currentTimeMillis();
+            int currentTick = gameState != null ? gameState.getTickCount() : -1;
+            
+            // Refresh if tick changed OR if enough time has passed
+            boolean tickChanged = currentTick != lastRulerStatsTickCount;
+            boolean timeElapsed = (currentTime - lastRulerStatsUpdate) >= RULER_STATS_UPDATE_INTERVAL_MS;
+            
+            if (tickChanged || timeElapsed) {
+                cachedRulerStats = client.getRulerStats();
+                lastRulerStatsUpdate = currentTime;
+                lastRulerStatsTickCount = currentTick;
+            }
         }
     }
     

@@ -198,11 +198,11 @@ public class GameService {
                         int army2Strength = army2.getSoldiers();
                         
                         if (army1.getPlayerId() == 1) {
-                            // Integer math: (soldiers * morale + 50) / 100 for rounding
-                            army1Strength = ((army1Strength * army1.getMorale()) + 50) / 100;
+                            // Integer math with long intermediate: (soldiers * morale + 50) / 100 for rounding
+                            army1Strength = (int) ((((long) army1Strength * army1.getMorale()) + 50L) / 100L);
                         }
                         if (army2.getPlayerId() == 1) {
-                            army2Strength = ((army2Strength * army2.getMorale()) + 50) / 100;
+                            army2Strength = (int) ((((long) army2Strength * army2.getMorale()) + 50L) / 100L);
                         }
                         
                         army1.setSoldiers(Math.max(0, army1.getSoldiers() - army2Strength));
@@ -482,9 +482,17 @@ public class GameService {
                     // Compute growth in basis points to preserve fractional modifiers:
                     // growth = (currentPop * baseGrowthRate * (100 + growthModifier)) / 10000
                     int currentPop = tile.getPopulation();
-                    int growthNumerator = currentPop * baseGrowthRate * (100 + growthModifier);
-                    int growth = (growthNumerator + 5000) / 10000; // Integer math with rounding (basis points)
-                    tile.setPopulation(currentPop + growth);
+                    long growthNumerator = (long) currentPop * baseGrowthRate * (100L + growthModifier);
+                    long growthLong = (growthNumerator + 5000L) / 10000L; // Integer math with rounding (basis points)
+                    long newPopulationLong = (long) currentPop + growthLong;
+                    
+                    // Clamp to prevent overflow
+                    if (newPopulationLong > Integer.MAX_VALUE) {
+                        newPopulationLong = Integer.MAX_VALUE;
+                    } else if (newPopulationLong < 0L) {
+                        newPopulationLong = 0L;
+                    }
+                    tile.setPopulation((int) newPopulationLong);
                 }
             }
         }
