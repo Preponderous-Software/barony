@@ -478,12 +478,12 @@ public class GameService {
                     // Population growth: base growth of 1% per tick, modified by population policy
                     int growthModifier = RulerDecision.getPopulationGrowthModifier(populationPolicy);
                     int baseGrowthRate = 1; // 1% per tick
-                    // Apply modifier: (baseRate * (100 + modifier)) / 100
-                    int effectiveGrowthRate = (baseGrowthRate * (100 + growthModifier)) / 100;
                     
-                    // Apply growth: population * (effectiveRate / 100)
+                    // Compute growth in basis points to preserve fractional modifiers:
+                    // growth ≈ currentPop * baseGrowthRate% * (100 + growthModifier) / 100
                     int currentPop = tile.getPopulation();
-                    int growth = (currentPop * effectiveGrowthRate + 50) / 100; // Integer math with rounding
+                    int growthNumerator = currentPop * baseGrowthRate * (100 + growthModifier);
+                    int growth = (growthNumerator + 5000) / 10000; // Integer math with rounding (basis points)
                     tile.setPopulation(currentPop + growth);
                 }
             }
@@ -555,7 +555,9 @@ public class GameService {
         while (iterator.hasNext()) {
             Army army = iterator.next();
             if (army.getPlayerId() == 1) {
-                int desertionRate = (100 - army.getLoyalty()) / 20; // % (0-5%)
+                // Desertion rate: (100 - loyalty) / 20, clamped at 0% minimum
+                // Loyalty > 100 results in negative desertion (0%)
+                int desertionRate = Math.max(0, (100 - army.getLoyalty()) / 20); // % (0-5%)
                 // Integer math: (soldiers * rate + 50) / 100 for rounding
                 int desertions = (army.getSoldiers() * desertionRate + 50) / 100;
                 army.setSoldiers(Math.max(0, army.getSoldiers() - desertions));

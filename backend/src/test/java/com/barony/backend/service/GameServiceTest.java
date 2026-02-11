@@ -2373,4 +2373,52 @@ class GameServiceTest {
         assertEquals("STANDARD_SERVICE", stats.getMilitaryPolicy());
         assertEquals("STABLE_POPULATION", stats.getPopulationPolicy());
     }
+    
+    @Test
+    void populationPolicyAffectsGrowthRate() {
+        gameService.resetGame();
+        GameState internalState = gameService.getInternalStateForTest();
+        
+        // Set village to Player 1 with initial population
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(1000);
+        
+        // Test GROWTH_FOCUS (+15% growth)
+        gameService.changePolicy(RulerDecision.PolicyCategory.POPULATION, "GROWTH_FOCUS");
+        
+        int initialPopGrowth = internalState.getGrid()[3][3].getPopulation();
+        
+        // Tick 10 times
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState stateGrowth = gameService.getState();
+        int finalPopGrowth = stateGrowth.getGrid()[3][3].getPopulation();
+        int growthWithBonus = finalPopGrowth - initialPopGrowth;
+        
+        // Reset and test QUALITY_OVER_QUANTITY (-10% growth)
+        gameService.resetGame();
+        internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(1000);
+        
+        gameService.changePolicy(RulerDecision.PolicyCategory.POPULATION, "QUALITY_OVER_QUANTITY");
+        
+        int initialPopQuality = internalState.getGrid()[3][3].getPopulation();
+        
+        // Tick 10 times
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
+        
+        GameState stateQuality = gameService.getState();
+        int finalPopQuality = stateQuality.getGrid()[3][3].getPopulation();
+        int growthWithPenalty = finalPopQuality - initialPopQuality;
+        
+        // Growth Focus should produce more population than Quality Over Quantity
+        assertTrue(growthWithBonus > growthWithPenalty, 
+            "GROWTH_FOCUS should increase population more than QUALITY_OVER_QUANTITY. Got: " + 
+            growthWithBonus + " vs " + growthWithPenalty);
+    }
 }

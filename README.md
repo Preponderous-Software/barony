@@ -136,7 +136,7 @@ The system tracks several new statistics for Player 1 entities:
 
 - **Villages:**
   - `stability` (0-100): Affects soldier generation efficiency. Formula: `base generation * (stability / 100)`
-  - `population` (current population): Affects generation capacity (not yet fully implemented)
+  - `population` (current population): Sets the base soldier generation rate. Baseline formula: `base_generation = population / 100` (before stability and policy modifiers)
   
 - **Armies:**
   - `morale` (0-200): Affects combat effectiveness. Formula: `strength * (morale / 100)`
@@ -152,7 +152,7 @@ Stats gradually return to baseline (100%) to prevent extreme scenarios:
 **Policy Mechanics:**
 
 - Policy effects are **continuous** (not one-time bonuses) and last until the policy changes
-- Policy effects apply **immediately** when a policy is changed
+- Policy effects start influencing stats on the **next game tick** after a policy is changed (stats are updated during `tick()`, not instantly)
 - There is a **15-tick cooldown** between policy changes to prevent rapid switching exploits
 - All calculations use integer math with rounding for soldier generation
 - **AI (Player 2) does not use ruler decisions** - this is a Player 1 only feature

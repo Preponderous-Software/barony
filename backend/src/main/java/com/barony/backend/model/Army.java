@@ -108,6 +108,6 @@ public class Army {
     }
     
     public void setLoyalty(int loyalty) {
-        this.loyalty = Math.max(0, Math.min(100, loyalty)); // Clamp between 0 and 100
+        this.loyalty = Math.max(0, Math.min(110, loyalty)); // Clamp between 0 and 110 (allow bonus)
     }
 }

@@ -40,6 +40,26 @@ public class GameController {
     
     @PostMapping("/api/decision")
     public GameState decision(@RequestBody RulerDecision decision) {
+        // Validate request
+        if (decision == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Request body 'decision' is required"
+            );
+        }
+        if (decision.getCategory() == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Field 'category' is required"
+            );
+        }
+        if (decision.getChoice() == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Field 'choice' is required"
+            );
+        }
+        
         try {
             gameService.changePolicy(decision.getCategory(), decision.getChoice());
             return gameService.getState();
