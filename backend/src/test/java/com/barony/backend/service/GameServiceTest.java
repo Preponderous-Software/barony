@@ -2422,4 +2422,54 @@ class GameServiceTest {
             "GROWTH_FOCUS should increase population more than QUALITY_OVER_QUANTITY. Got: " + 
             growthWithBonus + " vs " + growthWithPenalty);
     }
+    
+    @Test
+    void aiLeavesGarrisonWhenMovingAwayFromCapturedVillage() {
+        // Move Player 2's army to village at (6,6) with AI disabled
+        GameState state = gameService.getState();
+        Army p2Army = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(p2Army);
+        int p2ArmyId = p2Army.getId();
+        
+        Command moveToVillage = new Command();
+        moveToVillage.setType("MOVE");
+        moveToVillage.setArmyId(p2ArmyId);
+        moveToVillage.setTargetX(6);
+        moveToVillage.setTargetY(6);
+        gameService.executeCommand(moveToVillage);
+        
+        // Move army to village (from 9,9 to 6,6 = 3+3 = 6 ticks)
+        for (int i = 0; i < 6; i++) {
+            gameService.tick();
+        }
+        
+        // Verify village is captured by Player 2
+        state = gameService.getState();
+        assertEquals(2, state.getGrid()[6][6].getOwnerId());
+        
+        // Enable AI and tick once - AI should decide to move and leave garrison
+        gameService.setAiEnabled(true);
+        gameService.tick();
+        
+        state = gameService.getState();
+        
+        // Find all Player 2 armies at the village location
+        long p2ArmiesAtVillage = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2 && a.getX() == 6 && a.getY() == 6)
+            .count();
+        
+        // There should be a garrison army left at the village
+        assertTrue(p2ArmiesAtVillage >= 1, "AI should leave at least one army at the captured village");
+        
+        // Find the garrison (non-moving army at the village)
+        Army garrison = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2 && a.getX() == 6 && a.getY() == 6 && !a.isMoving())
+            .findFirst()
+            .orElse(null);
+        assertNotNull(garrison, "AI should leave a garrison at the captured village");
+        assertEquals(1, garrison.getSoldiers(), "Garrison should have 1 soldier");
+    }
 }

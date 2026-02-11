@@ -679,10 +679,28 @@ public class GameService {
             }
         }
         
+        // Collect garrison armies to add after iteration
+        java.util.List<Army> newGarrisons = new java.util.ArrayList<>();
+        
         // Make decisions for each idle AI army
         for (Army army : aiArmies) {
             makeAIDecision(army);
+            
+            // If the army is now moving away from a village it owns, leave a garrison
+            if (army.isMoving() && army.getSoldiers() > 1) {
+                int x = army.getX();
+                int y = army.getY();
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == AI_PLAYER_ID) {
+                    Army garrison = new Army(x, y, 1, AI_PLAYER_ID);
+                    army.setSoldiers(army.getSoldiers() - 1);
+                    newGarrisons.add(garrison);
+                }
+            }
         }
+        
+        // Add garrison armies to game state
+        gameState.getArmiesInternal().addAll(newGarrisons);
     }
     
     private void makeAIDecision(Army army) {
