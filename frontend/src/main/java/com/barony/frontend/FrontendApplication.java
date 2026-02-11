@@ -330,9 +330,17 @@ public class FrontendApplication {
         glfwSwapInterval(1);
         glfwShowWindow(window);
         
+        // Display loading message
+        glfwSetWindowTitle(window, "Barony - Connecting to server...");
+        
         // Initialize game client
         client = new GameClient("http://localhost:8080");
         gameState = client.getState();
+        
+        // Update title with game state once connected
+        if (gameState != null) {
+            glfwSetWindowTitle(window, "Barony - Connected");
+        }
     }
     
     private void loop() {
