@@ -151,7 +151,6 @@ public class FrontendApplication {
                             gameState = newState;
                             updateCachedCounts();
                             gameOverMessagePrinted = false; // Reset flag
-                            System.out.println("Game reset!");
                         } else {
                             System.err.println("Failed to reset game: server returned no state. Previous state preserved.");
                         }
@@ -168,7 +167,6 @@ public class FrontendApplication {
                         updateCachedCounts();
                         // Add log message for tick
                         addLogMessage("Tick " + gameState.getTickCount());
-                        System.out.println("Tick sent. Current tick: " + gameState.getTickCount());
                     }
                 }
             }
@@ -181,9 +179,6 @@ public class FrontendApplication {
                     if (newState != null) {
                         gameState = newState;
                         updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to (5,5)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
                     }
                 }
             }
@@ -233,7 +228,7 @@ public class FrontendApplication {
                     int totalSoldiers = firstArmy.getSoldiers();
                     
                     if (totalSoldiers <= 1) {
-                        System.out.println("Split command not possible for army ID " + firstArmyId + " because it has " + totalSoldiers + " soldier" + (totalSoldiers == 1 ? "" : "s") + ".");
+                        // Army too small to split
                     } else {
                         splitModeActive = true;
                         splitModeArmyId = firstArmyId;
@@ -253,11 +248,9 @@ public class FrontendApplication {
                     // Close menu
                     policyMenuOpen = false;
                     selectedPolicyCategory = null;
-                    System.out.println("Policy menu closed");
                 } else {
                     // Open menu
                     policyMenuOpen = true;
-                    System.out.println("Policy menu opened - Press E (Economic), M (Military), or O (pOpulation) to select category");
                 }
             }
             
@@ -265,13 +258,10 @@ public class FrontendApplication {
             if (policyMenuOpen && action == GLFW_RELEASE) {
                 if (key == GLFW_KEY_E) {
                     selectedPolicyCategory = "ECONOMIC";
-                    System.out.println("Economic policy selected - Press 1 (Heavy Tax), 2 (Balanced), 3 (Infrastructure)");
                 } else if (key == GLFW_KEY_M) {
                     selectedPolicyCategory = "MILITARY";
-                    System.out.println("Military policy selected - Press 1 (Aggressive), 2 (Standard), 3 (Veteran)");
                 } else if (key == GLFW_KEY_O) {
                     selectedPolicyCategory = "POPULATION";
-                    System.out.println("Population policy selected - Press 1 (Growth), 2 (Stable), 3 (Quality)");
                 }
                 
                 // Policy choice selection (1, 2, 3) when category is selected
@@ -292,14 +282,10 @@ public class FrontendApplication {
                     }
                     
                     if (choice != null) {
-                        System.out.println("Sending policy decision: " + selectedPolicyCategory + " -> " + choice);
                         GameState newState = client.changePolicy(selectedPolicyCategory, choice);
                         if (newState != null) {
                             gameState = newState;
                             updateCachedCounts();
-                            System.out.println("Policy changed successfully!");
-                        } else {
-                            System.out.println("Failed to change policy (check cooldown or server error)");
                         }
                         // Close menu after selection
                         policyMenuOpen = false;
@@ -325,10 +311,17 @@ public class FrontendApplication {
         glfwSwapInterval(1);
         glfwShowWindow(window);
         
+        // Display loading message
+        glfwSetWindowTitle(window, "Barony - Connecting to server...");
+        
         // Initialize game client
         client = new GameClient("http://localhost:8080");
         gameState = client.getState();
-        System.out.println("Connected to server. Initial state retrieved.");
+        
+        // Update title with game state once connected
+        if (gameState != null) {
+            glfwSetWindowTitle(window, "Barony - Connected");
+        }
     }
     
     private void loop() {
@@ -817,7 +810,6 @@ public class FrontendApplication {
                 // Select Player 1 army
                 selectedArmyId = clickedArmy.getId();
                 addLogMessage("Selected army #" + selectedArmyId + " (" + clickedArmy.getSoldiers() + " soldiers)");
-                System.out.println("Selected army ID " + selectedArmyId + " at (" + hoveredGridX + "," + hoveredGridY + ")");
             } else if (selectedArmyId != null) {
                 // Move selected army to clicked tile
                 Command cmd = new Command("MOVE", selectedArmyId, hoveredGridX, hoveredGridY);
@@ -826,7 +818,6 @@ public class FrontendApplication {
                     gameState = newState;
                     updateCachedCounts();
                     addLogMessage("Army #" + selectedArmyId + " moving to (" + hoveredGridX + "," + hoveredGridY + ")");
-                    System.out.println("Move command sent for army ID " + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
                 } else {
                     addLogMessage("Failed to move army #" + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
                     System.err.println("Failed to send move command for army ID " + selectedArmyId + " to (" + hoveredGridX + "," + hoveredGridY + ")");
@@ -836,7 +827,6 @@ public class FrontendApplication {
             // Right-click to deselect
             if (selectedArmyId != null) {
                 addLogMessage("Deselected army #" + selectedArmyId);
-                System.out.println("Deselected army");
                 selectedArmyId = null;
             }
         }
