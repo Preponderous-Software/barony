@@ -26,9 +26,9 @@ All 7 major features have been successfully implemented and tested. See [CHANGEL
 - ✅ **Decision Impact:** Policy effects visible within 10 ticks ✓
 
 ### Test Coverage
-- **Backend:** 112 tests (all passing)
+- **Backend:** 119 tests (all passing)
 - **Frontend:** 15 tests (all passing)
-- **Total:** 127 unit tests with 100% success rate
+- **Total:** 134 tests with 100% success rate
 
 ---
 
