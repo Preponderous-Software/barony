@@ -739,6 +739,192 @@ Final State: Army A (11 soldiers) at (3,3), Army B (8 soldiers) at (9,9), tick c
 ## Technical Constraints
 
 - **No Authentication**: This is a prototype - no user authentication or authorization
+- **No Persistence**: Game state is lost on server restart
+- **Single Game Instance**: Server manages only one game state globally
+- **No Networking Beyond HTTP**: Client-server communication is purely REST/HTTP
+- **No Assets**: All rendering uses simple geometric shapes and colors
+
+## Troubleshooting
+
+### Backend Issues
+
+**Problem: Backend fails to start**
+- **Solution**: Ensure Java 17 is installed (`java -version`)
+- **Solution**: Check if port 8080 is already in use (`lsof -i :8080` on Unix/macOS or `netstat -ano | findstr :8080` on Windows)
+- **Solution**: Try running `./mvnw clean install` first to rebuild
+
+**Problem: Tests fail during build**
+- **Solution**: Verify Java 17 is being used (not Java 8 or 11)
+- **Solution**: Run `./mvnw clean test` to see detailed error messages
+- **Solution**: Check that MAVEN_OPTS doesn't override Java version
+
+**Problem: Out of memory during build**
+- **Solution**: Increase Maven heap size: `export MAVEN_OPTS="-Xmx1024m"` (Unix) or `set MAVEN_OPTS=-Xmx1024m` (Windows)
+
+### Frontend Issues
+
+**Problem: Frontend window doesn't open**
+- **Solution**: Ensure backend is running first (frontend requires active server on localhost:8080)
+- **Solution**: On WSL, install and start an X server (VcXsrv, Xming)
+- **Solution**: On Linux, verify DISPLAY environment variable is set correctly
+- **Solution**: Try setting `export LIBGL_ALWAYS_SOFTWARE=1` for software rendering fallback
+
+**Problem: Black screen or rendering issues**
+- **Solution**: Update graphics drivers
+- **Solution**: Try software rendering: `export LIBGL_ALWAYS_SOFTWARE=1` (Linux)
+- **Solution**: Check LWJGL native libraries are correctly loaded for your OS
+
+**Problem: Mouse clicks not working**
+- **Solution**: Ensure window has focus (click the title bar)
+- **Solution**: Try maximizing the window if it's too small
+- **Solution**: Restart the frontend application
+
+**Problem: "Connection refused" errors**
+- **Solution**: Verify backend is running on port 8080
+- **Solution**: Check firewall settings aren't blocking localhost connections
+- **Solution**: Try `curl http://localhost:8080/state` to test backend connectivity
+
+**Problem: Army split command doesn't work**
+- **Solution**: After pressing 'S', check the console/terminal for input prompt
+- **Solution**: Enter a valid number between 1 and (total_soldiers - 1)
+- **Solution**: Note: This is a known limitation (blocking console input in prototype)
+
+### Performance Issues
+
+**Problem: Low frame rate (< 60 FPS)**
+- **Solution**: Reduce window size to improve performance
+- **Solution**: Close other applications consuming GPU resources
+- **Solution**: Enable VSync if experiencing tearing
+- **Solution**: Try software rendering if GPU drivers are problematic
+
+**Problem: High CPU usage**
+- **Solution**: This is expected for the polling-based architecture
+- **Solution**: Close other resource-intensive applications
+- **Solution**: The frontend polls server every frame; this is intentional for MVP
+
+### Gameplay Issues
+
+**Problem: AI doesn't seem to be working**
+- **Solution**: Verify `aiEnabled` is true in game state (check `/state` endpoint)
+- **Solution**: AI only controls Player 2 (red armies)
+- **Solution**: AI makes decisions during each tick - try advancing several ticks
+
+**Problem: Policies don't seem to have effect**
+- **Solution**: Policy effects are gradual (take several ticks to manifest)
+- **Solution**: Check ruler stats panel to see current stat values
+- **Solution**: Wait 15 ticks between policy changes (cooldown period)
+- **Solution**: Only Player 1 armies/villages are affected by policies
+
+**Problem: Castle won't capture**
+- **Solution**: Enemy army must occupy castle for 3 consecutive ticks
+- **Solution**: If friendly army arrives, capture progress resets to 0
+- **Solution**: Check capture progress bar above castle (red fill shows progress)
+
+### Platform-Specific Issues
+
+**Windows:**
+- If batch files don't work, run commands manually from command prompt
+- Use `start-backend.bat` and `start-frontend.bat` from cmd.exe, not PowerShell
+- For WSL users: install VcXsrv and set `export DISPLAY=:0`
+
+**macOS:**
+- If you get security warnings, go to System Preferences → Security & Privacy → Allow
+- Ensure Java 17 is from a trusted source (Oracle, Adoptium, Homebrew)
+- Some older Macs may require software rendering
+
+**Linux:**
+- If LWJGL fails to load natives, install `libglfw3` and `libglfw3-dev`
+- For Wayland users, try `export GDK_BACKEND=x11` to force X11
+- Ensure graphics drivers are up to date (especially for NVIDIA/AMD)
+
+## Known Limitations
+
+### Gameplay Limitations
+- **Single Player Only**: No multiplayer support; one game instance per server
+- **No Save/Load**: Game state is lost when backend restarts (in-memory only)
+- **No Fog of War**: All units and tiles are always visible to both players
+- **No Terrain Effects**: All tiles are equally traversable (except destination placement)
+- **No Unit Types**: Only one army type; no knights, archers, siege weapons, etc.
+- **Single AI Difficulty**: No adjustable difficulty levels
+- **No Undo**: Commands are final; no undo/redo functionality
+
+### Technical Limitations
+- **Blocking Console Input**: Split command (S key) blocks rendering temporarily while awaiting console input
+- **Headless Environments**: Frontend requires X11/Wayland display server; cannot run in true headless mode
+- **No Persistent Storage**: No database; all state is volatile (in-memory)
+- **Single Game Instance**: Server manages one game at a time globally
+- **No Authentication**: No user accounts, passwords, or session management
+- **Localhost Only**: CORS restricted to localhost; not designed for public internet deployment
+
+### UI Limitations
+- **No Sound**: No audio effects or background music
+- **No Animations**: Movement is tile-by-tile; no smooth interpolation between positions
+- **Basic Graphics**: Simple geometric shapes and colors; no sprites or textures
+- **Console-Based Split Input**: Army splitting requires console input (not in-game UI)
+- **Limited Text Rendering**: Custom text renderer; no font antialiasing or Unicode support
+- **Fixed Window Size**: Window size is fixed at startup (not dynamically resizable)
+
+### AI Limitations
+- **Rule-Based Only**: AI uses simple heuristics; no machine learning or adaptive behavior
+- **No Army Splitting**: AI does not use split command (planned for future)
+- **Predictable Patterns**: AI follows priority-based decision tree; can be exploited by experienced players
+- **No Communication**: AI doesn't provide feedback or messages about its intentions
+
+### Policy System Limitations
+- **Player 1 Only**: Ruler decisions and policies only affect Player 1 (not AI)
+- **No Policy Mixing**: Can only have one active policy per category at a time
+- **15-Tick Cooldown**: Cannot rapidly switch between policies; must wait between changes
+- **Integer Math**: All stat calculations use integer arithmetic; some rounding occurs
+- **No Policy History**: No tracking of past policy choices or their long-term effects
+
+### Performance Limitations
+- **Polling Architecture**: Frontend polls server every frame; not event-driven
+- **Single-Threaded Backend**: Game logic runs on single thread; not optimized for massive army counts
+- **No Culling**: All entities rendered every frame; performance degrades with 50+ armies
+- **Memory Growth**: Long sessions may accumulate minor memory overhead (though no critical leaks)
+
+### Documentation Limitations
+- **No Tutorial**: Players must read README to understand controls and mechanics
+- **Limited Tooltips**: Hover tooltips don't explain all game mechanics in detail
+- **No In-Game Help**: No help menu or quick reference guide within the game
+
+## Future Enhancements
+
+See [MVP.md](MVP.md) and [TICKETS.md](TICKETS.md) for planned features beyond the MVP scope.
+
+Potential improvements include:
+- Multiple unit types and specialized armies
+- Terrain effects (mountains, rivers, forests)
+- Fog of war and limited visibility
+- Multiple AI difficulty levels
+- Sound effects and background music
+- Smooth animations and visual effects
+- Save/load functionality
+- In-game tutorial and help system
+- Advanced policy system with more categories
+- Multiplayer support (networked gameplay)
+
+## Architecture
+
+### Backend (Game Server)
+- **GameService**: Singleton service managing in-memory game state
+- **Thread Safety**: All public methods are synchronized to handle concurrent requests
+- **State Management**: Returns defensive copies to prevent external modification
+- **Army Identification**: Uses AtomicInteger-generated unique IDs (not list indices)
+- **CORS**: Restricted to localhost origins (ports 8080 and 3000)
+- **No Database**: All state is in-memory (resets on server restart)
+
+### Frontend (Game Client)
+- **Polling**: Client fetches game state periodically via GET /state
+- **Commands**: User actions sent as HTTP POST requests
+- **Rendering**: OpenGL-based grid rendering at 60 FPS
+- **Connection Management**: 5s connect timeout, 10s read timeout, automatic disconnection
+- **Cross-Platform**: Maven profiles auto-detect OS and load appropriate LWJGL natives (Linux, macOS, Windows)
+- **UTF-8 Encoding**: All HTTP communication uses explicit UTF-8 charset
+
+## Technical Constraints
+
+- **No Authentication**: This is a prototype - no user authentication or authorization
 - **No AI Implementation**: Player 2 armies exist but are not controlled by AI (future enhancement)
 - **No Persistence**: Game state is lost on server restart
 - **Single Game Instance**: Server manages only one game state globally
