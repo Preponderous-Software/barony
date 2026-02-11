@@ -21,7 +21,6 @@ public class FrontendApplication {
     private GameClient client;
     private GameState gameState;
     private String lastWindowTitle = "";
-    private java.util.Scanner inputScanner; // Shared scanner for console input, never closed
     private boolean gameOverMessagePrinted = false; // Track if we've printed the game over message
     
     // Mouse state
@@ -67,6 +66,11 @@ public class FrontendApplication {
     // Policy selection UI state
     private boolean policyMenuOpen = false;
     private String selectedPolicyCategory = null; // "ECONOMIC", "MILITARY", or "POPULATION"
+    
+    // Split mode UI state
+    private boolean splitModeActive = false;
+    private int splitModeArmyId = -1;
+    private int splitModeTotalSoldiers = 0;
     
     public void run() {
         init();
@@ -127,7 +131,14 @@ public class FrontendApplication {
         
         glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
-                glfwSetWindowShouldClose(window, true);
+                if (splitModeActive) {
+                    splitModeActive = false;
+                    splitModeArmyId = -1;
+                    splitModeTotalSoldiers = 0;
+                    System.out.println("Split mode cancelled");
+                } else {
+                    glfwSetWindowShouldClose(window, true);
+                }
             }
             
             // Disable input when game is over (except R for reset)
@@ -176,112 +187,62 @@ public class FrontendApplication {
                     }
                 }
             }
-            // Number keys for moving first army to strategic locations
-            if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
-                // Move to Player 1 castle (0,0)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 0, 0);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to Player 1 castle (0,0)");
+            // Split mode: number keys 1-9 select split amount
+            if (splitModeActive && action == GLFW_RELEASE) {
+                int splitAmount = -1;
+                if (key == GLFW_KEY_1) splitAmount = 1;
+                else if (key == GLFW_KEY_2) splitAmount = 2;
+                else if (key == GLFW_KEY_3) splitAmount = 3;
+                else if (key == GLFW_KEY_4) splitAmount = 4;
+                else if (key == GLFW_KEY_5) splitAmount = 5;
+                else if (key == GLFW_KEY_6) splitAmount = 6;
+                else if (key == GLFW_KEY_7) splitAmount = 7;
+                else if (key == GLFW_KEY_8) splitAmount = 8;
+                else if (key == GLFW_KEY_9) splitAmount = 9;
+                
+                if (splitAmount >= 1) {
+                    if (splitAmount < splitModeTotalSoldiers) {
+                        Command cmd = new Command("SPLIT", splitModeArmyId, splitAmount);
+                        GameState newState = client.sendCommand(cmd);
+                        if (newState != null) {
+                            gameState = newState;
+                            updateCachedCounts();
+                            addLogMessage("Split army " + splitModeArmyId + ": " + splitAmount + " soldiers");
+                            System.out.println("Split command sent for army ID " + splitModeArmyId + ", splitting off " + splitAmount + " soldiers");
+                        } else {
+                            System.out.println("Split command failed for army ID " + splitModeArmyId + "; no updated game state received.");
+                        }
+                        splitModeActive = false;
+                        splitModeArmyId = -1;
+                        splitModeTotalSoldiers = 0;
                     } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
-                    }
-                }
-            }
-            if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
-                // Move to Player 2 castle (9,9)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 9, 9);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to Player 2 castle (9,9)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
-                    }
-                }
-            }
-            if (key == GLFW_KEY_3 && action == GLFW_RELEASE) {
-                // Move to village at (3,3)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 3, 3);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to village (3,3)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
-                    }
-                }
-            }
-            if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
-                // Move to village at (6,6)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 6, 6);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to village (6,6)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
+                        System.out.println("Invalid split amount: " + splitAmount + ". Must be between 1 and " + (splitModeTotalSoldiers - 1));
                     }
                 }
             }
             if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
-                // Send a split command for first army
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
+                if (splitModeActive) {
+                    // Cancel split mode
+                    splitModeActive = false;
+                    splitModeArmyId = -1;
+                    splitModeTotalSoldiers = 0;
+                    System.out.println("Split mode cancelled");
+                } else if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
                     Army firstArmy = gameState.getArmies().get(0);
                     int firstArmyId = firstArmy.getId();
                     int totalSoldiers = firstArmy.getSoldiers();
                     
-                    // Check if army has enough soldiers to split
                     if (totalSoldiers <= 1) {
                         System.out.println("Split command not possible for army ID " + firstArmyId + " because it has " + totalSoldiers + " soldier" + (totalSoldiers == 1 ? "" : "s") + ".");
                     } else {
-                        // Note: Reading from console will block the render loop. Consider this a limitation for the prototype.
-                        // In a production game, use an in-game UI or handle input on a separate thread.
-                        System.out.println("Split command initiated for army ID " + firstArmyId + " with " + totalSoldiers + " soldiers");
-                        System.out.print("Enter number of soldiers to split off (1-" + (totalSoldiers - 1) + "): ");
-                        
-                        try {
-                            // Use shared scanner that never closes System.in
-                            if (inputScanner == null) {
-                                inputScanner = new java.util.Scanner(System.in);
-                            }
-                            
-                            if (inputScanner.hasNextInt()) {
-                                int splitAmount = inputScanner.nextInt();
-                                
-                                if (splitAmount >= 1 && splitAmount < totalSoldiers) {
-                                    Command cmd = new Command("SPLIT", firstArmyId, splitAmount);
-                                    GameState newState = client.sendCommand(cmd);
-                                    if (newState != null) {
-                                        gameState = newState;
-                                        updateCachedCounts();
-                                        System.out.println("Split command sent for army ID " + firstArmyId + ", splitting off " + splitAmount + " soldiers");
-                                    } else {
-                                        System.out.println("Split command failed for army ID " + firstArmyId + "; no updated game state received.");
-                                    }
-                                } else {
-                                    System.out.println("Invalid split amount. Must be between 1 and " + (totalSoldiers - 1));
-                                }
-                            } else {
-                                System.out.println("Invalid input. Split command cancelled.");
-                                inputScanner.next(); // Consume invalid token
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Error processing split command: " + e.getMessage());
-                        }
+                        splitModeActive = true;
+                        splitModeArmyId = firstArmyId;
+                        splitModeTotalSoldiers = totalSoldiers;
+                        // Close policy menu if open
+                        policyMenuOpen = false;
+                        selectedPolicyCategory = null;
+                        int maxSplit = Math.min(totalSoldiers - 1, 9);
+                        System.out.println("Split mode: press 1-" + maxSplit + " to split off soldiers (S or ESC to cancel)");
                     }
                 }
             }
@@ -1452,6 +1413,63 @@ public class FrontendApplication {
             
             menuTextY -= 0.1f;
             SimpleTextRenderer.drawText("[P] Close Menu", menuTextX, menuTextY, menuTextScale, 1.0f, 0.5f, 0.5f);
+        }
+        
+        // Render split mode overlay
+        if (splitModeActive) {
+            float menuCenterX = 0.0f;
+            float menuCenterY = 0.0f;
+            float menuWidth = 0.6f;
+            float menuHeight = 0.3f;
+            
+            // Semi-transparent background overlay
+            glColor4f(0.0f, 0.0f, 0.0f, 0.7f);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBegin(GL_QUADS);
+            glVertex2f(-1.0f, -1.0f);
+            glVertex2f(1.0f, -1.0f);
+            glVertex2f(1.0f, 1.0f);
+            glVertex2f(-1.0f, 1.0f);
+            glEnd();
+            
+            // Menu panel
+            glColor3f(0.15f, 0.15f, 0.2f);
+            glBegin(GL_QUADS);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY + menuHeight/2);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY + menuHeight/2);
+            glEnd();
+            
+            // Menu border
+            glColor3f(1.0f, 0.7f, 0.3f);
+            glLineWidth(2.0f);
+            glBegin(GL_LINE_LOOP);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY - menuHeight/2);
+            glVertex2f(menuCenterX + menuWidth/2, menuCenterY + menuHeight/2);
+            glVertex2f(menuCenterX - menuWidth/2, menuCenterY + menuHeight/2);
+            glEnd();
+            glLineWidth(1.0f);
+            glDisable(GL_BLEND);
+            
+            // Menu content
+            float menuTextScale = 0.007f;
+            float menuTextY = menuCenterY + menuHeight/2 - 0.05f;
+            float menuTextX = menuCenterX - menuWidth/2 + 0.05f;
+            
+            SimpleTextRenderer.drawText("SPLIT ARMY", menuTextX, menuTextY, menuTextScale * 1.2f, 1.0f, 0.8f, 0.2f);
+            menuTextY -= 0.08f;
+            
+            SimpleTextRenderer.drawText("Army ID: " + splitModeArmyId + "  Soldiers: " + splitModeTotalSoldiers, menuTextX, menuTextY, menuTextScale, 0.9f, 0.9f, 0.9f);
+            menuTextY -= 0.07f;
+            
+            int maxSplit = Math.min(splitModeTotalSoldiers - 1, 9);
+            SimpleTextRenderer.drawText("Press [1-" + maxSplit + "] to split off soldiers", menuTextX, menuTextY, menuTextScale, 0.7f, 1.0f, 0.7f);
+            menuTextY -= 0.08f;
+            
+            SimpleTextRenderer.drawText("[S] or [ESC] Cancel", menuTextX, menuTextY, menuTextScale, 1.0f, 0.5f, 0.5f);
         }
         
         // Render bottom bar (game log)
