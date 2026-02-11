@@ -58,6 +58,11 @@ public class FrontendApplication {
     private int cachedPlayer1Villages = 0;
     private int cachedPlayer2Villages = 0;
     
+    // Cached ruler stats
+    private RulerStats cachedRulerStats = null;
+    private long lastRulerStatsUpdate = 0;
+    private static final long RULER_STATS_UPDATE_INTERVAL_MS = 1000; // Update every second
+    
     public void run() {
         init();
         loop();
@@ -872,6 +877,13 @@ public class FrontendApplication {
                 }
             }
         }
+        
+        // Update ruler stats periodically (not every frame)
+        long currentTime = System.currentTimeMillis();
+        if (client != null && (currentTime - lastRulerStatsUpdate) >= RULER_STATS_UPDATE_INTERVAL_MS) {
+            cachedRulerStats = client.getRulerStats();
+            lastRulerStatsUpdate = currentTime;
+        }
     }
     
     private Army getSelectedArmy() {
@@ -890,19 +902,24 @@ public class FrontendApplication {
     
     private String formatPolicyName(String policy) {
         if (policy == null) return "None";
-        // Convert HEAVY_TAXATION -> Heavy Tax
+        // Convert HEAVY_TAXATION -> Heavy Taxation
         String[] parts = policy.split("_");
         if (parts.length == 0) return policy;
         
-        // Take first word and capitalize
-        String result = parts[0].charAt(0) + parts[0].substring(1).toLowerCase();
-        
-        // Add abbreviated second word if exists
-        if (parts.length > 1) {
-            result += " " + parts[1].substring(0, Math.min(3, parts[1].length()));
+        StringBuilder result = new StringBuilder();
+        for (String part : parts) {
+            if (part == null || part.isEmpty()) continue;
+            String lower = part.toLowerCase();
+            char firstChar = Character.toUpperCase(lower.charAt(0));
+            String word = firstChar + lower.substring(1);
+            if (result.length() > 0) {
+                result.append(' ');
+            }
+            result.append(word);
         }
         
-        return result;
+        // Fallback: if all parts were empty, return the original policy string
+        return result.length() > 0 ? result.toString() : policy;
     }
     
     private void addLogMessage(String message) {
@@ -1176,88 +1193,63 @@ public class FrontendApplication {
         SimpleTextRenderer.drawText("RULER STATS (P1)", panelLeft, statsY, panelTextScale, 1.0f, 0.8f, 0.2f);
         statsY -= 0.05f;
         
-        // Display morale, loyalty, stability info from army/village data
-        if (gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-            // Calculate averages for Player 1
-            int p1ArmyCount = 0;
-            int totalMorale = 0;
-            int totalLoyalty = 0;
+        // Use cached ruler stats from backend if available
+        if (cachedRulerStats != null) {
+            int avgMorale = (int) cachedRulerStats.getAverageMorale();
+            int avgLoyalty = (int) cachedRulerStats.getAverageLoyalty();
+            int avgStability = (int) cachedRulerStats.getAverageStability();
             
-            for (Army army : gameState.getArmies()) {
-                if (army.getPlayerId() == 1) {
-                    p1ArmyCount++;
-                    totalMorale += army.getMorale();
-                    totalLoyalty += army.getLoyalty();
-                }
-            }
+            // Morale (color based on value)
+            float moraleColor = avgMorale >= 100 ? 0.2f : 1.0f;
+            SimpleTextRenderer.drawText("Avg Morale: " + avgMorale + "%", panelLeft, statsY, panelTextScale, 
+                moraleColor, 0.8f, moraleColor);
+            statsY -= 0.04f;
             
-            if (p1ArmyCount > 0) {
-                int avgMorale = totalMorale / p1ArmyCount;
-                int avgLoyalty = totalLoyalty / p1ArmyCount;
-                
-                // Morale (color based on value)
-                float moraleColor = avgMorale >= 100 ? 0.2f : 1.0f;
-                SimpleTextRenderer.drawText("Avg Morale: " + avgMorale + "%", panelLeft, statsY, panelTextScale, 
-                    moraleColor, 0.8f, moraleColor);
-                statsY -= 0.04f;
-                
-                // Loyalty (color based on value)
-                float loyaltyColor = avgLoyalty >= 80 ? 0.2f : 1.0f;
-                SimpleTextRenderer.drawText("Avg Loyalty: " + avgLoyalty + "%", panelLeft, statsY, panelTextScale, 
-                    loyaltyColor, 0.8f, loyaltyColor);
-                statsY -= 0.04f;
-            }
+            // Loyalty (color based on value)
+            float loyaltyColor = avgLoyalty >= 80 ? 0.2f : 1.0f;
+            SimpleTextRenderer.drawText("Avg Loyalty: " + avgLoyalty + "%", panelLeft, statsY, panelTextScale, 
+                loyaltyColor, 0.8f, loyaltyColor);
+            statsY -= 0.04f;
+            
+            // Stability (color based on value)
+            float stabilityColor = avgStability >= 70 ? 0.2f : 1.0f;
+            SimpleTextRenderer.drawText("Avg Stability: " + avgStability + "%", panelLeft, statsY, panelTextScale, 
+                stabilityColor, 0.8f, stabilityColor);
+            statsY -= 0.04f;
         }
         
-        // Display village stability if Player 1 owns villages
-        if (gameState.getGrid() != null) {
-            int villageCount = 0;
-            int totalStability = 0;
-            
-            for (int x = 0; x < gameState.getGrid().length; x++) {
-                for (int y = 0; y < gameState.getGrid()[x].length; y++) {
-                    Tile tile = gameState.getGrid()[x][y];
-                    if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == 1) {
-                        villageCount++;
-                        totalStability += tile.getStability();
-                    }
-                }
-            }
-            
-            if (villageCount > 0) {
-                int avgStability = totalStability / villageCount;
-                
-                // Stability (color based on value)
-                float stabilityColor = avgStability >= 70 ? 0.2f : 1.0f;
-                SimpleTextRenderer.drawText("Avg Stability: " + avgStability + "%", panelLeft, statsY, panelTextScale, 
-                    stabilityColor, 0.8f, stabilityColor);
-                statsY -= 0.04f;
-            }
-        }
-        
-        // Display current policies
+        // Display current policies from cached ruler stats (with fallback to gameState)
         statsY -= 0.02f;
         SimpleTextRenderer.drawText("POLICIES:", panelLeft, statsY, panelTextScale, 0.8f, 0.8f, 0.8f);
         statsY -= 0.04f;
         
-        String economicPolicy = gameState.getEconomicPolicy() != null ? 
-            formatPolicyName(gameState.getEconomicPolicy()) : "Balanced";
+        String economicPolicy = cachedRulerStats != null && cachedRulerStats.getEconomicPolicy() != null ? 
+            formatPolicyName(cachedRulerStats.getEconomicPolicy()) : 
+            (gameState.getEconomicPolicy() != null ? formatPolicyName(gameState.getEconomicPolicy()) : "Balanced");
         SimpleTextRenderer.drawText("Econ: " + economicPolicy, panelLeft, statsY, panelTextScale, 0.7f, 0.7f, 0.7f);
         statsY -= 0.035f;
         
-        String militaryPolicy = gameState.getMilitaryPolicy() != null ? 
-            formatPolicyName(gameState.getMilitaryPolicy()) : "Standard";
+        String militaryPolicy = cachedRulerStats != null && cachedRulerStats.getMilitaryPolicy() != null ? 
+            formatPolicyName(cachedRulerStats.getMilitaryPolicy()) : 
+            (gameState.getMilitaryPolicy() != null ? formatPolicyName(gameState.getMilitaryPolicy()) : "Standard");
         SimpleTextRenderer.drawText("Mil: " + militaryPolicy, panelLeft, statsY, panelTextScale, 0.7f, 0.7f, 0.7f);
         statsY -= 0.035f;
         
-        String populationPolicy = gameState.getPopulationPolicy() != null ? 
-            formatPolicyName(gameState.getPopulationPolicy()) : "Stable";
+        String populationPolicy = cachedRulerStats != null && cachedRulerStats.getPopulationPolicy() != null ? 
+            formatPolicyName(cachedRulerStats.getPopulationPolicy()) : 
+            (gameState.getPopulationPolicy() != null ? formatPolicyName(gameState.getPopulationPolicy()) : "Stable");
         SimpleTextRenderer.drawText("Pop: " + populationPolicy, panelLeft, statsY, panelTextScale, 0.7f, 0.7f, 0.7f);
         statsY -= 0.04f;
         
-        // Policy cooldown
-        int ticksSinceLastChange = gameState.getTickCount() - gameState.getLastPolicyChangeTick();
-        int ticksUntilNext = Math.max(0, 15 - ticksSinceLastChange);
+        // Policy cooldown from cached ruler stats (with fallback to gameState calculation)
+        int ticksUntilNext;
+        if (cachedRulerStats != null) {
+            ticksUntilNext = cachedRulerStats.getTicksUntilNextDecision();
+        } else {
+            int ticksSinceLastChange = gameState.getTickCount() - gameState.getLastPolicyChangeTick();
+            ticksUntilNext = Math.max(0, 15 - ticksSinceLastChange);
+        }
+        
         if (ticksUntilNext > 0) {
             SimpleTextRenderer.drawText("Cooldown: " + ticksUntilNext + " ticks", panelLeft, statsY, panelTextScale, 1.0f, 0.5f, 0.5f);
         } else {

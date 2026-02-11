@@ -133,34 +133,14 @@ public class GameClient {
     }
     
     private GameState readResponse(HttpURLConnection conn) throws Exception {
-        int responseCode = conn.getResponseCode();
-        InputStream inputStream;
-        
-        if (responseCode >= 200 && responseCode < 300) {
-            inputStream = conn.getInputStream();
-        } else {
-            inputStream = conn.getErrorStream();
-            if (inputStream == null) {
-                throw new Exception("HTTP error code: " + responseCode);
-            }
-        }
-        
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = in.readLine()) != null) {
-                response.append(line);
-            }
-        }
-        
-        if (responseCode >= 200 && responseCode < 300) {
-            return gson.fromJson(response.toString(), GameState.class);
-        } else {
-            throw new Exception("Server returned error: " + response.toString());
-        }
+        return readJsonResponse(conn, GameState.class);
     }
     
     private RulerStats readRulerStatsResponse(HttpURLConnection conn) throws Exception {
+        return readJsonResponse(conn, RulerStats.class);
+    }
+    
+    private <T> T readJsonResponse(HttpURLConnection conn, Class<T> responseType) throws Exception {
         int responseCode = conn.getResponseCode();
         InputStream inputStream;
         
@@ -182,7 +162,7 @@ public class GameClient {
         }
         
         if (responseCode >= 200 && responseCode < 300) {
-            return gson.fromJson(response.toString(), RulerStats.class);
+            return gson.fromJson(response.toString(), responseType);
         } else {
             throw new Exception("Server returned error: " + response.toString());
         }

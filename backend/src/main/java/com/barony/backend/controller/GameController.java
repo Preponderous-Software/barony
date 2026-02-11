@@ -40,8 +40,22 @@ public class GameController {
     
     @PostMapping("/api/decision")
     public GameState decision(@RequestBody RulerDecision decision) {
-        gameService.changePolicy(decision.getCategory(), decision.getChoice());
-        return gameService.getState();
+        try {
+            gameService.changePolicy(decision.getCategory(), decision.getChoice());
+            return gameService.getState();
+        } catch (IllegalStateException e) {
+            // Policy change on cooldown
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT, 
+                "Policy change on cooldown: " + e.getMessage()
+            );
+        } catch (IllegalArgumentException e) {
+            // Invalid policy choice
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST, 
+                "Invalid policy choice: " + e.getMessage()
+            );
+        }
     }
     
     @GetMapping("/api/ruler-stats")

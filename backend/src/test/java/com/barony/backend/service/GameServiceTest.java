@@ -2059,8 +2059,9 @@ class GameServiceTest {
         gameService.resetGame();
         GameState internalState = gameService.getInternalStateForTest();
         
-        // Set village at (3,3) to Player 1
+        // Set village at (3,3) to Player 1 with higher population
         internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(200); // 2 soldiers/tick baseline
         
         // Move Player 1 army to village
         Army p1Army = internalState.getArmiesInternal().stream()
@@ -2071,24 +2072,53 @@ class GameServiceTest {
         p1Army.setY(3);
         p1Army.setSoldiers(10);
         
-        // Set low stability (50%)
-        internalState.getGrid()[3][3].setStability(50);
+        // Test with 100% stability as control
+        internalState.getGrid()[3][3].setStability(100);
+        int initialSoldiers100 = p1Army.getSoldiers();
+        final int p1ArmyId = p1Army.getId(); // Store ID for lambda
         
-        int initialSoldiers = p1Army.getSoldiers();
-        
-        // Tick twice
         gameService.tick();
         gameService.tick();
         
-        // With 50% stability, should generate 0.5 soldiers per tick (rounds to 1 or 0)
-        GameState state = gameService.getState();
-        Army updatedArmy = state.getArmies().stream()
-            .filter(a -> a.getId() == p1Army.getId())
+        GameState state100 = gameService.getState();
+        Army army100 = state100.getArmies().stream()
+            .filter(a -> a.getId() == p1ArmyId)
             .findFirst()
             .get();
+        int generated100 = army100.getSoldiers() - initialSoldiers100;
         
-        // After 2 ticks at 50% stability, should generate approximately 1 soldier (0.5*2 = 1)
-        assertTrue(updatedArmy.getSoldiers() <= initialSoldiers + 2, "Low stability should reduce soldier generation");
+        // Reset and test with 50% stability
+        gameService.resetGame();
+        internalState = gameService.getInternalStateForTest();
+        internalState.getGrid()[3][3].setOwnerId(1);
+        internalState.getGrid()[3][3].setPopulation(200); // Same population
+        Army p1Army2 = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        p1Army2.setX(3);
+        p1Army2.setY(3);
+        p1Army2.setSoldiers(10);
+        internalState.getGrid()[3][3].setStability(50);
+        
+        int initialSoldiers50 = p1Army2.getSoldiers();
+        final int p1Army2Id = p1Army2.getId(); // Store ID for lambda
+        
+        gameService.tick();
+        gameService.tick();
+        
+        GameState state50 = gameService.getState();
+        Army army50 = state50.getArmies().stream()
+            .filter(a -> a.getId() == p1Army2Id)
+            .findFirst()
+            .get();
+        int generated50 = army50.getSoldiers() - initialSoldiers50;
+        
+        // With 50% stability should generate less than 100% stability
+        // At 200 population: base = 2, with 100% stability = 2, with 50% stability = 1
+        assertTrue(generated50 < generated100, 
+            "50% stability should generate fewer soldiers than 100% stability. Got: " + 
+            generated50 + " vs " + generated100);
     }
     
     @Test
@@ -2276,15 +2306,21 @@ class GameServiceTest {
         
         // Set village to Player 1
         internalState.getGrid()[3][3].setOwnerId(1);
-        int initialStability = internalState.getGrid()[3][3].getStability();
         
-        // Change to HEAVY_TAXATION (-10% stability)
+        // Change to HEAVY_TAXATION (target stability = 100 - 10 = 90)
         gameService.changePolicy(RulerDecision.PolicyCategory.ECONOMIC, "HEAVY_TAXATION");
         
-        GameState state = gameService.getState();
-        int newStability = state.getGrid()[3][3].getStability();
+        // Tick several times to allow stability to drift toward target
+        for (int i = 0; i < 10; i++) {
+            gameService.tick();
+        }
         
-        assertEquals(initialStability - 10, newStability, "Heavy taxation should reduce stability by 10");
+        GameState state = gameService.getState();
+        int finalStability = state.getGrid()[3][3].getStability();
+        
+        // Should have drifted toward 90 (target for heavy taxation)
+        assertTrue(finalStability <= 90, "Heavy taxation should reduce stability toward 90, got: " + finalStability);
+        assertTrue(finalStability >= 80, "Stability should be drifting toward 90, got: " + finalStability);
     }
     
     @Test
@@ -2297,11 +2333,14 @@ class GameServiceTest {
             .filter(a -> a.getPlayerId() == 1)
             .findFirst()
             .get();
-        int initialMorale = p1Army.getMorale();
-        int initialLoyalty = p1Army.getLoyalty();
         
-        // Change to AGGRESSIVE_TRAINING (+10% morale, -5% loyalty)
+        // Change to AGGRESSIVE_TRAINING (target morale = 100 + 10 = 110, target loyalty = 100 - 5 = 95)
         gameService.changePolicy(RulerDecision.PolicyCategory.MILITARY, "AGGRESSIVE_TRAINING");
+        
+        // Tick several times to allow morale/loyalty to drift toward target
+        for (int i = 0; i < 15; i++) {
+            gameService.tick();
+        }
         
         GameState state = gameService.getState();
         Army updatedArmy = state.getArmies().stream()
@@ -2309,8 +2348,9 @@ class GameServiceTest {
             .findFirst()
             .get();
         
-        assertEquals(initialMorale + 10, updatedArmy.getMorale(), "Aggressive training should increase morale by 10");
-        assertEquals(initialLoyalty - 5, updatedArmy.getLoyalty(), "Aggressive training should decrease loyalty by 5");
+        // Should have drifted toward targets
+        assertTrue(updatedArmy.getMorale() >= 105, "Morale should drift toward 110, got: " + updatedArmy.getMorale());
+        assertTrue(updatedArmy.getLoyalty() <= 95, "Loyalty should drift toward 95, got: " + updatedArmy.getLoyalty());
     }
     
     @Test
