@@ -220,67 +220,6 @@ public class FrontendApplication {
                     }
                 }
             }
-            // Number keys for moving first army to strategic locations
-            if (!splitModeActive && key == GLFW_KEY_1 && action == GLFW_RELEASE) {
-                // Move to Player 1 castle (0,0)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 0, 0);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to Player 1 castle (0,0)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
-                    }
-                }
-            }
-            if (!splitModeActive && key == GLFW_KEY_2 && action == GLFW_RELEASE) {
-                // Move to Player 2 castle (9,9)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 9, 9);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to Player 2 castle (9,9)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
-                    }
-                }
-            }
-            if (!splitModeActive && key == GLFW_KEY_3 && action == GLFW_RELEASE) {
-                // Move to village at (3,3)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 3, 3);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to village (3,3)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
-                    }
-                }
-            }
-            if (!splitModeActive && key == GLFW_KEY_4 && action == GLFW_RELEASE) {
-                // Move to village at (6,6)
-                if (client != null && gameState != null && gameState.getArmies() != null && !gameState.getArmies().isEmpty()) {
-                    int firstArmyId = gameState.getArmies().get(0).getId();
-                    Command cmd = new Command("MOVE", firstArmyId, 6, 6);
-                    GameState newState = client.sendCommand(cmd);
-                    if (newState != null) {
-                        gameState = newState;
-                        updateCachedCounts();
-                        System.out.println("Move command sent for army ID " + firstArmyId + " to village (6,6)");
-                    } else {
-                        System.out.println("Move command failed for army ID " + firstArmyId + "; no updated game state received.");
-                    }
-                }
-            }
             if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
                 if (splitModeActive) {
                     // Cancel split mode
