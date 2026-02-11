@@ -478,9 +478,10 @@ public class GameService {
                     // Population growth: base growth of 1% per tick, modified by population policy
                     int growthModifier = RulerDecision.getPopulationGrowthModifier(populationPolicy);
                     int baseGrowthRate = 1; // 1% per tick
-                    int effectiveGrowthRate = baseGrowthRate + ((baseGrowthRate * growthModifier) / 100);
+                    // Apply modifier: (baseRate * (100 + modifier)) / 100
+                    int effectiveGrowthRate = (baseGrowthRate * (100 + growthModifier)) / 100;
                     
-                    // Apply growth: population * (1 + rate/100)
+                    // Apply growth: population * (effectiveRate / 100)
                     int currentPop = tile.getPopulation();
                     int growth = (currentPop * effectiveGrowthRate + 50) / 100; // Integer math with rounding
                     tile.setPopulation(currentPop + growth);
