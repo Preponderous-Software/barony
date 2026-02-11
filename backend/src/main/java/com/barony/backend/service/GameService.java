@@ -480,7 +480,7 @@ public class GameService {
                     int baseGrowthRate = 1; // 1% per tick
                     
                     // Compute growth in basis points to preserve fractional modifiers:
-                    // growth ≈ currentPop * baseGrowthRate% * (100 + growthModifier) / 100
+                    // growth = (currentPop * baseGrowthRate * (100 + growthModifier)) / 10000
                     int currentPop = tile.getPopulation();
                     int growthNumerator = currentPop * baseGrowthRate * (100 + growthModifier);
                     int growth = (growthNumerator + 5000) / 10000; // Integer math with rounding (basis points)

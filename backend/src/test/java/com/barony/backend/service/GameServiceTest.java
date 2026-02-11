@@ -2383,10 +2383,11 @@ class GameServiceTest {
         internalState.getGrid()[3][3].setOwnerId(1);
         internalState.getGrid()[3][3].setPopulation(1000);
         
+        // Capture initial population before changing policy
+        int initialPopGrowth = internalState.getGrid()[3][3].getPopulation();
+        
         // Test GROWTH_FOCUS (+15% growth)
         gameService.changePolicy(RulerDecision.PolicyCategory.POPULATION, "GROWTH_FOCUS");
-        
-        int initialPopGrowth = internalState.getGrid()[3][3].getPopulation();
         
         // Tick 10 times
         for (int i = 0; i < 10; i++) {
