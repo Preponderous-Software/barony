@@ -1,6 +1,19 @@
 # Barony Prototype
 
+**Version:** 1.0.0 (MVP Complete)  
+**Status:** ✅ Production Ready
+
 A minimal client/server game prototype with a Java Spring Boot backend and Java LWJGL frontend. This is a single-player strategy game where you control your armies against AI-controlled enemy Lords.
+
+**🎉 MVP Features Complete:**
+- ✅ Army movement with Manhattan pathfinding
+- ✅ Army splitting and automatic merging
+- ✅ Territory control with village ownership
+- ✅ Castle capture mechanics (3-tick timer)
+- ✅ Win/loss conditions
+- ✅ AI opponent with priority-based decision making
+- ✅ Mouse and keyboard controls with HUD
+- ✅ Ruler decision system (CK-lite policies)
 
 ## Project Structure
 
