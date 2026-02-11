@@ -437,11 +437,11 @@ cd frontend
 
 ### Run Tests
 ```bash
-# Backend tests (77 tests)
+# Backend tests
 cd backend
 ./mvnw test  # or: mvn test
 
-# Frontend tests (15 tests)
+# Frontend tests
 cd frontend
 ./mvnw test  # or: mvn test
 ```
@@ -449,13 +449,13 @@ cd frontend
 ### Continuous Integration
 GitHub Actions workflow automatically runs on pull requests to `main` or `develop`:
 - Builds both backend and frontend
-- Runs all unit tests (92 total: 77 backend + 15 frontend - including castle capture and win condition tests)
+- Runs all unit and integration tests
 - Packages applications
 - Uses JDK 17 with Maven caching for faster builds
 
 Test coverage includes:
-- **Backend**: Model tests (Army, Command, Tile with ownership and occupationTicks, GameState with gameOver/winnerId), Service tests (GameService with game mechanics, movement system, territory control including castle capture and win conditions)
-- **Frontend**: Model tests (Army, Command, Tile with ownerId and occupationTicks, GameState with gameOver/winnerId)
+- **Backend**: Model tests, service tests (game mechanics, movement, territory control, castle capture, win conditions), and integration tests
+- **Frontend**: Model tests for all game entities
 
 ## Game Rules
 

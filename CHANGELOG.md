@@ -123,17 +123,14 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ In-memory game state (stateless server)
 - ✅ Defensive copying for thread safety
 - ✅ CORS configuration for localhost origins
-- ✅ Comprehensive unit test suite (119 tests total (112 unit tests + 7 integration tests))
+- ✅ Comprehensive test suite with unit and integration tests
 
 ### Testing
 
-#### Unit Tests
-- ✅ Backend: 119 tests covering models, game service, and integration scenarios
-  - GameServiceTest: 77 tests
-  - GameServiceIntegrationTest: 7 tests
-  - Model tests: 35 tests (Army, Tile, Command, GameState, RulerDecision)
-- ✅ Frontend: 15 tests covering models
-- ✅ All tests passing with 100% success rate
+#### Test Coverage
+- ✅ Backend: Model tests, game service tests, and integration scenarios
+- ✅ Frontend: Model tests for all game entities
+- ✅ All tests passing
 
 #### Test Coverage
 - ✅ Army movement and pathfinding
