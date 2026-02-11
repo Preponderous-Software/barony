@@ -135,7 +135,7 @@ The system includes three policy categories, each with three options:
 The system tracks several new statistics for Player 1 entities:
 
 - **Villages:**
-  - `stability` (0-100): Affects soldier generation efficiency. Formula: `base generation * (stability / 100)`
+  - `stability` (0-110, clamped): Affects soldier generation efficiency. Formula: `base generation * (stability / 100)`. Policies can raise stability above 100 (up to 110 cap).
   - `population` (current population): Sets the base soldier generation rate. Baseline formula: `base_generation = population / 100` (before stability and policy modifiers)
   
 - **Armies:**
@@ -144,10 +144,10 @@ The system tracks several new statistics for Player 1 entities:
 
 **Stat Recovery/Decay:**
 
-Stats gradually return to baseline (100%) to prevent extreme scenarios:
-- Stability recovers toward 100% at 2% per tick
-- Morale decays toward 100% at 1% per tick
-- Loyalty recovers toward 100% at 2% per tick
+Stats gradually drift toward policy-modified baselines (not always 100%):
+- Stability moves toward policy-modified target (100 + economic modifier + population modifier) at 2 points per tick, capped at 110
+- Morale moves toward policy-modified target (100 + military modifier) at 1 point per tick
+- Loyalty moves toward policy-modified target (100 + military modifier) at 2 points per tick, capped at 110
 
 **Policy Mechanics:**
 

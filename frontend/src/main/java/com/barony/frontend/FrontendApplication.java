@@ -882,7 +882,7 @@ public class FrontendApplication {
         // Update ruler stats whenever cached counts are refreshed to avoid stale HUD data
         if (client != null) {
             long currentTime = System.currentTimeMillis();
-            int currentTick = gameState != null ? gameState.getTickCount() : -1;
+            int currentTick = gameState.getTickCount();
             
             // Refresh if tick changed OR if enough time has passed
             boolean tickChanged = currentTick != lastRulerStatsTickCount;

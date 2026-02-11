@@ -468,6 +468,9 @@ public class GameService {
                     int populationMod = RulerDecision.getPopulationStabilityModifier(populationPolicy);
                     int targetStability = baselineStability + economicMod + populationMod;
                     
+                    // Clamp target to maximum allowed stability to make drift logic consistent
+                    targetStability = Math.min(110, targetStability);
+                    
                     // Move toward target stability at 2 points per tick
                     if (stability < targetStability) {
                         tile.setStability(Math.min(targetStability, stability + 2));
@@ -539,9 +542,9 @@ public class GameService {
                 Tile tile = gameState.getGrid()[x][y];
                 TileType tileType = tile.getType();
                 if (tileType == TileType.VILLAGE && tile.getOwnerId() == army.getPlayerId()) {
-                    // Base generation scales with population (100 population = 1 soldier/tick baseline)
+                    // Base generation scales with population: base_generation = population / 100
+                    // Villages with population < 100 will generate 0 soldiers per tick
                     int baseGeneration = tile.getPopulation() / 100;
-                    if (baseGeneration < 1) baseGeneration = 1; // Minimum 1 soldier per tick
                     
                     // Apply stability modifier for Player 1 villages using integer math
                     if (army.getPlayerId() == 1) {

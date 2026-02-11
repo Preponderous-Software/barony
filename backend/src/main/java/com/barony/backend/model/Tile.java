@@ -4,7 +4,7 @@ public class Tile {
     private TileType type;
     private int ownerId; // 0=neutral, 1=player1, 2=player2
     private int occupationTicks; // For castle capture progress
-    private int stability; // 0-100, affects soldier generation efficiency (default 100, villages only)
+    private int stability; // 0-110 (clamped), affects soldier generation efficiency (default 100, villages only; up to 110 with bonuses)
     private int population; // Current population, affects generation capacity (default 100, villages only)
     
     public Tile(TileType type) {
