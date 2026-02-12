@@ -2628,36 +2628,41 @@ class GameServiceTest {
 
     @Test
     void aiLeavesGarrisonWhenMovingAwayFromCapturedVillage() {
-        // Move Player 2's army to village at (6,6) with AI disabled
-        GameState state = gameService.getState();
-        Army p2Army = state.getArmies().stream()
+        // Set up a deterministic scenario using internal state
+        GameState internalState = gameService.getInternalStateForTest();
+
+        // Clear all existing villages to avoid interference
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+
+        // Place a village at (6,6) owned by Player 2 and a neutral village at (3,3) as AI target
+        internalState.getGrid()[6][6].setType(TileType.VILLAGE);
+        internalState.getGrid()[6][6].setOwnerId(2);
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
+        internalState.getGrid()[3][3].setOwnerId(0);
+
+        // Place Player 2 army directly at the owned village
+        Army p2Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2)
             .findFirst()
             .orElse(null);
         assertNotNull(p2Army);
-        int p2ArmyId = p2Army.getId();
-
-        Command moveToVillage = new Command();
-        moveToVillage.setType("MOVE");
-        moveToVillage.setArmyId(p2ArmyId);
-        moveToVillage.setTargetX(6);
-        moveToVillage.setTargetY(6);
-        gameService.executeCommand(moveToVillage);
-
-        // Move army to village (from 9,9 to 6,6 = 3+3 = 6 ticks)
-        for (int i = 0; i < 6; i++) {
-            gameService.tick();
-        }
-
-        // Verify village is captured by Player 2
-        state = gameService.getState();
-        assertEquals(2, state.getGrid()[6][6].getOwnerId());
+        p2Army.setX(6);
+        p2Army.setY(6);
+        p2Army.setDestinationX(null);
+        p2Army.setDestinationY(null);
+        p2Army.setSoldiers(10);
 
         // Enable AI and tick once - AI should decide to move and leave garrison
         gameService.setAiEnabled(true);
         gameService.tick();
 
-        state = gameService.getState();
+        GameState state = gameService.getState();
 
         // There should now be 2 Player 2 armies: the main army (moving) and a garrison
         long p2ArmyCount = state.getArmies().stream()

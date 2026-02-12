@@ -676,14 +676,34 @@ public class GameService {
             makeAIDecision(army);
             
             // If the army is now moving away from a village it owns, leave a garrison
+            // but only if there isn't already a friendly army staying at this village
             if (army.isMoving() && army.getSoldiers() > 1) {
                 int x = army.getX();
                 int y = army.getY();
                 Tile tile = gameState.getGrid()[x][y];
                 if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == AI_PLAYER_ID) {
-                    Army garrison = new Army(x, y, 1, AI_PLAYER_ID);
-                    army.setSoldiers(army.getSoldiers() - 1);
-                    newGarrisons.add(garrison);
+                    boolean hasExistingGarrison = false;
+                    for (Army other : gameState.getArmiesInternal()) {
+                        if (other != army && other.getPlayerId() == AI_PLAYER_ID
+                                && other.getX() == x && other.getY() == y && !other.isMoving()) {
+                            hasExistingGarrison = true;
+                            break;
+                        }
+                    }
+                    // Also check garrisons created earlier in this tick
+                    if (!hasExistingGarrison) {
+                        for (Army g : newGarrisons) {
+                            if (g.getX() == x && g.getY() == y) {
+                                hasExistingGarrison = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!hasExistingGarrison) {
+                        Army garrison = new Army(x, y, 1, AI_PLAYER_ID);
+                        army.setSoldiers(army.getSoldiers() - 1);
+                        newGarrisons.add(garrison);
+                    }
                 }
             }
         }
