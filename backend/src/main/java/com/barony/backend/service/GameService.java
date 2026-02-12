@@ -14,19 +14,8 @@ public class GameService {
     }
     
     private void initializeGame() {
-        gameState = new GameState(10, 10);
-        
-        // Set up initial board with ownership
-        gameState.getGrid()[0][0].setType(TileType.CASTLE);
-        gameState.getGrid()[0][0].setOwnerId(1); // Player 1 castle
-        gameState.getGrid()[9][9].setType(TileType.CASTLE);
-        gameState.getGrid()[9][9].setOwnerId(2); // Player 2 castle
-        gameState.getGrid()[3][3].setType(TileType.VILLAGE);
-        gameState.getGrid()[6][6].setType(TileType.VILLAGE);
-        
-        // Add initial armies
-        gameState.getArmiesInternal().add(new Army(0, 0, 10, 1));
-        gameState.getArmiesInternal().add(new Army(9, 9, 10, 2));
+        MapGenerator generator = new MapGenerator();
+        gameState = generator.generate();
     }
     
     public synchronized GameState getState() {
