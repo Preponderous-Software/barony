@@ -2686,6 +2686,61 @@ class GameServiceTest {
         assertNotNull(mainArmy, "Main army should be moving to a new target");
     }
 
+    @Test
+    void aiGarrisonStaysAtVillageUntilEnoughSoldiers() {
+        // Set up a deterministic scenario using internal state
+        GameState internalState = gameService.getInternalStateForTest();
+
+        // Clear all existing villages to avoid interference
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+
+        // Place a village at (6,6) owned by Player 2 and a neutral village at (3,3) as AI target
+        internalState.getGrid()[6][6].setType(TileType.VILLAGE);
+        internalState.getGrid()[6][6].setOwnerId(2);
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
+        internalState.getGrid()[3][3].setOwnerId(0);
+
+        // Place Player 2 army at the village with only 2 soldiers (below threshold)
+        Army p2Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(p2Army);
+        p2Army.setX(6);
+        p2Army.setY(6);
+        p2Army.setDestinationX(null);
+        p2Army.setDestinationY(null);
+        p2Army.setSoldiers(2);
+
+        // Enable AI and tick - army should stay put (too few soldiers to move)
+        gameService.setAiEnabled(true);
+        gameService.tick();
+
+        GameState state = gameService.getState();
+
+        // There should still be only 1 Player 2 army (no split, stayed at village)
+        long p2ArmyCount = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .count();
+        assertEquals(1, p2ArmyCount, "Small garrison should stay at village, not split");
+
+        // The army should still be at the village and not moving
+        Army garrison = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(garrison);
+        assertEquals(6, garrison.getX());
+        assertEquals(6, garrison.getY());
+        assertFalse(garrison.isMoving(), "Small garrison should not be moving");
+    }
+
     private int[] findPlayerCastle(GameState state, int playerId) {
         for (int x = 0; x < state.getWidth(); x++) {
             for (int y = 0; y < state.getHeight(); y++) {
