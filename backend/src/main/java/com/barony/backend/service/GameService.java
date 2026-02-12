@@ -313,8 +313,8 @@ public class GameService {
             }
         }
         
-        if (targetArmy == null) {
-            return; // Army not found
+        if (targetArmy == null || targetArmy.getPlayerId() != 1) {
+            return; // Army not found or not owned by player
         }
         
         // Validate split amount

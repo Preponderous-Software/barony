@@ -2635,33 +2635,43 @@ class GameServiceTest {
 
     @Test
     void playerArmyRespawnsAtCastleWhenAllArmiesLost() {
-        // Set up scenario where Player 1 loses all armies via combat
-        GameState state = gameService.getState();
-        int army1Id = state.getArmies().get(0).getId();
-        int army2Id = state.getArmies().get(1).getId();
-
-        // Move both armies to collide - equal strength so both will be eliminated
-        Command move1 = new Command();
-        move1.setType("MOVE");
-        move1.setArmyId(army1Id);
-        move1.setTargetX(5);
-        move1.setTargetY(5);
-        gameService.executeCommand(move1);
-
-        Command move2 = new Command();
-        move2.setType("MOVE");
-        move2.setArmyId(army2Id);
-        move2.setTargetX(5);
-        move2.setTargetY(5);
-        gameService.executeCommand(move2);
-
-        // Move until combat occurs and both are destroyed
-        for (int i = 0; i < 15; i++) {
-            gameService.tick();
+        // Set up known positions and clear villages to prevent soldier gain
+        GameState internalState = gameService.getInternalStateForTest();
+        Army p1Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1).findFirst().get();
+        Army p2Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        
+        // Place both armies at (5,5) so they fight immediately
+        p1Army.setX(5);
+        p1Army.setY(5);
+        p1Army.setDestinationX(null);
+        p1Army.setDestinationY(null);
+        p2Army.setX(5);
+        p2Army.setY(5);
+        p2Army.setDestinationX(null);
+        p2Army.setDestinationY(null);
+        
+        // Clear all villages to prevent soldier generation on the path
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
         }
-
-        state = gameService.getState();
-
+        
+        // Find castle positions before combat
+        int[] p1Castle = findPlayerCastle(internalState, 1);
+        int[] p2Castle = findPlayerCastle(internalState, 2);
+        assertNotNull(p1Castle);
+        assertNotNull(p2Castle);
+        
+        // Tick to trigger combat — equal armies destroy each other, then respawn
+        gameService.tick();
+        
+        GameState state = gameService.getState();
+        
         // Both players should have respawned armies at their castles
         Army player1Army = null;
         Army player2Army = null;
@@ -2669,16 +2679,16 @@ class GameServiceTest {
             if (a.getPlayerId() == 1) player1Army = a;
             if (a.getPlayerId() == 2) player2Army = a;
         }
-
+        
         assertNotNull(player1Army, "Player 1 should have a respawned army");
         assertEquals(1, player1Army.getSoldiers());
-        assertEquals(0, player1Army.getX());
-        assertEquals(0, player1Army.getY());
-
+        assertEquals(p1Castle[0], player1Army.getX());
+        assertEquals(p1Castle[1], player1Army.getY());
+        
         assertNotNull(player2Army, "Player 2 should have a respawned army");
         assertEquals(1, player2Army.getSoldiers());
-        assertEquals(9, player2Army.getX());
-        assertEquals(9, player2Army.getY());
+        assertEquals(p2Castle[0], player2Army.getX());
+        assertEquals(p2Castle[1], player2Army.getY());
     }
 
     @Test
@@ -2706,6 +2716,27 @@ class GameServiceTest {
             .count();
         assertEquals(1, player1After);
         assertEquals(1, player2After);
+    }
+
+    @Test
+    void splitCommandCannotSplitEnemyArmy() {
+        GameState state = gameService.getState();
+        Army enemyArmy = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        int enemySoldiersBefore = enemyArmy.getSoldiers();
+        int armyCountBefore = state.getArmies().size();
+
+        Command splitCmd = new Command();
+        splitCmd.setType("SPLIT");
+        splitCmd.setArmyId(enemyArmy.getId());
+        splitCmd.setSplitAmount(3);
+        gameService.executeCommand(splitCmd);
+
+        state = gameService.getState();
+        assertEquals(armyCountBefore, state.getArmies().size());
+        Army enemyAfter = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        assertEquals(enemySoldiersBefore, enemyAfter.getSoldiers());
     }
 
     private int[] findPlayerCastle(GameState state, int playerId) {
