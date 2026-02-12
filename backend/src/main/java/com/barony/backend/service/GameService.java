@@ -585,6 +585,9 @@ public class GameService {
     }
     
     private void spawnArmyIfNoneRemaining() {
+        if (gameState.isGameOver()) {
+            return;
+        }
         for (int playerId = 1; playerId <= 2; playerId++) {
             boolean hasArmy = false;
             for (Army army : gameState.getArmiesInternal()) {
