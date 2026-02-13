@@ -951,5 +951,5 @@ This project is licensed under the **Stephenson Software Non-Commercial License 
 You may use, modify, and share this software for **non-commercial purposes only**.  
 Commercial use is prohibited without explicit written permission from the copyright holder.
 
-Full license text: [Stephenson-NC License](https://github.com/Stephenson-Software/stephenson-nc-license)  
-SPDX Identifier: `Stephenson-NC`
+Full license text: [LICENSE.md](LICENSE.md) (canonical: [Stephenson-Software/stephenson-nc-license](https://github.com/Stephenson-Software/stephenson-nc-license))  
+SPDX Identifier (custom): `LicenseRef-Stephenson-NC`
