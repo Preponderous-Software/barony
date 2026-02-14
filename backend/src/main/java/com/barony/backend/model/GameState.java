@@ -1,9 +1,14 @@
 package com.barony.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@Setter
 public class GameState {
     private Tile[][] grid;
     private List<Army> armies;
@@ -35,11 +40,7 @@ public class GameState {
             }
         }
     }
-    
-    public Tile[][] getGrid() {
-        return grid;
-    }
-    
+
     public List<Army> getArmies() {
         return new ArrayList<>(armies);
     }
@@ -50,10 +51,7 @@ public class GameState {
     public List<Army> getArmiesInternal() {
         return armies;
     }
-    
-    public int getTickCount() {
-        return tickCount;
-    }
+
     
     public void incrementTick() {
         this.tickCount++;
@@ -66,60 +64,5 @@ public class GameState {
     public int getHeight() {
         return grid.length > 0 ? grid[0].length : 0;
     }
-    
-    public boolean isGameOver() {
-        return gameOver;
-    }
-    
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
-    }
-    
-    public Integer getWinnerId() {
-        return winnerId;
-    }
-    
-    public void setWinnerId(Integer winnerId) {
-        this.winnerId = winnerId;
-    }
-    
-    public boolean isAiEnabled() {
-        return aiEnabled;
-    }
-    
-    public void setAiEnabled(boolean aiEnabled) {
-        this.aiEnabled = aiEnabled;
-    }
-    
-    public String getEconomicPolicy() {
-        return economicPolicy;
-    }
-    
-    public void setEconomicPolicy(String economicPolicy) {
-        this.economicPolicy = economicPolicy;
-    }
-    
-    public String getMilitaryPolicy() {
-        return militaryPolicy;
-    }
-    
-    public void setMilitaryPolicy(String militaryPolicy) {
-        this.militaryPolicy = militaryPolicy;
-    }
-    
-    public String getPopulationPolicy() {
-        return populationPolicy;
-    }
-    
-    public void setPopulationPolicy(String populationPolicy) {
-        this.populationPolicy = populationPolicy;
-    }
-    
-    public int getLastPolicyChangeTick() {
-        return lastPolicyChangeTick;
-    }
-    
-    public void setLastPolicyChangeTick(int lastPolicyChangeTick) {
-        this.lastPolicyChangeTick = lastPolicyChangeTick;
-    }
+
 }
