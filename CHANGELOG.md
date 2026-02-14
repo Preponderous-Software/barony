@@ -215,7 +215,7 @@ This MVP explicitly excludes:
 
 ### Repository
 - GitHub: dmccoystephenson/barony-prototype
-- License: (See repository for license information)
+- License: Stephenson-NC (See LICENSE.md)
 - Java Version: 17
 - Build Tool: Maven 3.x with wrapper included
 

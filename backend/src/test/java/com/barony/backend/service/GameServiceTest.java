@@ -2634,6 +2634,122 @@ class GameServiceTest {
     }
 
     @Test
+    void aiLeavesGarrisonWhenMovingAwayFromCapturedVillage() {
+        // Set up a deterministic scenario using internal state
+        GameState internalState = gameService.getInternalStateForTest();
+
+        // Clear all existing villages to avoid interference
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+
+        // Place a village at (6,6) owned by Player 2 and a neutral village at (3,3) as AI target
+        internalState.getGrid()[6][6].setType(TileType.VILLAGE);
+        internalState.getGrid()[6][6].setOwnerId(2);
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
+        internalState.getGrid()[3][3].setOwnerId(0);
+
+        // Place Player 2 army directly at the owned village
+        Army p2Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(p2Army);
+        p2Army.setX(6);
+        p2Army.setY(6);
+        p2Army.setDestinationX(null);
+        p2Army.setDestinationY(null);
+        p2Army.setSoldiers(10);
+
+        // Enable AI and tick once - AI should decide to move and leave garrison
+        gameService.setAiEnabled(true);
+        gameService.tick();
+
+        GameState state = gameService.getState();
+
+        // There should now be 2 Player 2 armies: the main army (moving) and a garrison
+        long p2ArmyCount = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .count();
+        assertEquals(2, p2ArmyCount, "AI should have split into main army and garrison");
+
+        // Find the garrison (non-moving army at the village)
+        Army garrison = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2 && a.getX() == 6 && a.getY() == 6 && !a.isMoving())
+            .findFirst()
+            .orElse(null);
+        assertNotNull(garrison, "AI should leave a garrison at the captured village");
+        assertEquals(1, garrison.getSoldiers(), "Garrison should have 1 soldier");
+
+        // Verify the main army is moving away from the village
+        Army mainArmy = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2 && a.isMoving())
+            .findFirst()
+            .orElse(null);
+        assertNotNull(mainArmy, "Main army should be moving to a new target");
+    }
+
+    @Test
+    void aiGarrisonStaysAtVillageUntilEnoughSoldiers() {
+        // Set up a deterministic scenario using internal state
+        GameState internalState = gameService.getInternalStateForTest();
+
+        // Clear all existing villages to avoid interference
+        for (int x = 0; x < internalState.getWidth(); x++) {
+            for (int y = 0; y < internalState.getHeight(); y++) {
+                if (internalState.getGrid()[x][y].getType() == TileType.VILLAGE) {
+                    internalState.getGrid()[x][y].setType(TileType.EMPTY);
+                }
+            }
+        }
+
+        // Place a village at (6,6) owned by Player 2 and a neutral village at (3,3) as AI target
+        internalState.getGrid()[6][6].setType(TileType.VILLAGE);
+        internalState.getGrid()[6][6].setOwnerId(2);
+        internalState.getGrid()[3][3].setType(TileType.VILLAGE);
+        internalState.getGrid()[3][3].setOwnerId(0);
+
+        // Place Player 2 army at the village with only 2 soldiers (below threshold)
+        Army p2Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(p2Army);
+        p2Army.setX(6);
+        p2Army.setY(6);
+        p2Army.setDestinationX(null);
+        p2Army.setDestinationY(null);
+        p2Army.setSoldiers(2);
+
+        // Enable AI and tick - army should stay put (too few soldiers to move)
+        gameService.setAiEnabled(true);
+        gameService.tick();
+
+        GameState state = gameService.getState();
+
+        // There should still be only 1 Player 2 army (no split, stayed at village)
+        long p2ArmyCount = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .count();
+        assertEquals(1, p2ArmyCount, "Small garrison should stay at village, not split");
+
+        // The army should still be at the village and not moving
+        Army garrison = state.getArmies().stream()
+            .filter(a -> a.getPlayerId() == 2)
+            .findFirst()
+            .orElse(null);
+        assertNotNull(garrison);
+        assertEquals(6, garrison.getX());
+        assertEquals(6, garrison.getY());
+        assertFalse(garrison.isMoving(), "Small garrison should not be moving");
+    }
+
+
+    @Test
     void playerArmyRespawnsAtCastleWhenAllArmiesLost() {
         // Set up known positions and clear villages to prevent soldier gain
         GameState internalState = gameService.getInternalStateForTest();
@@ -2641,7 +2757,7 @@ class GameServiceTest {
             .filter(a -> a.getPlayerId() == 1).findFirst().get();
         Army p2Army = internalState.getArmiesInternal().stream()
             .filter(a -> a.getPlayerId() == 2).findFirst().get();
-        
+
         // Place both armies at (5,5) so they fight immediately
         p1Army.setX(5);
         p1Army.setY(5);
@@ -2651,7 +2767,7 @@ class GameServiceTest {
         p2Army.setY(5);
         p2Army.setDestinationX(null);
         p2Army.setDestinationY(null);
-        
+
         // Clear all villages to prevent soldier generation on the path
         for (int x = 0; x < internalState.getWidth(); x++) {
             for (int y = 0; y < internalState.getHeight(); y++) {
@@ -2660,18 +2776,18 @@ class GameServiceTest {
                 }
             }
         }
-        
+
         // Find castle positions before combat
         int[] p1Castle = findPlayerCastle(internalState, 1);
         int[] p2Castle = findPlayerCastle(internalState, 2);
         assertNotNull(p1Castle);
         assertNotNull(p2Castle);
-        
+
         // Tick to trigger combat — equal armies destroy each other, then respawn
         gameService.tick();
-        
+
         GameState state = gameService.getState();
-        
+
         // Both players should have respawned armies at their castles
         Army player1Army = null;
         Army player2Army = null;
@@ -2679,12 +2795,12 @@ class GameServiceTest {
             if (a.getPlayerId() == 1) player1Army = a;
             if (a.getPlayerId() == 2) player2Army = a;
         }
-        
+
         assertNotNull(player1Army, "Player 1 should have a respawned army");
         assertEquals(1, player1Army.getSoldiers());
         assertEquals(p1Castle[0], player1Army.getX());
         assertEquals(p1Castle[1], player1Army.getY());
-        
+
         assertNotNull(player2Army, "Player 2 should have a respawned army");
         assertEquals(1, player2Army.getSoldiers());
         assertEquals(p2Castle[0], player2Army.getX());

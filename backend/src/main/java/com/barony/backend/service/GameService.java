@@ -692,7 +692,15 @@ public class GameService {
     private void executeAI() {
         final int AI_PLAYER_ID = 2;
         
-        // Get all AI armies
+        // Count total AI armies for cap enforcement
+        int totalAiArmies = 0;
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getPlayerId() == AI_PLAYER_ID) {
+                totalAiArmies++;
+            }
+        }
+        
+        // Get all idle AI armies
         java.util.List<Army> aiArmies = new java.util.ArrayList<>();
         for (Army army : gameState.getArmiesInternal()) {
             if (army.getPlayerId() == AI_PLAYER_ID && !army.isMoving()) {
@@ -700,14 +708,68 @@ public class GameService {
             }
         }
         
+        // Collect garrison armies to add after iteration
+        java.util.List<Army> newGarrisons = new java.util.ArrayList<>();
+        
         // Make decisions for each idle AI army
         for (Army army : aiArmies) {
             makeAIDecision(army);
+            
+            // If the army is now moving away from a village it owns, leave a garrison
+            // but only if there isn't already a friendly army staying at this village
+            // and we haven't hit the army cap
+            if (army.isMoving() && army.getSoldiers() > 1
+                    && (totalAiArmies + newGarrisons.size()) < AI_MAX_ARMIES) {
+                int x = army.getX();
+                int y = army.getY();
+                Tile tile = gameState.getGrid()[x][y];
+                if (tile.getType() == TileType.VILLAGE && tile.getOwnerId() == AI_PLAYER_ID) {
+                    boolean hasExistingGarrison = false;
+                    for (Army other : gameState.getArmiesInternal()) {
+                        if (other != army && other.getPlayerId() == AI_PLAYER_ID
+                                && other.getX() == x && other.getY() == y && !other.isMoving()) {
+                            hasExistingGarrison = true;
+                            break;
+                        }
+                    }
+                    // Also check garrisons created earlier in this tick
+                    if (!hasExistingGarrison) {
+                        for (Army g : newGarrisons) {
+                            if (g.getX() == x && g.getY() == y) {
+                                hasExistingGarrison = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!hasExistingGarrison) {
+                        Army garrison = new Army(x, y, 1, AI_PLAYER_ID);
+                        army.setSoldiers(army.getSoldiers() - 1);
+                        newGarrisons.add(garrison);
+                    }
+                }
+            }
         }
+        
+        // Add garrison armies to game state
+        gameState.getArmiesInternal().addAll(newGarrisons);
     }
+    
+    private static final int AI_MIN_SOLDIERS_TO_MOVE = 5;
+    private static final int AI_MAX_ARMIES = 5;
     
     private void makeAIDecision(Army army) {
         final int AI_PLAYER_ID = 2;
+        
+        // If the army is garrisoning an owned village, stay until it has enough soldiers
+        int ax = army.getX();
+        int ay = army.getY();
+        if (ax >= 0 && ax < gameState.getWidth() && ay >= 0 && ay < gameState.getHeight()) {
+            Tile currentTile = gameState.getGrid()[ax][ay];
+            if (currentTile.getType() == TileType.VILLAGE && currentTile.getOwnerId() == AI_PLAYER_ID
+                    && army.getSoldiers() < AI_MIN_SOLDIERS_TO_MOVE) {
+                return; // Stay and build up forces
+            }
+        }
         
         // Priority 1: Defend owned villages under threat (enemy within 3 tiles)
         int[] threatenedVillage = findThreatenedVillage(AI_PLAYER_ID);
