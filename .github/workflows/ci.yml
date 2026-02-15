@@ -70,3 +70,33 @@ jobs:
       run: |
         cd frontend
         mvn package -DskipTests
+
+  web-client:
+    name: Web Client Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'maven'
+        
+    - name: Build web-client
+      run: |
+        cd web-client
+        mvn clean compile
+        
+    - name: Run web-client tests
+      run: |
+        cd web-client
+        mvn test
+        
+    - name: Package web-client
+      run: |
+        cd web-client
+        mvn package -DskipTests
