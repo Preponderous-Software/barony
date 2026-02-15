@@ -142,19 +142,35 @@
         
         function tick() {
             fetch('/api/tick', { method: 'POST' })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to advance turn: ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(data => updateUI(data))
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error advancing turn: ' + error.message);
+                });
         }
         
         function reset() {
             fetch('/api/reset', { method: 'POST' })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to reset game: ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     updateUI(data);
                     selectedArmy = null;
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error resetting game: ' + error.message);
+                });
         }
         
         function autoPlay() {
@@ -186,31 +202,23 @@
             })
             .then(response => {
                 if (!response.ok) {
-                    return response.json().then(errorData => {
-                        // Extract meaningful error message
-                        let errorMsg = errorData.error || 'Unknown error';
-                        
-                        // Provide user-friendly messages for known error types
-                        if (response.status === 409) {
-                            errorMsg = 'Policy change on cooldown. You must wait 15 turns between policy changes. Check "Next Decision In" in the Policies section.';
-                        } else if (errorData.message) {
-                            // Try to parse the nested JSON message if it exists
-                            try {
-                                const nestedError = JSON.parse(errorData.message);
-                                errorMsg = nestedError.error || errorMsg;
-                            } catch (e) {
-                                // If not JSON, use the message as-is
-                                errorMsg = errorData.message;
+                    // Handle error responses
+                    if (response.status === 409) {
+                        throw new Error('Policy change on cooldown. You must wait 15 turns between policy changes. Check "Next Decision In" in the Policies section.');
+                    }
+                    // Try to parse error response
+                    return response.json()
+                        .then(errorData => {
+                            const errorMsg = errorData.error || errorData.message || 'Failed to change policy';
+                            throw new Error(errorMsg);
+                        })
+                        .catch(parseError => {
+                            // If JSON parsing fails or no useful error message
+                            if (parseError.message.includes('Policy change on cooldown')) {
+                                throw parseError; // Re-throw our custom message
                             }
-                        }
-                        throw new Error(errorMsg);
-                    }).catch(jsonError => {
-                        // If JSON parsing fails, fall back to status text
-                        if (response.status === 409) {
-                            throw new Error('Policy change on cooldown. You must wait 15 turns between policy changes.');
-                        }
-                        throw new Error(jsonError.message || response.statusText);
-                    });
+                            throw new Error('Failed to change policy: ' + response.statusText);
+                        });
                 }
                 return response.json();
             })
@@ -219,6 +227,7 @@
             })
             .catch(error => {
                 alert('Error changing policy: ' + error.message);
+                console.error('Policy change error:', error);
             });
         }
         
@@ -381,7 +390,17 @@
                     splitAmount: splitAmount
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        const message = (err && err.message) ? err.message : 'Failed to split army';
+                        throw new Error(message);
+                    }).catch(() => {
+                        throw new Error('Failed to split army');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 updateUI(data);
             })
@@ -395,15 +414,28 @@
         // Initial load
         document.addEventListener('DOMContentLoaded', function() {
             fetch('/api/state')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load game state: ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(data => updateUI(data))
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error loading game state:', error);
+                    alert('Error loading game: ' + error.message);
+                });
         });
         
         // Canvas click handler for army movement
         document.getElementById('mapCanvas').addEventListener('click', function(e) {
             fetch('/api/state')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load game state');
+                    }
+                    return response.json();
+                })
                 .then(gameState => {
                     const canvas = document.getElementById('mapCanvas');
                     const rect = canvas.getBoundingClientRect();
@@ -435,13 +467,25 @@
                                 targetY: gridY
                             })
                         })
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to move army: ' + response.status);
+                            }
+                            return response.json();
+                        })
                         .then(data => {
                             updateUI(data);
                             selectedArmy = null;
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error moving army: ' + error.message);
+                        });
                     }
+                })
+                .catch(error => {
+                    console.error('Error loading game state:', error);
+                    alert('Error: ' + error.message);
                 });
         });
         /*]]>*/
