@@ -127,6 +127,10 @@
             if (data.gameOver && data.winnerId !== null) {
                 document.getElementById('winnerId').textContent = data.winnerId;
                 winnerLine.style.display = '';
+                // Stop auto-play when game is over
+                if (autoPlayInterval !== null) {
+                    stopAutoPlay();
+                }
             } else {
                 winnerLine.style.display = 'none';
             }
