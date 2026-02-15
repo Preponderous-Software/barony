@@ -3,9 +3,17 @@ package com.barony.webclient.controller;
 import com.barony.webclient.model.*;
 import com.barony.webclient.service.BackendService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClientException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Controller
 public class WebController {
@@ -46,8 +54,30 @@ public class WebController {
     
     @PostMapping("/api/decision")
     @ResponseBody
-    public GameState decision(@RequestBody RulerDecision decision) {
-        return backendService.changePolicy(decision);
+    public ResponseEntity<?> decision(@RequestBody RulerDecision decision) {
+        try {
+            GameState state = backendService.changePolicy(decision);
+            return ResponseEntity.ok(state);
+        } catch (HttpClientErrorException e) {
+            // Backend returned 4xx error - pass through the status code and message
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getStatusText());
+            error.put("message", e.getResponseBodyAsString());
+            error.put("status", e.getStatusCode().value());
+            return ResponseEntity.status(e.getStatusCode()).body(error);
+        } catch (HttpServerErrorException e) {
+            // Backend returned 5xx error
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Backend error: " + e.getStatusText());
+            error.put("status", e.getStatusCode().value());
+            return ResponseEntity.status(e.getStatusCode()).body(error);
+        } catch (RestClientException e) {
+            // Other network/connection errors
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Could not connect to backend");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+        }
     }
     
     @GetMapping("/api/state")

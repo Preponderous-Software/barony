@@ -182,8 +182,30 @@
             })
             .then(response => {
                 if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(text || response.statusText);
+                    return response.json().then(errorData => {
+                        // Extract meaningful error message
+                        let errorMsg = errorData.error || 'Unknown error';
+                        
+                        // Provide user-friendly messages for known error types
+                        if (response.status === 409) {
+                            errorMsg = 'Policy change on cooldown. You must wait 15 turns between policy changes. Check "Next Decision In" in the Policies section.';
+                        } else if (errorData.message) {
+                            // Try to parse the nested JSON message if it exists
+                            try {
+                                const nestedError = JSON.parse(errorData.message);
+                                errorMsg = nestedError.error || errorMsg;
+                            } catch (e) {
+                                // If not JSON, use the message as-is
+                                errorMsg = errorData.message;
+                            }
+                        }
+                        throw new Error(errorMsg);
+                    }).catch(jsonError => {
+                        // If JSON parsing fails, fall back to status text
+                        if (response.status === 409) {
+                            throw new Error('Policy change on cooldown. You must wait 15 turns between policy changes.');
+                        }
+                        throw new Error(jsonError.message || response.statusText);
                     });
                 }
                 return response.json();
