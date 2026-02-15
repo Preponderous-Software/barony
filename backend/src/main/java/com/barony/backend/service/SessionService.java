@@ -19,7 +19,7 @@ public class SessionService {
     /**
      * Create or retrieve a session for the given username
      */
-    public synchronized Session getOrCreateSession(String username) {
+    public Session getOrCreateSession(String username) {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("Username cannot be empty");
         }
@@ -27,23 +27,17 @@ public class SessionService {
         // Clean up old sessions periodically
         cleanupExpiredSessions();
         
-        // Look for existing session by username
-        Session existingSession = sessions.values().stream()
+        // Use computeIfAbsent for thread-safe session creation/retrieval
+        return sessions.values().stream()
             .filter(s -> s.getUsername().equals(username))
             .findFirst()
-            .orElse(null);
-        
-        if (existingSession != null) {
-            existingSession.updateLastAccessed();
-            return existingSession;
-        }
-        
-        // Create new session with fresh game state
-        GameState newGameState = mapGenerator.generate();
-        Session newSession = new Session(username, newGameState);
-        sessions.put(newSession.getSessionId(), newSession);
-        
-        return newSession;
+            .orElseGet(() -> {
+                // Create new session with fresh game state
+                GameState newGameState = mapGenerator.generate();
+                Session newSession = new Session(username, newGameState);
+                sessions.put(newSession.getSessionId(), newSession);
+                return newSession;
+            });
     }
     
     /**

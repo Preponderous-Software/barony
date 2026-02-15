@@ -112,40 +112,48 @@ public class GameController {
     }
     
     @GetMapping("/api/session/state")
-    public synchronized GameState getSessionState(@RequestHeader("X-Session-Id") String sessionId) {
+    public GameState getSessionState(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        gameService.setGameState(session.getGameState());
-        return gameService.getState();
+        synchronized (session.getGameState()) {
+            gameService.setGameState(session.getGameState());
+            return gameService.getState();
+        }
     }
     
     @PostMapping("/api/session/tick")
-    public synchronized GameState sessionTick(@RequestHeader("X-Session-Id") String sessionId) {
+    public GameState sessionTick(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        gameService.setGameState(session.getGameState());
-        gameService.tick();
-        return gameService.getState();
+        synchronized (session.getGameState()) {
+            gameService.setGameState(session.getGameState());
+            gameService.tick();
+            return gameService.getState();
+        }
     }
     
     @PostMapping("/api/session/command")
-    public synchronized GameState sessionCommand(
+    public GameState sessionCommand(
             @RequestHeader("X-Session-Id") String sessionId,
             @RequestBody Command command) {
         Session session = validateAndGetSession(sessionId);
-        gameService.setGameState(session.getGameState());
-        gameService.executeCommand(command);
-        return gameService.getState();
+        synchronized (session.getGameState()) {
+            gameService.setGameState(session.getGameState());
+            gameService.executeCommand(command);
+            return gameService.getState();
+        }
     }
     
     @PostMapping("/api/session/reset")
-    public synchronized GameState sessionReset(@RequestHeader("X-Session-Id") String sessionId) {
+    public GameState sessionReset(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        gameService.setGameState(session.getGameState());
-        gameService.resetGame();
-        return gameService.getState();
+        synchronized (session.getGameState()) {
+            gameService.setGameState(session.getGameState());
+            gameService.resetGame();
+            return gameService.getState();
+        }
     }
     
     @PostMapping("/api/session/decision")
-    public synchronized GameState sessionDecision(
+    public GameState sessionDecision(
             @RequestHeader("X-Session-Id") String sessionId,
             @RequestBody RulerDecision decision) {
         Session session = validateAndGetSession(sessionId);
@@ -170,28 +178,32 @@ public class GameController {
             );
         }
         
-        gameService.setGameState(session.getGameState());
-        
-        try {
-            gameService.changePolicy(decision.getCategory(), decision.getChoice());
-            return gameService.getState();
-        } catch (IllegalStateException e) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT, 
-                "Policy change on cooldown: " + e.getMessage()
-            );
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, 
-                "Invalid policy choice: " + e.getMessage()
-            );
+        synchronized (session.getGameState()) {
+            gameService.setGameState(session.getGameState());
+            
+            try {
+                gameService.changePolicy(decision.getCategory(), decision.getChoice());
+                return gameService.getState();
+            } catch (IllegalStateException e) {
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, 
+                    "Policy change on cooldown: " + e.getMessage()
+                );
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, 
+                    "Invalid policy choice: " + e.getMessage()
+                );
+            }
         }
     }
     
     @GetMapping("/api/session/ruler-stats")
-    public synchronized RulerStats sessionRulerStats(@RequestHeader("X-Session-Id") String sessionId) {
+    public RulerStats sessionRulerStats(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        gameService.setGameState(session.getGameState());
-        return gameService.getRulerStats();
+        synchronized (session.getGameState()) {
+            gameService.setGameState(session.getGameState());
+            return gameService.getRulerStats();
+        }
     }
 }
