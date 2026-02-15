@@ -87,14 +87,26 @@
                 <h3>Armies</h3>
                 <div id="armiesList">
                     <div th:each="army : ${gameState.armies}" class="army-item">
-                        <p>
-                            Army #<span th:text="${army.id}">-</span> 
-                            (Player <span th:text="${army.playerId}">-</span>)
-                            - Position: (<span th:text="${army.x}">-</span>, <span th:text="${army.y}">-</span>)
-                            - Soldiers: <span th:text="${army.soldiers}">-</span>
-                            - Morale: <span th:text="${army.morale}">-</span>
-                            - Loyalty: <span th:text="${army.loyalty}">-</span>
-                        </p>
+                        <div class="army-info">
+                            <p>
+                                Army #<span th:text="${army.id}">-</span> 
+                                (Player <span th:text="${army.playerId}">-</span>)
+                                - Position: (<span th:text="${army.x}">-</span>, <span th:text="${army.y}">-</span>)
+                                - Soldiers: <span th:text="${army.soldiers}">-</span>
+                                - Morale: <span th:text="${army.morale}">-</span>
+                                - Loyalty: <span th:text="${army.loyalty}">-</span>
+                            </p>
+                        </div>
+                        <div class="army-actions" th:if="${army.playerId == 1 && army.soldiers > 1}">
+                            <input type="number" 
+                                   th:id="'splitAmount-' + ${army.id}"
+                                   min="1" 
+                                   th:max="${army.soldiers - 1}" 
+                                   value="1" 
+                                   class="split-input"
+                                   placeholder="Amount">
+                            <button onclick="splitArmy([[${army.id}]])" class="split-button">Split Army</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -282,7 +294,10 @@
             armies.forEach(army => {
                 const div = document.createElement('div');
                 div.className = 'army-item';
-                div.innerHTML = `
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'army-info';
+                infoDiv.innerHTML = `
                     <p>
                         Army #${army.id} (Player ${army.playerId})
                         - Position: (${army.x}, ${army.y})
@@ -291,7 +306,56 @@
                         - Loyalty: ${army.loyalty}
                     </p>
                 `;
+                div.appendChild(infoDiv);
+                
+                // Add split controls for player 1 armies with more than 1 soldier
+                if (army.playerId === 1 && army.soldiers > 1) {
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'army-actions';
+                    actionsDiv.innerHTML = `
+                        <input type="number" 
+                               id="splitAmount-${army.id}"
+                               min="1" 
+                               max="${army.soldiers - 1}" 
+                               value="1" 
+                               class="split-input"
+                               placeholder="Amount">
+                        <button onclick="splitArmy(${army.id})" class="split-button">Split Army</button>
+                    `;
+                    div.appendChild(actionsDiv);
+                }
+                
                 container.appendChild(div);
+            });
+        }
+        
+        function splitArmy(armyId) {
+            const splitAmountInput = document.getElementById('splitAmount-' + armyId);
+            const splitAmount = parseInt(splitAmountInput.value);
+            
+            if (isNaN(splitAmount) || splitAmount < 1) {
+                alert('Please enter a valid split amount (at least 1)');
+                return;
+            }
+            
+            fetch('/api/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: 'SPLIT',
+                    armyId: armyId,
+                    splitAmount: splitAmount
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateUI(data);
+            })
+            .catch(error => {
+                alert('Error splitting army: ' + error.message);
+                console.error('Error:', error);
             });
         }
         
