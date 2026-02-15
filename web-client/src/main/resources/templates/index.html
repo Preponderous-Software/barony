@@ -26,7 +26,9 @@
                     <h3>Game Status</h3>
                     <p>Turn: <span id="tickCount" th:text="${gameState.tickCount}">0</span></p>
                     <p>Game Over: <span id="gameOver" th:text="${gameState.gameOver}">false</span></p>
-                    <p th:if="${gameState.gameOver}">Winner: Player <span th:text="${gameState.winnerId}">-</span></p>
+                    <p id="winnerLine" th:attr="style=${gameState.gameOver} ? '' : 'display:none;'">
+                        Winner: Player <span id="winnerId" th:text="${gameState.winnerId}">-</span>
+                    </p>
                 </div>
                 
                 <div class="info-section">
@@ -107,6 +109,16 @@
         function updateUI(data) {
             document.getElementById('tickCount').textContent = data.tickCount;
             document.getElementById('gameOver').textContent = data.gameOver;
+            
+            // Update winner display
+            const winnerLine = document.getElementById('winnerLine');
+            if (data.gameOver && data.winnerId !== null) {
+                document.getElementById('winnerId').textContent = data.winnerId;
+                winnerLine.style.display = '';
+            } else {
+                winnerLine.style.display = 'none';
+            }
+            
             drawMap(data);
             updateArmiesList(data.armies);
             updateRulerStats();
@@ -166,7 +178,6 @@
             })
             .then(data => {
                 updateUI(data);
-                updateRulerStats();
             })
             .catch(error => {
                 alert('Error changing policy: ' + error.message);

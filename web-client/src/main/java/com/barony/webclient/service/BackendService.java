@@ -2,11 +2,14 @@ package com.barony.webclient.service;
 
 import com.barony.webclient.model.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+
+import java.time.Duration;
 
 @Service
 public class BackendService {
@@ -16,8 +19,11 @@ public class BackendService {
     
     private final RestTemplate restTemplate;
     
-    public BackendService() {
-        this.restTemplate = new RestTemplate();
+    public BackendService(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(Duration.ofSeconds(5))
+                .setReadTimeout(Duration.ofSeconds(10))
+                .build();
     }
     
     public GameState getState() {
