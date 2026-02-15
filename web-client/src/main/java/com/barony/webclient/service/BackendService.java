@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Service
 public class BackendService {
@@ -24,6 +25,13 @@ public class BackendService {
                 .setConnectTimeout(Duration.ofSeconds(5))
                 .setReadTimeout(Duration.ofSeconds(10))
                 .build();
+    }
+    
+    public Map<String, String> login(Map<String, String> request) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(request, headers);
+        return restTemplate.postForObject(backendUrl + "/api/auth/login", entity, Map.class);
     }
     
     public GameState getState() {

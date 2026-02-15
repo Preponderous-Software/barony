@@ -22,16 +22,27 @@ public class WebController {
     private BackendService backendService;
     
     @GetMapping("/")
-    public String index(Model model) {
-        try {
-            GameState state = backendService.getState();
-            RulerStats stats = backendService.getRulerStats();
-            model.addAttribute("gameState", state);
-            model.addAttribute("rulerStats", stats);
-        } catch (Exception e) {
-            model.addAttribute("error", "Could not connect to backend: " + e.getMessage());
-        }
-        return "index";
+    public String index() {
+        return "redirect:/login";
+    }
+    
+    @GetMapping("/login")
+    public String login() {
+        return "login";
+    }
+    
+    @GetMapping("/game")
+    public String game(Model model) {
+        // Game page will be loaded and JavaScript will handle session validation
+        return "game";
+    }
+    
+    // Proxy endpoints for session-based backend API calls
+    @PostMapping("/api/auth/login")
+    @ResponseBody
+    public Map<String, String> proxyLogin(@RequestBody Map<String, String> request) {
+        // Forward login request to backend
+        return backendService.login(request);
     }
     
     @PostMapping("/api/tick")
