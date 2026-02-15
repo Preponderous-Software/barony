@@ -18,7 +18,9 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 ## Project Structure
 
 - `backend/` - Spring Boot REST API server (owns all game logic)
-- `frontend/` - LWJGL client application (renders game state and sends commands)
+- `frontend/` - LWJGL desktop client application (renders game state and sends commands)
+- `web-client/` - Spring Boot web application (browser-based game interface)
+- `docker-compose.yml` - Docker Compose configuration for running backend and web-client services
 
 ## Backend
 
@@ -249,6 +251,76 @@ mvn spring-boot:run
 ```
 
 Server will start on http://localhost:8080
+
+
+## Web Client
+
+### Overview
+A Spring Boot web application that provides a browser-based interface to play Barony. The web client communicates with the backend REST API and provides an interactive game interface.
+
+### Features
+- Real-time game visualization with HTML5 Canvas
+- Interactive game controls (Advance Turn, Reset, Auto Play)
+- Policy management interface
+- Army list display with detailed stats
+- Ruler statistics dashboard
+- Responsive UI with modern styling
+
+### Running the Web Client
+
+**Standalone (requires backend running on port 8080):**
+```bash
+bash start-web-client.sh
+# or on Windows
+start-web-client.bat
+```
+
+Then open http://localhost:3000 in your browser.
+
+### Technology Stack
+- Spring Boot 3.1.5
+- Thymeleaf template engine
+- HTML5 Canvas for game rendering
+- RESTful communication with backend
+
+## Docker Deployment
+
+### Running with Docker Compose
+The easiest way to run both the backend and web client is using Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+This will:
+- Build and start the backend service on port 8080
+- Build and start the web-client service on port 3000
+- Configure networking between services
+
+Access the game at http://localhost:3000
+
+### Individual Docker Services
+
+**Build and run backend:**
+```bash
+cd backend
+docker build -t barony-backend .
+docker run -p 8080:8080 barony-backend
+```
+
+**Build and run web-client:**
+```bash
+cd web-client
+docker build -t barony-web-client .
+docker run -p 3000:3000 -e BACKEND_URL=http://localhost:8080 barony-web-client
+```
+
+### Docker Compose Services
+- `backend` - Game backend API (port 8080)
+- `web-client` - Web UI client (port 3000)
+
+Both services are connected via a bridge network for internal communication.
+
 
 ## Frontend
 
