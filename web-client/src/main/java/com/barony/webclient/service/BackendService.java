@@ -1,0 +1,52 @@
+package com.barony.webclient.service;
+
+import com.barony.webclient.model.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+
+@Service
+public class BackendService {
+    
+    @Value("${backend.url:http://localhost:8080}")
+    private String backendUrl;
+    
+    private final RestTemplate restTemplate;
+    
+    public BackendService() {
+        this.restTemplate = new RestTemplate();
+    }
+    
+    public GameState getState() {
+        return restTemplate.getForObject(backendUrl + "/state", GameState.class);
+    }
+    
+    public GameState tick() {
+        return restTemplate.postForObject(backendUrl + "/tick", null, GameState.class);
+    }
+    
+    public GameState sendCommand(Command command) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Command> request = new HttpEntity<>(command, headers);
+        return restTemplate.postForObject(backendUrl + "/command", request, GameState.class);
+    }
+    
+    public GameState reset() {
+        return restTemplate.postForObject(backendUrl + "/api/reset", null, GameState.class);
+    }
+    
+    public GameState changePolicy(RulerDecision decision) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<RulerDecision> request = new HttpEntity<>(decision, headers);
+        return restTemplate.postForObject(backendUrl + "/api/decision", request, GameState.class);
+    }
+    
+    public RulerStats getRulerStats() {
+        return restTemplate.getForObject(backendUrl + "/api/ruler-stats", RulerStats.class);
+    }
+}
