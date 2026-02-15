@@ -18,6 +18,14 @@ public class GameService {
         gameState = generator.generate();
     }
     
+    /**
+     * Set the game state for session-based operations
+     * This allows the service to work with different game states for different users
+     */
+    public synchronized void setGameState(GameState state) {
+        this.gameState = state;
+    }
+    
     public synchronized GameState getState() {
         // Return a snapshot/deep copy to prevent concurrent modification during serialization
         GameState snapshot = new GameState(gameState.getWidth(), gameState.getHeight());
