@@ -332,9 +332,15 @@
         function splitArmy(armyId) {
             const splitAmountInput = document.getElementById('splitAmount-' + armyId);
             const splitAmount = parseInt(splitAmountInput.value);
+            const maxSplit = parseInt(splitAmountInput.max);
             
             if (isNaN(splitAmount) || splitAmount < 1) {
                 alert('Please enter a valid split amount (at least 1)');
+                return;
+            }
+            
+            if (splitAmount > maxSplit) {
+                alert('Split amount cannot exceed ' + maxSplit + ' soldiers');
                 return;
             }
             
@@ -354,7 +360,8 @@
                 updateUI(data);
             })
             .catch(error => {
-                alert('Error splitting army: ' + error.message);
+                const errorMsg = error.message || 'Network error occurred';
+                alert('Error splitting army: ' + errorMsg);
                 console.error('Error:', error);
             });
         }
