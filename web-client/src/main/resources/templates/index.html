@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Barony Game</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="container">
+        <h1>Barony Strategy Game</h1>
+        
+        <div th:if="${error}" class="error">
+            <p th:text="${error}"></p>
+            <p>Make sure the backend is running on port 8080</p>
+        </div>
+        
+        <div th:unless="${error}">
+            <div class="controls">
+                <button onclick="tick()">Advance Turn</button>
+                <button onclick="reset()">Reset Game</button>
+                <button onclick="autoPlay()">Auto Play</button>
+                <button onclick="stopAutoPlay()">Stop Auto</button>
+            </div>
+            
+            <div class="game-info">
+                <div class="info-section">
+                    <h3>Game Status</h3>
+                    <p>Turn: <span id="tickCount" th:text="${gameState.tickCount}">0</span></p>
+                    <p>Game Over: <span id="gameOver" th:text="${gameState.gameOver}">false</span></p>
+                    <p id="winnerLine" th:attr="style=${gameState.gameOver} ? '' : 'display:none;'">
+                        Winner: Player <span id="winnerId" th:text="${gameState.winnerId}">-</span>
+                    </p>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Ruler Stats</h3>
+                    <p>Avg Stability: <span id="avgStability" th:text="${#numbers.formatDecimal(rulerStats.averageStability, 1, 1)}">0</span></p>
+                    <p>Avg Morale: <span id="avgMorale" th:text="${#numbers.formatDecimal(rulerStats.averageMorale, 1, 1)}">0</span></p>
+                    <p>Avg Loyalty: <span id="avgLoyalty" th:text="${#numbers.formatDecimal(rulerStats.averageLoyalty, 1, 1)}">0</span></p>
+                    <p>Total Population: <span id="totalPop" th:text="${rulerStats.totalPopulation}">0</span></p>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Policies</h3>
+                    <p>Economic: <span id="economicPolicy" th:text="${rulerStats.economicPolicy}">-</span></p>
+                    <p>Military: <span id="militaryPolicy" th:text="${rulerStats.militaryPolicy}">-</span></p>
+                    <p>Population: <span id="populationPolicy" th:text="${rulerStats.populationPolicy}">-</span></p>
+                    <p>Next Decision In: <span id="ticksUntilNext" th:text="${rulerStats.ticksUntilNextDecision}">0</span> turns</p>
+                </div>
+            </div>
+            
+            <div class="policy-controls">
+                <h3>Change Policy</h3>
+                <div class="policy-section">
+                    <label>Economic:</label>
+                    <select id="economicPolicySelect">
+                        <option value="HEAVY_TAXATION">Heavy Taxation (+20% income, -10% stability)</option>
+                        <option value="BALANCED_BUDGET" selected>Balanced Budget</option>
+                        <option value="INFRASTRUCTURE_INVESTMENT">Infrastructure Investment (-10% income, +10% stability)</option>
+                    </select>
+                    <button onclick="changePolicy('ECONOMIC')">Apply</button>
+                </div>
+                <div class="policy-section">
+                    <label>Military:</label>
+                    <select id="militaryPolicySelect">
+                        <option value="AGGRESSIVE_TRAINING">Aggressive Training (+10% morale, -5% loyalty)</option>
+                        <option value="STANDARD_SERVICE" selected>Standard Service</option>
+                        <option value="VETERAN_BENEFITS">Veteran Benefits (-10% morale, +10% loyalty)</option>
+                    </select>
+                    <button onclick="changePolicy('MILITARY')">Apply</button>
+                </div>
+                <div class="policy-section">
+                    <label>Population:</label>
+                    <select id="populationPolicySelect">
+                        <option value="GROWTH_FOCUS">Growth Focus (+15% growth, -5% stability)</option>
+                        <option value="STABLE_POPULATION" selected>Stable Population</option>
+                        <option value="QUALITY_OVER_QUANTITY">Quality Over Quantity (-10% growth, +10% stability)</option>
+                    </select>
+                    <button onclick="changePolicy('POPULATION')">Apply</button>
+                </div>
+            </div>
+            
+            <div id="gameCanvas">
+                <canvas id="mapCanvas" width="800" height="600"></canvas>
+            </div>
+            
+            <div class="armies-list">
+                <h3>Armies</h3>
+                <div id="armiesList">
+                    <div th:each="army : ${gameState.armies}" class="army-item">
+                        <div class="army-info">
+                            <p>
+                                Army #<span th:text="${army.id}">-</span> 
+                                (Player <span th:text="${army.playerId}">-</span>)
+                                - Position: (<span th:text="${army.x}">-</span>, <span th:text="${army.y}">-</span>)
+                                - Soldiers: <span th:text="${army.soldiers}">-</span>
+                                - Morale: <span th:text="${army.morale}">-</span>
+                                - Loyalty: <span th:text="${army.loyalty}">-</span>
+                            </p>
+                        </div>
+                        <div class="army-actions" th:if="${army.playerId == 1 && army.soldiers > 1}">
+                            <input type="number" 
+                                   th:id="'splitAmount-' + ${army.id}"
+                                   min="1" 
+                                   th:max="${army.soldiers - 1}" 
+                                   value="1" 
+                                   class="split-input"
+                                   placeholder="Amount">
+                            <button onclick="splitArmy([[${army.id}]])" class="split-button">Split Army</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        let autoPlayInterval = null;
+        let selectedArmy = null;
+        
+        function updateUI(data) {
+            document.getElementById('tickCount').textContent = data.tickCount;
+            document.getElementById('gameOver').textContent = data.gameOver;
+            
+            // Update winner display
+            const winnerLine = document.getElementById('winnerLine');
+            if (data.gameOver && data.winnerId !== null) {
+                document.getElementById('winnerId').textContent = data.winnerId;
+                winnerLine.style.display = '';
+                // Stop auto-play when game is over
+                if (autoPlayInterval !== null) {
+                    stopAutoPlay();
+                }
+            } else {
+                winnerLine.style.display = 'none';
+            }
+            
+            drawMap(data);
+            updateArmiesList(data.armies);
+            updateRulerStats();
+        }
+        
+        function tick() {
+            fetch('/api/tick', { method: 'POST' })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to advance turn: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => updateUI(data))
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error advancing turn: ' + error.message);
+                });
+        }
+        
+        function reset() {
+            fetch('/api/reset', { method: 'POST' })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to reset game: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updateUI(data);
+                    selectedArmy = null;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error resetting game: ' + error.message);
+                });
+        }
+        
+        function autoPlay() {
+            if (autoPlayInterval === null) {
+                autoPlayInterval = setInterval(tick, 1000);
+            }
+        }
+        
+        function stopAutoPlay() {
+            if (autoPlayInterval !== null) {
+                clearInterval(autoPlayInterval);
+                autoPlayInterval = null;
+            }
+        }
+        
+        function changePolicy(category) {
+            let selectId = category.toLowerCase() + 'PolicySelect';
+            let choice = document.getElementById(selectId).value;
+            
+            fetch('/api/decision', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    category: category,
+                    choice: choice
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Handle error responses
+                    if (response.status === 409) {
+                        throw new Error('Policy change on cooldown. You must wait 15 turns between policy changes. Check "Next Decision In" in the Policies section.');
+                    }
+                    // Try to parse error response
+                    return response.json()
+                        .then(errorData => {
+                            const errorMsg = errorData.error || errorData.message || 'Failed to change policy';
+                            throw new Error(errorMsg);
+                        })
+                        .catch(parseError => {
+                            // If JSON parsing fails or no useful error message
+                            if (parseError.message.includes('Policy change on cooldown')) {
+                                throw parseError; // Re-throw our custom message
+                            }
+                            throw new Error('Failed to change policy: ' + response.statusText);
+                        });
+                }
+                return response.json();
+            })
+            .then(data => {
+                updateUI(data);
+            })
+            .catch(error => {
+                alert('Error changing policy: ' + error.message);
+                console.error('Policy change error:', error);
+            });
+        }
+        
+        function updateRulerStats() {
+            fetch('/api/ruler-stats')
+                .then(response => response.json())
+                .then(stats => {
+                    document.getElementById('avgStability').textContent = stats.averageStability.toFixed(1);
+                    document.getElementById('avgMorale').textContent = stats.averageMorale.toFixed(1);
+                    document.getElementById('avgLoyalty').textContent = stats.averageLoyalty.toFixed(1);
+                    document.getElementById('totalPop').textContent = stats.totalPopulation;
+                    document.getElementById('economicPolicy').textContent = stats.economicPolicy;
+                    document.getElementById('militaryPolicy').textContent = stats.militaryPolicy;
+                    document.getElementById('populationPolicy').textContent = stats.populationPolicy;
+                    document.getElementById('ticksUntilNext').textContent = stats.ticksUntilNextDecision;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        function drawMap(gameState) {
+            const canvas = document.getElementById('mapCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = gameState.width;
+            const height = gameState.height;
+            const cellWidth = canvas.width / width;
+            const cellHeight = canvas.height / height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw tiles
+            for (let x = 0; x < width; x++) {
+                for (let y = 0; y < height; y++) {
+                    const tile = gameState.grid[x][y];
+                    const px = x * cellWidth;
+                    const py = y * cellHeight;
+                    
+                    // Draw tile background based on owner
+                    if (tile.ownerId === 1) {
+                        ctx.fillStyle = 'rgba(100, 150, 255, 0.3)';
+                    } else if (tile.ownerId === 2) {
+                        ctx.fillStyle = 'rgba(255, 100, 100, 0.3)';
+                    } else {
+                        ctx.fillStyle = 'rgba(200, 200, 200, 0.1)';
+                    }
+                    ctx.fillRect(px, py, cellWidth, cellHeight);
+                    
+                    // Draw tile type
+                    if (tile.type === 'CASTLE') {
+                        ctx.fillStyle = '#666';
+                        ctx.fillRect(px + cellWidth * 0.25, py + cellHeight * 0.25, 
+                                   cellWidth * 0.5, cellHeight * 0.5);
+                        ctx.strokeStyle = '#000';
+                        ctx.strokeRect(px + cellWidth * 0.25, py + cellHeight * 0.25, 
+                                     cellWidth * 0.5, cellHeight * 0.5);
+                    } else if (tile.type === 'VILLAGE') {
+                        ctx.fillStyle = '#8B4513';
+                        ctx.beginPath();
+                        ctx.arc(px + cellWidth / 2, py + cellHeight / 2, 
+                              Math.min(cellWidth, cellHeight) * 0.25, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.strokeStyle = '#000';
+                        ctx.stroke();
+                    }
+                    
+                    // Draw grid
+                    ctx.strokeStyle = '#ddd';
+                    ctx.strokeRect(px, py, cellWidth, cellHeight);
+                }
+            }
+            
+            // Draw armies
+            gameState.armies.forEach(army => {
+                const px = army.x * cellWidth + cellWidth / 2;
+                const py = army.y * cellHeight + cellHeight / 2;
+                const radius = Math.min(cellWidth, cellHeight) * 0.3;
+                
+                ctx.fillStyle = army.playerId === 1 ? '#0066FF' : '#FF0000';
+                ctx.beginPath();
+                ctx.arc(px, py, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw soldier count
+                ctx.fillStyle = '#FFF';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(army.soldiers.toString(), px, py);
+            });
+        }
+        
+        function updateArmiesList(armies) {
+            const container = document.getElementById('armiesList');
+            container.innerHTML = '';
+            
+            armies.forEach(army => {
+                const div = document.createElement('div');
+                div.className = 'army-item';
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'army-info';
+                infoDiv.innerHTML = `
+                    <p>
+                        Army #${army.id} (Player ${army.playerId})
+                        - Position: (${army.x}, ${army.y})
+                        - Soldiers: ${army.soldiers}
+                        - Morale: ${army.morale}
+                        - Loyalty: ${army.loyalty}
+                    </p>
+                `;
+                div.appendChild(infoDiv);
+                
+                // Add split controls for player 1 armies with more than 1 soldier
+                if (army.playerId === 1 && army.soldiers > 1) {
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'army-actions';
+                    actionsDiv.innerHTML = `
+                        <input type="number" 
+                               id="splitAmount-${army.id}"
+                               min="1" 
+                               max="${army.soldiers - 1}" 
+                               value="1" 
+                               class="split-input"
+                               placeholder="Amount">
+                        <button onclick="splitArmy(${army.id})" class="split-button">Split Army</button>
+                    `;
+                    div.appendChild(actionsDiv);
+                }
+                
+                container.appendChild(div);
+            });
+        }
+        
+        function splitArmy(armyId) {
+            const splitAmountInput = document.getElementById('splitAmount-' + armyId);
+            const splitAmount = parseInt(splitAmountInput.value);
+            const maxSplit = parseInt(splitAmountInput.max);
+            
+            if (isNaN(splitAmount) || splitAmount < 1) {
+                alert('Please enter a valid split amount (at least 1)');
+                return;
+            }
+            
+            if (splitAmount > maxSplit) {
+                alert('Split amount cannot exceed ' + maxSplit + ' soldiers');
+                return;
+            }
+            
+            fetch('/api/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: 'SPLIT',
+                    armyId: armyId,
+                    splitAmount: splitAmount
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        const message = (err && err.message) ? err.message : 'Failed to split army';
+                        throw new Error(message);
+                    }).catch(() => {
+                        throw new Error('Failed to split army');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                updateUI(data);
+            })
+            .catch(error => {
+                const errorMsg = error.message || 'Network error occurred';
+                alert('Error splitting army: ' + errorMsg);
+                console.error('Error:', error);
+            });
+        }
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/state')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load game state: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => updateUI(data))
+                .catch(error => {
+                    console.error('Error loading game state:', error);
+                    alert('Error loading game: ' + error.message);
+                });
+        });
+        
+        // Canvas click handler for army movement
+        document.getElementById('mapCanvas').addEventListener('click', function(e) {
+            fetch('/api/state')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load game state');
+                    }
+                    return response.json();
+                })
+                .then(gameState => {
+                    const canvas = document.getElementById('mapCanvas');
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const cellWidth = canvas.width / gameState.width;
+                    const cellHeight = canvas.height / gameState.height;
+                    const gridX = Math.floor(x / cellWidth);
+                    const gridY = Math.floor(y / cellHeight);
+                    
+                    if (!selectedArmy) {
+                        // Try to select an army at this position
+                        const army = gameState.armies.find(a => a.x === gridX && a.y === gridY && a.playerId === 1);
+                        if (army) {
+                            selectedArmy = army;
+                            alert('Army #' + army.id + ' selected. Click a tile to move.');
+                        }
+                    } else {
+                        // Move selected army
+                        fetch('/api/command', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                type: 'MOVE',
+                                armyId: selectedArmy.id,
+                                targetX: gridX,
+                                targetY: gridY
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to move army: ' + response.status);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            updateUI(data);
+                            selectedArmy = null;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error moving army: ' + error.message);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading game state:', error);
+                    alert('Error: ' + error.message);
+                });
+        });
+        /*]]>*/
+    </script>
+</body>
+</html>

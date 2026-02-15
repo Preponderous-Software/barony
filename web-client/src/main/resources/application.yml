@@ -1,0 +1,11 @@
+server:
+  port: 3000
+
+backend:
+  url: ${BACKEND_URL:http://localhost:8080}
+
+spring:
+  application:
+    name: barony-web-client
+  thymeleaf:
+    cache: false

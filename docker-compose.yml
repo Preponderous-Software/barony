@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: barony-backend
+    ports:
+      - "8080:8080"
+    networks:
+      - barony-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/state"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  web-client:
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile
+    container_name: barony-web-client
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - barony-network
+
+networks:
+  barony-network:
+    driver: bridge
