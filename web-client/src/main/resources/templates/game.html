@@ -94,8 +94,7 @@
         </div>
     </div>
     
-    <script th:inline="javascript">
-        /*<![CDATA[*/
+    <script>
         let autoPlayInterval = null;
         let selectedArmy = null;
         let sessionId = null;
@@ -162,7 +161,7 @@
         }
         
         function tick() {
-            fetch('http://localhost:8080/api/session/tick', { 
+            fetch('/api/session/tick', { 
                 method: 'POST',
                 headers: getSessionHeaders()
             })
@@ -186,7 +185,7 @@
         }
         
         function reset() {
-            fetch('http://localhost:8080/api/session/reset', { 
+            fetch('/api/session/reset', { 
                 method: 'POST',
                 headers: getSessionHeaders()
             })
@@ -223,10 +222,9 @@
             let selectId = category.toLowerCase() + 'PolicySelect';
             let choice = document.getElementById(selectId).value;
             
-            fetch('http://localhost:8080/api/session/decision', {
+            fetch('/api/session/decision', {
                 method: 'POST',
                 headers: getSessionHeaders(),
-                },
                 body: JSON.stringify({
                     category: category,
                     choice: choice
@@ -264,7 +262,7 @@
         }
         
         function updateRulerStats() {
-            fetch('http://localhost:8080/api/session/ruler-stats', {
+            fetch('/api/session/ruler-stats', {
                 headers: getSessionHeaders()
             })
                 .then(response => {
@@ -420,7 +418,7 @@
                 return;
             }
             
-            fetch('http://localhost:8080/api/session/command', {
+            fetch('/api/session/command', {
                 method: 'POST',
                 headers: getSessionHeaders(),
                 body: JSON.stringify({
@@ -457,7 +455,7 @@
                 return;
             }
             
-            fetch('http://localhost:8080/api/session/state', {
+            fetch('/api/session/state', {
                 headers: getSessionHeaders()
             })
                 .then(response => {
@@ -481,7 +479,7 @@
         
         // Canvas click handler for army movement
         document.getElementById('mapCanvas').addEventListener('click', function(e) {
-            fetch('http://localhost:8080/api/session/state', {
+            fetch('/api/session/state', {
                 headers: getSessionHeaders()
             })
                 .then(response => {
@@ -515,7 +513,7 @@
                         }
                     } else {
                         // Move selected army
-                        fetch('http://localhost:8080/api/session/command', {
+                        fetch('/api/session/command', {
                             method: 'POST',
                             headers: getSessionHeaders(),
                             body: JSON.stringify({
@@ -546,7 +544,6 @@
                     alert('Error: ' + error.message);
                 });
         });
-        /*]]>*/
     </script>
 </body>
 </html>

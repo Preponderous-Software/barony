@@ -63,4 +63,49 @@ public class BackendService {
     public RulerStats getRulerStats() {
         return restTemplate.getForObject(backendUrl + "/api/ruler-stats", RulerStats.class);
     }
+    
+    // Session-aware backend API calls
+    public GameState getSessionState(String sessionId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Session-Id", sessionId);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        return restTemplate.exchange(backendUrl + "/api/session/state", org.springframework.http.HttpMethod.GET, entity, GameState.class).getBody();
+    }
+    
+    public GameState sessionTick(String sessionId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Session-Id", sessionId);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        return restTemplate.postForObject(backendUrl + "/api/session/tick", entity, GameState.class);
+    }
+    
+    public GameState sessionCommand(String sessionId, Command command) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Session-Id", sessionId);
+        HttpEntity<Command> entity = new HttpEntity<>(command, headers);
+        return restTemplate.postForObject(backendUrl + "/api/session/command", entity, GameState.class);
+    }
+    
+    public GameState sessionReset(String sessionId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Session-Id", sessionId);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        return restTemplate.postForObject(backendUrl + "/api/session/reset", entity, GameState.class);
+    }
+    
+    public GameState sessionChangePolicy(String sessionId, RulerDecision decision) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Session-Id", sessionId);
+        HttpEntity<RulerDecision> entity = new HttpEntity<>(decision, headers);
+        return restTemplate.postForObject(backendUrl + "/api/session/decision", entity, GameState.class);
+    }
+    
+    public RulerStats sessionRulerStats(String sessionId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Session-Id", sessionId);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        return restTemplate.exchange(backendUrl + "/api/session/ruler-stats", org.springframework.http.HttpMethod.GET, entity, RulerStats.class).getBody();
+    }
 }

@@ -102,4 +102,64 @@ public class WebController {
     public RulerStats getRulerStats() {
         return backendService.getRulerStats();
     }
+    
+    // Session-aware proxy endpoints
+    @GetMapping("/api/session/state")
+    @ResponseBody
+    public GameState getSessionState(@RequestHeader("X-Session-Id") String sessionId) {
+        return backendService.getSessionState(sessionId);
+    }
+    
+    @PostMapping("/api/session/tick")
+    @ResponseBody
+    public GameState sessionTick(@RequestHeader("X-Session-Id") String sessionId) {
+        return backendService.sessionTick(sessionId);
+    }
+    
+    @PostMapping("/api/session/command")
+    @ResponseBody
+    public GameState sessionCommand(
+            @RequestHeader("X-Session-Id") String sessionId,
+            @RequestBody Command command) {
+        return backendService.sessionCommand(sessionId, command);
+    }
+    
+    @PostMapping("/api/session/reset")
+    @ResponseBody
+    public GameState sessionReset(@RequestHeader("X-Session-Id") String sessionId) {
+        return backendService.sessionReset(sessionId);
+    }
+    
+    @PostMapping("/api/session/decision")
+    @ResponseBody
+    public ResponseEntity<?> sessionDecision(
+            @RequestHeader("X-Session-Id") String sessionId,
+            @RequestBody RulerDecision decision) {
+        try {
+            GameState state = backendService.sessionChangePolicy(sessionId, decision);
+            return ResponseEntity.ok(state);
+        } catch (HttpClientErrorException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getStatusText());
+            error.put("message", e.getResponseBodyAsString());
+            error.put("status", e.getStatusCode().value());
+            return ResponseEntity.status(e.getStatusCode()).body(error);
+        } catch (HttpServerErrorException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Backend error: " + e.getStatusText());
+            error.put("status", e.getStatusCode().value());
+            return ResponseEntity.status(e.getStatusCode()).body(error);
+        } catch (RestClientException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Could not connect to backend");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+        }
+    }
+    
+    @GetMapping("/api/session/ruler-stats")
+    @ResponseBody
+    public RulerStats getSessionRulerStats(@RequestHeader("X-Session-Id") String sessionId) {
+        return backendService.sessionRulerStats(sessionId);
+    }
 }
