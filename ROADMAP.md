@@ -56,7 +56,7 @@ Implement basic sound effects and background music to enhance game atmosphere.
   - Victory/defeat
   - Policy changes
 - Volume controls in settings
-- Mute toggle (M key)
+- Mute toggle (configurable keybinding; default `F10` on desktop builds)
 - Audio asset loading system
 
 **Technical Notes:**
@@ -87,14 +87,15 @@ Allow players to save game progress and resume later.
 - Save/load UI in menu
 
 **Backend Changes:**
-- Add `POST /api/save` endpoint with slot parameter
-- Add `GET /api/saves` endpoint (list available saves)
-- Add `POST /api/load` endpoint with slot parameter
+- Add session-aware `POST /api/session/save` endpoint with slot parameter
+- Add session-aware `GET /api/session/saves` endpoint (list available saves)
+- Add session-aware `POST /api/session/load` endpoint with slot parameter
+- All endpoints require `X-Session-Id` header to identify the active session
 - Serialize complete GameState to JSON
 - Include all game state: armies, tiles, policies, tick count
 
 **Frontend Changes:**
-- Add save/load menu (accessible via ESC key)
+- Add save/load menu (configurable keybinding; suggest `F5` key or dedicated menu button)
 - Display save slots with metadata
 - Confirm overwrite existing save
 - Loading screen during load operation
