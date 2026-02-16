@@ -2,6 +2,7 @@ package com.barony.frontend.client;
 
 import com.barony.frontend.model.Command;
 import com.barony.frontend.model.GameState;
+import com.barony.frontend.model.RulerDecision;
 import com.barony.frontend.model.RulerStats;
 import com.google.gson.Gson;
 
@@ -138,17 +139,23 @@ public class GameClient {
             URL url = new URL(baseUrl + "/api/decision");
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
             conn.setConnectTimeout(CONNECT_TIMEOUT);
             conn.setReadTimeout(READ_TIMEOUT);
             conn.setDoOutput(true);
             
-            // Create JSON request body
-            String jsonRequest = String.format("{\"category\":\"%s\",\"choice\":\"%s\"}", category, choice);
+            // Create RulerDecision object
+            RulerDecision decision = new RulerDecision(
+                RulerDecision.PolicyCategory.valueOf(category),
+                choice
+            );
+            
+            // Serialize to JSON
+            String jsonRequest = gson.toJson(decision);
             
             try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonRequest.getBytes(StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
+                os.write(jsonRequest.getBytes(StandardCharsets.UTF_8));
+                os.flush();
             }
             
             return readResponse(conn);
