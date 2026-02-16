@@ -1,5 +1,7 @@
 # Barony Prototype - GitHub Issues for MVP Development
 
+> **Note for Players:** This document is for developers and contains implementation tickets. If you want to learn how to play Barony, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md) instead.
+
 This document contains issue templates ready for GitHub issue creation. Each ticket is designed for implementation by GitHub Copilot Coding Agent and groups related functionality to minimize the number of agent sessions required.
 
 ---
