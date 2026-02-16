@@ -62,12 +62,25 @@ cd web-client && ./mvnw spring-boot:run
 ## Backend API
 
 ### REST Endpoints
+
+**Single-Game Endpoints:**
 - `GET /state` - Get current game state
 - `POST /tick` - Advance game by one turn
 - `POST /command` - Send MOVE or SPLIT command
 - `POST /api/reset` - Reset game
 - `POST /api/decision` - Change ruler policy
 - `GET /api/ruler-stats` - Get realm statistics
+
+**Session-Aware Endpoints (require `X-Session-Id` header):**
+- `GET /api/session/state` - Get game state for session
+- `POST /api/session/tick` - Advance game by one turn for session
+- `POST /api/session/command` - Send command for session
+- `POST /api/session/reset` - Reset game for session
+- `POST /api/session/decision` - Change ruler policy for session
+- `GET /api/session/ruler-stats` - Get realm statistics for session
+
+**Authentication:**
+- `POST /api/auth/login` - Login and get session ID
 
 ### Command Examples
 

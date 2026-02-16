@@ -70,7 +70,7 @@ The game board is a 10x10 grid with different tile types:
 
 **Keyboard Shortcuts:**
 - **SPACE** - Advance one turn
-- **S** - Split selected army (type number in console)
+- **S** - Enter split mode for first army (press 1-9 to choose split amount, S/ESC to cancel)
 - **R** - Play again (when game ends)
 - **ESC** - Quit game
 
@@ -89,7 +89,9 @@ The game board is a 10x10 grid with different tile types:
 - Don't attack with weak armies!
 
 **3. Split Your Armies**
-- Press **S** to divide an army into two
+- Press **S** to enter split mode (targets first army in list)
+- Press number keys **1-9** to choose how many soldiers to split off
+- Press **S** or **ESC** to cancel split mode
 - Useful for capturing multiple villages at once
 - Can garrison villages while your main force attacks
 
@@ -288,7 +290,7 @@ A: Left-click the army to select it, then left-click where you want it to go. Th
 A: Villages only generate soldiers for armies of the owning player stationed on the village. Neutral villages don't generate anything.
 
 **Q: How do I split an army?**
-A: Select the army, press **S**, and type the number of soldiers to split off in the console. Both armies must have at least 1 soldier.
+A: Press **S** to enter split mode (targets first army). Press a number key (**1**-**9**) to choose how many soldiers to split off. Press **S** or **ESC** to cancel. Both armies must have at least 1 soldier after splitting.
 
 **Q: Can I undo a move?**
 A: No, all commands are final. Plan carefully!
@@ -328,8 +330,9 @@ A: You can only change policies every 15 turns to prevent rapid switching exploi
 
 **Can't split armies:**
 - You need at least 2 soldiers to split
-- After pressing S, check the console for input prompt
-- Type a number between 1 and (total soldiers - 1)
+- Press **S** to enter split mode (targets first army)
+- Press number keys **1-9** to choose split amount
+- Press **S** or **ESC** to cancel
 
 ## Next Steps
 
