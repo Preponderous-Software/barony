@@ -15,6 +15,14 @@ A minimal client/server game prototype with a Java Spring Boot backend and Java 
 - ✅ Mouse and keyboard controls with HUD
 - ✅ Ruler decision system (CK-lite policies)
 
+## Documentation
+
+- **[MVP.md](MVP.md)** - Complete MVP specification and feature implementation details
+- **[ROADMAP.md](ROADMAP.md)** - Post-MVP feature roadmap with versioned releases (v1.1 through v3.0)
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and feature completion tracking
+- **[TICKETS.md](TICKETS.md)** - GitHub issue templates for MVP development
+- **[POLICY_UI_GUIDE.md](POLICY_UI_GUIDE.md)** - Guide to the ruler decision system UI
+
 ## Project Structure
 
 - `backend/` - Spring Boot REST API server (owns all game logic)
