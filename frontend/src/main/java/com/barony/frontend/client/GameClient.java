@@ -136,6 +136,15 @@ public class GameClient {
     public GameState changePolicy(String category, String choice) {
         HttpURLConnection conn = null;
         try {
+            // Validate category before creating enum
+            RulerDecision.PolicyCategory policyCategory;
+            try {
+                policyCategory = RulerDecision.PolicyCategory.valueOf(category);
+            } catch (IllegalArgumentException e) {
+                System.err.println("Invalid policy category: " + category);
+                return null;
+            }
+            
             URL url = new URL(baseUrl + "/api/decision");
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -145,10 +154,7 @@ public class GameClient {
             conn.setDoOutput(true);
             
             // Create RulerDecision object
-            RulerDecision decision = new RulerDecision(
-                RulerDecision.PolicyCategory.valueOf(category),
-                choice
-            );
+            RulerDecision decision = new RulerDecision(policyCategory, choice);
             
             // Serialize to JSON
             String jsonRequest = gson.toJson(decision);
