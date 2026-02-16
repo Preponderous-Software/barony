@@ -1694,7 +1694,7 @@ Support multiple languages in the game. Implement string externalization, langua
 28. Ticket 28 (Modding Support) - Community content
 29. Ticket 29 (Localization) - Language support
 
-**Total estimated effort:** 18-23 agent sessions (MVP) + 90-115 agent sessions (post-MVP)
+**Total estimated effort:** 18-23 agent sessions (MVP) + 88-116 agent sessions (post-MVP)
 
 ---
 
