@@ -8,9 +8,9 @@
     <div class="container">
         <h1>Barony Strategy Game</h1>
         
-        <div class="user-info" style="text-align: center; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
-            <p style="margin: 5px 0;"><strong>Player:</strong> <span id="currentUsername">Loading...</span></p>
-            <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Logout</button>
+        <div class="user-info">
+            <p><strong>Player:</strong> <span id="currentUsername">Loading...</span></p>
+            <button onclick="logout()" class="logout-button">Logout</button>
         </div>
         
         <div id="error" class="error" style="display: none;">
@@ -294,8 +294,9 @@
             const cellWidth = canvas.width / width;
             const cellHeight = canvas.height / height;
             
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Fill canvas with background color
+            ctx.fillStyle = '#1a1510';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Draw tiles
             for (let x = 0; x < width; x++) {
@@ -310,30 +311,30 @@
                     } else if (tile.ownerId === 2) {
                         ctx.fillStyle = 'rgba(255, 100, 100, 0.3)';
                     } else {
-                        ctx.fillStyle = 'rgba(200, 200, 200, 0.1)';
+                        ctx.fillStyle = 'rgba(200, 200, 200, 0.05)';
                     }
                     ctx.fillRect(px, py, cellWidth, cellHeight);
                     
                     // Draw tile type
                     if (tile.type === 'CASTLE') {
-                        ctx.fillStyle = '#666';
+                        ctx.fillStyle = '#888';
                         ctx.fillRect(px + cellWidth * 0.25, py + cellHeight * 0.25, 
                                    cellWidth * 0.5, cellHeight * 0.5);
-                        ctx.strokeStyle = '#000';
+                        ctx.strokeStyle = '#aaa';
                         ctx.strokeRect(px + cellWidth * 0.25, py + cellHeight * 0.25, 
                                      cellWidth * 0.5, cellHeight * 0.5);
                     } else if (tile.type === 'VILLAGE') {
-                        ctx.fillStyle = '#8B4513';
+                        ctx.fillStyle = '#a0724a';
                         ctx.beginPath();
                         ctx.arc(px + cellWidth / 2, py + cellHeight / 2, 
                               Math.min(cellWidth, cellHeight) * 0.25, 0, 2 * Math.PI);
                         ctx.fill();
-                        ctx.strokeStyle = '#000';
+                        ctx.strokeStyle = '#c0926a';
                         ctx.stroke();
                     }
                     
                     // Draw grid
-                    ctx.strokeStyle = '#ddd';
+                    ctx.strokeStyle = '#3a3228';
                     ctx.strokeRect(px, py, cellWidth, cellHeight);
                 }
             }
