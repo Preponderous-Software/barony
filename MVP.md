@@ -586,9 +586,8 @@ These features are explicitly **NOT** in MVP:
 
 **Post-MVP Development:**
 1. See **[ROADMAP.md](ROADMAP.md)** for post-MVP feature roadmap (v1.1 through v3.0)
-2. See **[dod.md](dod.md)** for Definition of Done criteria for all features
-3. Review community feedback and prioritize v1.1 features
-4. Begin implementation of polish and quality-of-life enhancements
+2. Review community feedback and prioritize v1.1 features
+3. Begin implementation of polish and quality-of-life enhancements
 
 ---
 
