@@ -8,12 +8,14 @@
     <div class="container">
         <h1>Barony Strategy Game</h1>
         
-        <div th:if="${error}" class="error">
-            <p th:text="${error}"></p>
-            <p>Make sure the backend is running on port 8080</p>
+        <div class="user-info" style="text-align: center; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+            <p style="margin: 5px 0;"><strong>Player:</strong> <span id="currentUsername">Loading...</span></p>
+            <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Logout</button>
         </div>
         
-        <div th:unless="${error}">
+        <div id="error" class="error" style="display: none;">
+            <p id="errorMessage"></p>
+        </div>
             <div class="controls">
                 <button onclick="tick()">Advance Turn</button>
                 <button onclick="reset()">Reset Game</button>
@@ -24,27 +26,27 @@
             <div class="game-info">
                 <div class="info-section">
                     <h3>Game Status</h3>
-                    <p>Turn: <span id="tickCount" th:text="${gameState.tickCount}">0</span></p>
-                    <p>Game Over: <span id="gameOver" th:text="${gameState.gameOver}">false</span></p>
-                    <p id="winnerLine" th:attr="style=${gameState.gameOver} ? '' : 'display:none;'">
-                        Winner: Player <span id="winnerId" th:text="${gameState.winnerId}">-</span>
+                    <p>Turn: <span id="tickCount">0</span></p>
+                    <p>Game Over: <span id="gameOver">false</span></p>
+                    <p id="winnerLine" style="display:none;">
+                        Winner: Player <span id="winnerId">-</span>
                     </p>
                 </div>
                 
                 <div class="info-section">
                     <h3>Ruler Stats</h3>
-                    <p>Avg Stability: <span id="avgStability" th:text="${#numbers.formatDecimal(rulerStats.averageStability, 1, 1)}">0</span></p>
-                    <p>Avg Morale: <span id="avgMorale" th:text="${#numbers.formatDecimal(rulerStats.averageMorale, 1, 1)}">0</span></p>
-                    <p>Avg Loyalty: <span id="avgLoyalty" th:text="${#numbers.formatDecimal(rulerStats.averageLoyalty, 1, 1)}">0</span></p>
-                    <p>Total Population: <span id="totalPop" th:text="${rulerStats.totalPopulation}">0</span></p>
+                    <p>Avg Stability: <span id="avgStability">0</span></p>
+                    <p>Avg Morale: <span id="avgMorale">0</span></p>
+                    <p>Avg Loyalty: <span id="avgLoyalty">0</span></p>
+                    <p>Total Population: <span id="totalPop">0</span></p>
                 </div>
                 
                 <div class="info-section">
                     <h3>Policies</h3>
-                    <p>Economic: <span id="economicPolicy" th:text="${rulerStats.economicPolicy}">-</span></p>
-                    <p>Military: <span id="militaryPolicy" th:text="${rulerStats.militaryPolicy}">-</span></p>
-                    <p>Population: <span id="populationPolicy" th:text="${rulerStats.populationPolicy}">-</span></p>
-                    <p>Next Decision In: <span id="ticksUntilNext" th:text="${rulerStats.ticksUntilNextDecision}">0</span> turns</p>
+                    <p>Economic: <span id="economicPolicy">-</span></p>
+                    <p>Military: <span id="militaryPolicy">-</span></p>
+                    <p>Population: <span id="populationPolicy">-</span></p>
+                    <p>Next Decision In: <span id="ticksUntilNext">0</span> turns</p>
                 </div>
             </div>
             
@@ -86,37 +88,55 @@
             <div class="armies-list">
                 <h3>Armies</h3>
                 <div id="armiesList">
-                    <div th:each="army : ${gameState.armies}" class="army-item">
-                        <div class="army-info">
-                            <p>
-                                Army #<span th:text="${army.id}">-</span> 
-                                (Player <span th:text="${army.playerId}">-</span>)
-                                - Position: (<span th:text="${army.x}">-</span>, <span th:text="${army.y}">-</span>)
-                                - Soldiers: <span th:text="${army.soldiers}">-</span>
-                                - Morale: <span th:text="${army.morale}">-</span>
-                                - Loyalty: <span th:text="${army.loyalty}">-</span>
-                            </p>
-                        </div>
-                        <div class="army-actions" th:if="${army.playerId == 1 && army.soldiers > 1}">
-                            <input type="number" 
-                                   th:id="'splitAmount-' + ${army.id}"
-                                   min="1" 
-                                   th:max="${army.soldiers - 1}" 
-                                   value="1" 
-                                   class="split-input"
-                                   placeholder="Amount">
-                            <button onclick="splitArmy([[${army.id}]])" class="split-button">Split Army</button>
-                        </div>
-                    </div>
+                    <!-- Armies will be loaded dynamically via JavaScript -->
                 </div>
             </div>
         </div>
     </div>
     
-    <script th:inline="javascript">
-        /*<![CDATA[*/
+    <script>
         let autoPlayInterval = null;
         let selectedArmy = null;
+        let sessionId = null;
+        let username = null;
+        
+        // Check session on page load
+        function checkSession() {
+            sessionId = localStorage.getItem('sessionId');
+            username = localStorage.getItem('username');
+            
+            if (!sessionId || !username) {
+                // No session, redirect to login
+                window.location.href = '/login';
+                return false;
+            }
+            
+            document.getElementById('currentUsername').textContent = username;
+            return true;
+        }
+        
+        function logout() {
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('username');
+            window.location.href = '/login';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function getSessionHeaders() {
+            return {
+                'X-Session-Id': sessionId,
+                'Content-Type': 'application/json'
+            };
+        }
         
         function updateUI(data) {
             document.getElementById('tickCount').textContent = data.tickCount;
@@ -141,22 +161,34 @@
         }
         
         function tick() {
-            fetch('/api/tick', { method: 'POST' })
+            fetch('/api/session/tick', { 
+                method: 'POST',
+                headers: getSessionHeaders()
+            })
                 .then(response => {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
                     if (!response.ok) {
                         throw new Error('Failed to advance turn: ' + response.status);
                     }
                     return response.json();
                 })
-                .then(data => updateUI(data))
+                .then(data => {
+                    if (data) updateUI(data);
+                })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error advancing turn: ' + error.message);
+                    showError('Error advancing turn: ' + error.message);
                 });
         }
         
         function reset() {
-            fetch('/api/reset', { method: 'POST' })
+            fetch('/api/session/reset', { 
+                method: 'POST',
+                headers: getSessionHeaders()
+            })
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Failed to reset game: ' + response.status);
@@ -190,11 +222,9 @@
             let selectId = category.toLowerCase() + 'PolicySelect';
             let choice = document.getElementById(selectId).value;
             
-            fetch('/api/decision', {
+            fetch('/api/session/decision', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getSessionHeaders(),
                 body: JSON.stringify({
                     category: category,
                     choice: choice
@@ -232,9 +262,18 @@
         }
         
         function updateRulerStats() {
-            fetch('/api/ruler-stats')
-                .then(response => response.json())
+            fetch('/api/session/ruler-stats', {
+                headers: getSessionHeaders()
+            })
+                .then(response => {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+                    return response.json();
+                })
                 .then(stats => {
+                    if (!stats) return;
                     document.getElementById('avgStability').textContent = stats.averageStability.toFixed(1);
                     document.getElementById('avgMorale').textContent = stats.averageMorale.toFixed(1);
                     document.getElementById('avgLoyalty').textContent = stats.averageLoyalty.toFixed(1);
@@ -379,11 +418,9 @@
                 return;
             }
             
-            fetch('/api/command', {
+            fetch('/api/session/command', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getSessionHeaders(),
                 body: JSON.stringify({
                     type: 'SPLIT',
                     armyId: armyId,
@@ -413,30 +450,51 @@
         
         // Initial load
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/api/state')
+            // Check session first
+            if (!checkSession()) {
+                return;
+            }
+            
+            fetch('/api/session/state', {
+                headers: getSessionHeaders()
+            })
                 .then(response => {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
                     if (!response.ok) {
                         throw new Error('Failed to load game state: ' + response.status);
                     }
                     return response.json();
                 })
-                .then(data => updateUI(data))
+                .then(data => {
+                    if (data) updateUI(data);
+                })
                 .catch(error => {
                     console.error('Error loading game state:', error);
-                    alert('Error loading game: ' + error.message);
+                    showError('Error loading game: ' + error.message);
                 });
         });
         
         // Canvas click handler for army movement
         document.getElementById('mapCanvas').addEventListener('click', function(e) {
-            fetch('/api/state')
+            fetch('/api/session/state', {
+                headers: getSessionHeaders()
+            })
                 .then(response => {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
                     if (!response.ok) {
                         throw new Error('Failed to load game state');
                     }
                     return response.json();
                 })
                 .then(gameState => {
+                    if (!gameState) return;
+                    
                     const canvas = document.getElementById('mapCanvas');
                     const rect = canvas.getBoundingClientRect();
                     const x = e.clientX - rect.left;
@@ -455,11 +513,9 @@
                         }
                     } else {
                         // Move selected army
-                        fetch('/api/command', {
+                        fetch('/api/session/command', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                            headers: getSessionHeaders(),
                             body: JSON.stringify({
                                 type: 'MOVE',
                                 armyId: selectedArmy.id,
@@ -488,7 +544,6 @@
                     alert('Error: ' + error.message);
                 });
         });
-        /*]]>*/
     </script>
 </body>
 </html>
