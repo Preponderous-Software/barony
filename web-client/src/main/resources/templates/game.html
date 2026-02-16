@@ -8,9 +8,9 @@
     <div class="container">
         <h1>Barony Strategy Game</h1>
         
-        <div class="user-info" style="text-align: center; margin-bottom: 20px; padding: 10px; background: #2a2a3d; border-radius: 8px;">
-            <p style="margin: 5px 0;"><strong>Player:</strong> <span id="currentUsername">Loading...</span></p>
-            <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Logout</button>
+        <div class="user-info">
+            <p><strong>Player:</strong> <span id="currentUsername">Loading...</span></p>
+            <button onclick="logout()" class="logout-button">Logout</button>
         </div>
         
         <div id="error" class="error" style="display: none;">
@@ -294,9 +294,8 @@
             const cellWidth = canvas.width / width;
             const cellHeight = canvas.height / height;
             
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#1a1a2e';
+            // Clear canvas by drawing background
+            ctx.fillStyle = '#1a1510';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Draw tiles
@@ -335,7 +334,7 @@
                     }
                     
                     // Draw grid
-                    ctx.strokeStyle = '#333';
+                    ctx.strokeStyle = '#3a3228';
                     ctx.strokeRect(px, py, cellWidth, cellHeight);
                 }
             }

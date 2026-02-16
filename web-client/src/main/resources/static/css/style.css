@@ -1,30 +1,39 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: linear-gradient(135deg, #1a1510 0%, #2a2218 100%);
     margin: 0;
     padding: 20px;
-    color: #e0e0e0;
+    color: #d4cfc8;
 }
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    background: #1e1e2f;
+    background: #2b2520;
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
+.login-container {
+    background: #2b2520;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    max-width: 400px;
+    width: 90%;
+}
+
 h1 {
     text-align: center;
-    color: #7b8cff;
+    color: #c9a96e;
     margin-bottom: 30px;
     font-size: 2.5em;
 }
 
 h3 {
-    color: #7b8cff;
-    border-bottom: 2px solid #7b8cff;
+    color: #c9a96e;
+    border-bottom: 2px solid #8b7355;
     padding-bottom: 5px;
     margin-bottom: 15px;
 }
@@ -44,8 +53,8 @@ h3 {
 }
 
 .controls button {
-    background: #667eea;
-    color: white;
+    background: #6b5a3e;
+    color: #f0e8d8;
     border: none;
     padding: 12px 24px;
     margin: 5px;
@@ -57,7 +66,7 @@ h3 {
 }
 
 .controls button:hover {
-    background: #5568d3;
+    background: #7d6a4c;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
@@ -74,10 +83,10 @@ h3 {
 }
 
 .info-section {
-    background: #2a2a3d;
+    background: #352f28;
     padding: 15px;
     border-radius: 8px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid #8b7355;
 }
 
 .info-section p {
@@ -86,7 +95,7 @@ h3 {
 }
 
 .policy-controls {
-    background: #2a2a3d;
+    background: #352f28;
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
@@ -107,16 +116,16 @@ h3 {
 .policy-section select {
     flex: 1;
     padding: 8px;
-    border: 1px solid #444;
+    border: 1px solid #5a4e3c;
     border-radius: 4px;
     font-size: 14px;
-    background: #1e1e2f;
-    color: #e0e0e0;
+    background: #2b2520;
+    color: #d4cfc8;
 }
 
 .policy-section button {
-    background: #28a745;
-    color: white;
+    background: #5a7a3a;
+    color: #f0e8d8;
     border: none;
     padding: 8px 20px;
     border-radius: 4px;
@@ -126,7 +135,7 @@ h3 {
 }
 
 .policy-section button:hover {
-    background: #218838;
+    background: #4a6a2e;
 }
 
 #gameCanvas {
@@ -135,25 +144,25 @@ h3 {
 }
 
 #mapCanvas {
-    border: 3px solid #667eea;
+    border: 3px solid #8b7355;
     border-radius: 8px;
-    background: #1a1a2e;
+    background: #1a1510;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .armies-list {
-    background: #2a2a3d;
+    background: #352f28;
     padding: 20px;
     border-radius: 8px;
     margin-top: 20px;
 }
 
 .army-item {
-    background: #1e1e2f;
+    background: #2b2520;
     padding: 10px;
     margin: 8px 0;
     border-radius: 4px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid #8b7355;
 }
 
 .army-item p {
@@ -175,16 +184,16 @@ h3 {
 .split-input {
     width: 80px;
     padding: 6px 10px;
-    border: 1px solid #444;
+    border: 1px solid #5a4e3c;
     border-radius: 4px;
     font-size: 14px;
-    background: #1e1e2f;
-    color: #e0e0e0;
+    background: #2b2520;
+    color: #d4cfc8;
 }
 
 .split-button {
-    background: #ff6b6b;
-    color: white;
+    background: #8b3a3a;
+    color: #f0e8d8;
     border: none;
     padding: 6px 16px;
     border-radius: 4px;
@@ -195,7 +204,91 @@ h3 {
 }
 
 .split-button:hover {
-    background: #ee5a52;
+    background: #a04040;
+}
+
+.user-info {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #352f28;
+    border-radius: 8px;
+}
+
+.user-info p {
+    margin: 5px 0;
+}
+
+.user-info .logout-button {
+    background: #8b3a3a;
+    color: #f0e8d8;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.user-info .logout-button:hover {
+    background: #a04040;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #d4cfc8;
+    font-weight: bold;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #5a4e3c;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+    background: #352f28;
+    color: #d4cfc8;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #c9a96e;
+}
+
+.login-container button {
+    width: 100%;
+    background: #6b5a3e;
+    color: #f0e8d8;
+    border: none;
+    padding: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.login-container button:hover {
+    background: #7d6a4c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.login-container button:active {
+    transform: translateY(0);
+}
+
+.info {
+    text-align: center;
+    color: #8a8278;
+    margin-top: 20px;
+    font-size: 14px;
 }
 
 #armiesList {
@@ -208,15 +301,15 @@ h3 {
 }
 
 #armiesList::-webkit-scrollbar-track {
-    background: #2a2a3d;
+    background: #352f28;
     border-radius: 4px;
 }
 
 #armiesList::-webkit-scrollbar-thumb {
-    background: #667eea;
+    background: #8b7355;
     border-radius: 4px;
 }
 
 #armiesList::-webkit-scrollbar-thumb:hover {
-    background: #5568d3;
+    background: #a08868;
 }
