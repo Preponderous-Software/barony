@@ -7,8 +7,9 @@ Barony is a turn-based strategy game where you command armies to capture village
 
 ## Documentation
 
-### For Players
+### Quick Links
 - **[PLAYER_GUIDE.md](PLAYER_GUIDE.md)** - Complete guide to playing Barony (start here!)
+- **[DOCS.md](DOCS.md)** - Documentation index (find what you need)
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and features
 
 ### For Developers
@@ -205,6 +206,13 @@ GitHub Actions runs on all PRs:
 - Effects are gradual (several turns)
 
 For detailed troubleshooting, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md).
+
+## Getting Help
+
+- **Playing the game?** See [PLAYER_GUIDE.md](PLAYER_GUIDE.md)
+- **Technical issues?** Check the Troubleshooting section above
+- **Can't find what you need?** See [DOCS.md](DOCS.md) for documentation index
+- **Found a bug?** Open an issue on GitHub
 
 ## License
 This project is licensed under the **Stephenson Software Non-Commercial License (Stephenson-NC)**.  
