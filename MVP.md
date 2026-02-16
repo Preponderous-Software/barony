@@ -1,5 +1,7 @@
 # Barony Prototype - Minimum Viable Product (MVP)
 
+> **Note for Players:** This document is technical documentation for developers. If you want to learn how to play Barony, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md) instead.
+
 ## 🎉 MVP Completion Status: **COMPLETE** 🎉
 
 **Completion Date:** February 11, 2026  
