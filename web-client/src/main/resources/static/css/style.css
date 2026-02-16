@@ -237,7 +237,7 @@ h3 {
     margin-bottom: 20px;
 }
 
-label {
+.form-group label {
     display: block;
     margin-bottom: 8px;
     color: #d4cfc8;
