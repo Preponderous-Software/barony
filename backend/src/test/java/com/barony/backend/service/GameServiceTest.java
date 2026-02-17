@@ -1703,6 +1703,66 @@ class GameServiceTest {
     }
     
     @Test
+    void resetGameProducesNewInternalState() {
+        // Get old internal state reference
+        GameState oldState = gameService.getGameStateInternal();
+        
+        // Modify state to simulate game progress
+        gameService.tick();
+        gameService.tick();
+        oldState.setGameOver(true);
+        oldState.setWinnerId(1);
+        
+        // Reset game
+        gameService.resetGame();
+        
+        // The internal state reference should be a new object
+        GameState newState = gameService.getGameStateInternal();
+        assertNotSame(oldState, newState, "resetGame should create a new GameState object");
+        
+        // New state should be fresh
+        assertEquals(0, newState.getTickCount());
+        assertFalse(newState.isGameOver());
+        assertNull(newState.getWinnerId());
+        
+        // Old state should still be game over (unchanged)
+        assertTrue(oldState.isGameOver());
+        assertEquals(1, oldState.getWinnerId());
+    }
+    
+    @Test
+    void sessionResetUpdatesSessionGameState() {
+        // Simulate session-based game flow
+        // 1. Session has a game state
+        GameState sessionState = gameService.getGameStateInternal();
+        
+        // 2. Game progresses and ends
+        sessionState.setGameOver(true);
+        sessionState.setWinnerId(1);
+        
+        // 3. Session reset: set session state, reset, get new state
+        gameService.setGameState(sessionState);
+        gameService.resetGame();
+        GameState newState = gameService.getGameStateInternal();
+        
+        // 4. Simulate updating session with new state (as the controller should do)
+        // Verify the new state is fresh and different from old session state
+        assertNotSame(sessionState, newState);
+        assertFalse(newState.isGameOver());
+        assertNull(newState.getWinnerId());
+        assertEquals(0, newState.getTickCount());
+        
+        // 5. Simulate next tick with updated session state
+        gameService.setGameState(newState);
+        gameService.tick();
+        
+        // Should not show game over from previous game
+        GameState afterTick = gameService.getState();
+        assertFalse(afterTick.isGameOver(), "After reset and tick, game should not be over");
+        assertEquals(1, afterTick.getTickCount());
+    }
+    
+    @Test
     void castleOccupationTicksVisibleInState() {
         // Set P2 army to known position (9,9)
         GameState internalState = gameService.getInternalStateForTest();

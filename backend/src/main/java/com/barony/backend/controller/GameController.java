@@ -146,8 +146,8 @@ public class GameController {
     public GameState sessionReset(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
         synchronized (session.getGameState()) {
-            gameService.setGameState(session.getGameState());
             gameService.resetGame();
+            session.setGameState(gameService.getGameStateInternal());
             return gameService.getState();
         }
     }

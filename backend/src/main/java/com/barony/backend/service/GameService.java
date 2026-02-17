@@ -25,6 +25,14 @@ public class GameService {
     public synchronized void setGameState(GameState state) {
         this.gameState = state;
     }
+
+    /**
+     * Get the internal game state reference (not a deep copy).
+     * Used for session management to update session references after reset.
+     */
+    public synchronized GameState getGameStateInternal() {
+        return this.gameState;
+    }
     
     public synchronized GameState getState() {
         // Return a snapshot/deep copy to prevent concurrent modification during serialization
