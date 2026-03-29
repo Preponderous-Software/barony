@@ -2,7 +2,13 @@ package com.barony.frontend;
 
 import com.barony.frontend.client.GameClient;
 import com.barony.frontend.model.*;
+import com.barony.frontend.rendering.ThemeManager;
 import com.barony.frontend.ui.SimpleTextRenderer;
+import com.barony.frontend.ui.NotificationManager;
+import com.barony.frontend.ui.ToastOverlay;
+import com.barony.frontend.ui.TooltipOverlay;
+import com.barony.frontend.ui.NotificationLogPanel;
+import com.barony.frontend.ui.SettingsPanel;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.*;
@@ -72,6 +78,12 @@ public class FrontendApplication {
     private int splitModeArmyId = -1;
     private int splitModeTotalSoldiers = 0;
     
+    // Overlay UI components
+    private ToastOverlay toastOverlay = new ToastOverlay();
+    private TooltipOverlay tooltipOverlay = new TooltipOverlay();
+    private NotificationLogPanel notificationLogPanel = new NotificationLogPanel();
+    private SettingsPanel settingsPanel = new SettingsPanel();
+    
     public void run() {
         init();
         loop();
@@ -131,14 +143,33 @@ public class FrontendApplication {
         
         glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
-                if (splitModeActive) {
+                if (settingsPanel.isVisible()) {
+                    settingsPanel.hide();
+                } else if (notificationLogPanel.isVisible()) {
+                    notificationLogPanel.hide();
+                } else if (splitModeActive) {
                     splitModeActive = false;
                     splitModeArmyId = -1;
                     splitModeTotalSoldiers = 0;
-                    System.out.println("Split mode cancelled");
+                    NotificationManager.getInstance().info("Split mode cancelled");
                 } else {
                     glfwSetWindowShouldClose(window, true);
                 }
+            }
+            
+            // F9 toggles settings panel
+            if (key == GLFW_KEY_F9 && action == GLFW_RELEASE) {
+                settingsPanel.toggle();
+                return;
+            }
+            
+            // Settings panel input handling
+            if (settingsPanel.isVisible() && action == GLFW_RELEASE) {
+                if (key == GLFW_KEY_UP) settingsPanel.navigateUp();
+                else if (key == GLFW_KEY_DOWN) settingsPanel.navigateDown();
+                else if (key == GLFW_KEY_LEFT) settingsPanel.navigateLeft();
+                else if (key == GLFW_KEY_RIGHT) settingsPanel.navigateRight();
+                return;
             }
             
             // Disable input when game is over (except R for reset)
@@ -562,11 +593,13 @@ public class FrontendApplication {
                     float centerY = GAME_BOTTOM + armyY * cellHeight + cellHeight / 2 + offsetY;
                     float radius = cellWidth / 4;
                     
-                    // Color based on player
+                    // Color based on player (uses ThemeManager for colorblind support)
+                    float[] p1Color = ThemeManager.getInstance().getPlayer1Color();
+                    float[] p2Color = ThemeManager.getInstance().getPlayer2Color();
                     if (army.getPlayerId() == 1) {
-                        glColor3f(0.0f, 0.0f, 1.0f); // Blue
+                        glColor3f(p1Color[0], p1Color[1], p1Color[2]);
                     } else {
-                        glColor3f(1.0f, 0.0f, 0.0f); // Red
+                        glColor3f(p2Color[0], p2Color[1], p2Color[2]);
                     }
                     
                     // Draw circle for army
@@ -729,6 +762,11 @@ public class FrontendApplication {
                 gameOverMessagePrinted = true;
             }
         }
+        
+        // Render overlay UI components (highest Z-order)
+        toastOverlay.render(windowWidth, windowHeight);
+        settingsPanel.render(windowWidth, windowHeight);
+        notificationLogPanel.render(windowWidth, windowHeight);
     }
     
     private void updateHoveredTile() {
@@ -953,6 +991,8 @@ public class FrontendApplication {
         if (gameLog.size() > MAX_LOG_ENTRIES) {
             gameLog.removeLast();
         }
+        // Also show as toast notification
+        NotificationManager.getInstance().info(message);
     }
     
     private boolean shouldShowTooltip() {
