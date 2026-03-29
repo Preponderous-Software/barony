@@ -124,6 +124,7 @@ For detailed API documentation, see technical sections below.
 - `P` - Open policy menu
 - `R` - Reset game (when over)
 - `F9` - Open Settings (colorblind mode, theme, font size)
+- `F10` - Open Notification Log
 - `ESC` - Quit / Close panel
 
 ### Features
@@ -149,7 +150,7 @@ docker-compose up
 Then open http://localhost:3000
 
 ### Web Client Features
-- Toast notifications replace all blocking alerts
+- Toast notifications replace all in-game blocking alerts
 - Canvas hover tooltips (tile info, army stats, castle capture progress)
 - Army selection highlight ring on canvas
 - Right-click to deselect armies

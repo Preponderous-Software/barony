@@ -73,6 +73,7 @@ The game board is a 10x10 grid with different tile types:
 - **S** - Enter split mode for first army (press 1-9 to choose split amount, S/ESC to cancel)
 - **R** - Play again (when game ends)
 - **F9** - Open Settings panel (colorblind mode, theme, font size)
+- **F10** - Open Notification Log
 - **ESC** - Quit game / Close panel
 
 **Tip:** Hover over any tile or army to see detailed information. In-game tooltips now cover most of what previously required consulting this guide mid-session.

@@ -40,15 +40,20 @@ public class SettingsPanel {
 
     public void hide() { visible = false; }
 
+    private String normalizeThemeName(String name) {
+        if (name == null) return "";
+        return name.replace('-', ' ').trim();
+    }
+
     private void loadFromThemeManager() {
         ThemeManager tm = ThemeManager.getInstance();
         String cb = tm.getColorblindMode();
         for (int i = 0; i < COLORBLIND_OPTIONS.length; i++) {
             if (COLORBLIND_OPTIONS[i].equalsIgnoreCase(cb)) { colorblindIndex = i; break; }
         }
-        String theme = tm.getThemeName();
+        String theme = normalizeThemeName(tm.getThemeName());
         for (int i = 0; i < THEME_OPTIONS.length; i++) {
-            if (THEME_OPTIONS[i].equalsIgnoreCase(theme)) { themeIndex = i; break; }
+            if (normalizeThemeName(THEME_OPTIONS[i]).equalsIgnoreCase(theme)) { themeIndex = i; break; }
         }
         float scale = tm.getFontScale();
         if (scale <= 0.85f) fontSizeIndex = 0;
@@ -122,6 +127,7 @@ public class SettingsPanel {
         glVertex2f(PANEL_X + PANEL_WIDTH, PANEL_Y + PANEL_HEIGHT);
         glVertex2f(PANEL_X, PANEL_Y + PANEL_HEIGHT);
         glEnd();
+        glLineWidth(1.0f);
 
         float textScale = ThemeManager.getInstance().getFontScale() * 0.0012f;
         float startY = PANEL_Y + PANEL_HEIGHT - 0.08f;

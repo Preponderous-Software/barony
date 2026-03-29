@@ -6,7 +6,6 @@ import com.barony.frontend.rendering.ThemeManager;
 import com.barony.frontend.ui.SimpleTextRenderer;
 import com.barony.frontend.ui.NotificationManager;
 import com.barony.frontend.ui.ToastOverlay;
-import com.barony.frontend.ui.TooltipOverlay;
 import com.barony.frontend.ui.NotificationLogPanel;
 import com.barony.frontend.ui.SettingsPanel;
 import org.lwjgl.glfw.*;
@@ -80,7 +79,6 @@ public class FrontendApplication {
     
     // Overlay UI components
     private ToastOverlay toastOverlay = new ToastOverlay();
-    private TooltipOverlay tooltipOverlay = new TooltipOverlay();
     private NotificationLogPanel notificationLogPanel = new NotificationLogPanel();
     private SettingsPanel settingsPanel = new SettingsPanel();
     
@@ -160,6 +158,19 @@ public class FrontendApplication {
             // F9 toggles settings panel
             if (key == GLFW_KEY_F9 && action == GLFW_RELEASE) {
                 settingsPanel.toggle();
+                return;
+            }
+            
+            // F10 toggles notification log panel
+            if (key == GLFW_KEY_F10 && action == GLFW_RELEASE) {
+                notificationLogPanel.toggle();
+                return;
+            }
+            
+            // Notification log panel scroll handling
+            if (notificationLogPanel.isVisible() && action == GLFW_RELEASE) {
+                if (key == GLFW_KEY_UP) notificationLogPanel.scrollUp();
+                else if (key == GLFW_KEY_DOWN) notificationLogPanel.scrollDown();
                 return;
             }
             

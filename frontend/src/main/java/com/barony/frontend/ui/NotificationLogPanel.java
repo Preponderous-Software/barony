@@ -65,20 +65,22 @@ public class NotificationLogPanel {
         glVertex2f(PANEL_X + PANEL_WIDTH, PANEL_Y + PANEL_HEIGHT);
         glVertex2f(PANEL_X, PANEL_Y + PANEL_HEIGHT);
         glEnd();
+        glLineWidth(1.0f);
 
         // Title
         float[] titleColor = new float[]{0.79f, 0.66f, 0.43f};
         float textScale = ThemeManager.getInstance().getFontScale() * 0.0012f;
         SimpleTextRenderer.drawText("Notification Log", PANEL_X + 0.02f, PANEL_Y + PANEL_HEIGHT - 0.05f, textScale, titleColor[0], titleColor[1], titleColor[2]);
 
-        // Draw entries
+        // Draw entries (newest first)
         float startY = PANEL_Y + PANEL_HEIGHT - 0.1f;
-        int startIdx = scrollOffset;
-        int endIdx = Math.min(history.length, startIdx + MAX_VISIBLE_LINES);
+        int totalEntries = history.length;
+        int startIdx = Math.max(0, totalEntries - 1 - scrollOffset);
+        int count = Math.min(MAX_VISIBLE_LINES, startIdx + 1);
 
-        for (int i = startIdx; i < endIdx; i++) {
-            Notification n = history[i];
-            float y = startY - (i - startIdx) * LINE_HEIGHT;
+        for (int i = 0; i < count; i++) {
+            Notification n = history[startIdx - i];
+            float y = startY - i * LINE_HEIGHT;
 
             float[] color = getSeverityColor(n.getSeverity());
 

@@ -39,7 +39,8 @@ public class ToastOverlay {
         float bottomStart = -1.0f + TOAST_BOTTOM_MARGIN;
 
         for (int i = 0; i < notifications.length; i++) {
-            Notification n = notifications[i];
+            // Render newest notifications closest to the bottom edge
+            Notification n = notifications[notifications.length - 1 - i];
             float y = bottomStart + i * (TOAST_HEIGHT + TOAST_MARGIN);
             float x = rightEdge - TOAST_WIDTH;
 

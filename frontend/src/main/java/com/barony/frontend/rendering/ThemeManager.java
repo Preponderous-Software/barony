@@ -166,7 +166,7 @@ public class ThemeManager {
                     themeName = (String) settings.get("theme");
                 }
                 if (settings.containsKey("fontScale")) {
-                    fontScale = ((Number) settings.get("fontScale")).floatValue();
+                    setFontScale(((Number) settings.get("fontScale")).floatValue());
                 }
                 applyTheme();
                 applyColorblindPalette();

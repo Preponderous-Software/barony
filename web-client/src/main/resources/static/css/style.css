@@ -1,15 +1,16 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #1a1510 0%, #2a2218 100%);
+    background: linear-gradient(135deg, var(--bg-primary, #1a1510) 0%, var(--bg-secondary, #2a2218) 100%);
     margin: 0;
     padding: 20px;
-    color: #d4cfc8;
+    color: var(--text-primary, #d4cfc8);
+    font-size: var(--font-size-base, 14px);
 }
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    background: #2b2520;
+    background: var(--bg-secondary, #2b2520);
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -26,14 +27,14 @@ body {
 
 h1 {
     text-align: center;
-    color: #c9a96e;
+    color: var(--accent, #c9a96e);
     margin-bottom: 30px;
     font-size: 2.5em;
 }
 
 h3 {
-    color: #c9a96e;
-    border-bottom: 2px solid #8b7355;
+    color: var(--accent, #c9a96e);
+    border-bottom: 2px solid var(--accent, #8b7355);
     padding-bottom: 5px;
     margin-bottom: 15px;
 }
@@ -83,15 +84,15 @@ h3 {
 }
 
 .info-section {
-    background: #352f28;
+    background: var(--bg-secondary, #352f28);
     padding: 15px;
     border-radius: 8px;
-    border-left: 4px solid #8b7355;
+    border-left: 4px solid var(--accent, #8b7355);
 }
 
 .info-section p {
     margin: 8px 0;
-    font-size: 14px;
+    font-size: var(--font-size-base, 14px);
 }
 
 .policy-controls {
@@ -543,6 +544,11 @@ input[type="text"]:focus {
     --player1-army: #0066FF;
     --player2-army: #FF0000;
     --font-size-base: 14px;
+    --bg-primary: #1a1510;
+    --bg-secondary: #2b2520;
+    --text-primary: #d4cfc8;
+    --text-secondary: #8a8278;
+    --accent: #c9a96e;
 }
 
 :root[data-colorblind="deuteranopia"] {
