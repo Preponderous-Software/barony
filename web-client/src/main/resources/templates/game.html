@@ -19,8 +19,7 @@
             <div class="controls">
                 <button onclick="tick()">Advance Turn</button>
                 <button onclick="reset()">Reset Game</button>
-                <button onclick="autoPlay()">Auto Play</button>
-                <button onclick="stopAutoPlay()">Stop Auto</button>
+                <button id="autoPlayToggle" onclick="toggleAutoPlay()">Auto Play</button>
             </div>
             
             <div class="game-info">
@@ -41,12 +40,46 @@
                     <p>Total Population: <span id="totalPop">0</span></p>
                 </div>
                 
+                <div class="info-section settings-panel" id="settingsPanel">
+                    <h3>Settings</h3>
+                    <div class="settings-row">
+                        <label>Colorblind:</label>
+                        <select id="colorblindSelect" onchange="applySettings()">
+                            <option value="none">None</option>
+                            <option value="deuteranopia">Deuteranopia</option>
+                            <option value="protanopia">Protanopia</option>
+                            <option value="tritanopia">Tritanopia</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>Theme:</label>
+                        <select id="themeSelect" onchange="applySettings()">
+                            <option value="dark">Dark (Default)</option>
+                            <option value="classic">Classic</option>
+                            <option value="high-contrast">High Contrast</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>Font Size:</label>
+                        <select id="fontSizeSelect" onchange="applySettings()">
+                            <option value="small">Small</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <div class="info-section">
                     <h3>Policies</h3>
                     <p>Economic: <span id="economicPolicy">-</span></p>
                     <p>Military: <span id="militaryPolicy">-</span></p>
                     <p>Population: <span id="populationPolicy">-</span></p>
-                    <p>Next Decision In: <span id="ticksUntilNext">0</span> turns</p>
+                    <div class="policy-progress" id="policyProgressContainer">
+                        <span class="policy-progress-label">Next Decision In: <span id="ticksUntilNext">0</span> turns</span>
+                        <div class="policy-progress-bar">
+                            <div class="policy-progress-fill" id="policyProgressFill" style="width: 0%"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -83,6 +116,13 @@
             
             <div id="gameCanvas">
                 <canvas id="mapCanvas" width="800" height="600"></canvas>
+                <div class="canvas-tooltip" id="canvasTooltip"></div>
+                <div class="game-over-banner" id="gameOverBanner" style="display: none;">
+                    <div class="game-over-banner-content">
+                        <h2 id="gameOverTitle">Game Over</h2>
+                        <p id="gameOverMessage"></p>
+                    </div>
+                </div>
             </div>
             
             <div class="armies-list">
@@ -94,19 +134,191 @@
         </div>
     </div>
     
+    <div id="toast-container"></div>
+    
     <script>
         let autoPlayInterval = null;
+        let isAutoPlaying = false;
         let selectedArmy = null;
         let sessionId = null;
         let username = null;
+        let lastGameState = null;
         
-        // Check session on page load
+        // Color palette for canvas drawing (swapped by colorblind modes)
+        const PALETTE = {
+            player1Tint: 'rgba(100, 150, 255, 0.3)',
+            player2Tint: 'rgba(255, 100, 100, 0.3)',
+            neutralTint: 'rgba(200, 200, 200, 0.05)',
+            player1Army: '#0066FF',
+            player2Army: '#FF0000',
+            selectionRing: '#FFD700',
+            castle: '#888',
+            castleBorder: '#aaa',
+            village: '#a0724a',
+            villageBorder: '#c0926a',
+            grid: '#3a3228',
+            background: '#1a1510',
+            textWhite: '#FFF'
+        };
+        
+        const COLORBLIND_PALETTES = {
+            none: {
+                player1Tint: 'rgba(100, 150, 255, 0.3)',
+                player2Tint: 'rgba(255, 100, 100, 0.3)',
+                player1Army: '#0066FF',
+                player2Army: '#FF0000'
+            },
+            deuteranopia: {
+                player1Tint: 'rgba(0, 114, 178, 0.3)',
+                player2Tint: 'rgba(230, 159, 0, 0.3)',
+                player1Army: '#0072B2',
+                player2Army: '#E69F00'
+            },
+            protanopia: {
+                player1Tint: 'rgba(240, 228, 66, 0.3)',
+                player2Tint: 'rgba(213, 94, 0, 0.3)',
+                player1Army: '#F0E442',
+                player2Army: '#D55E00'
+            },
+            tritanopia: {
+                player1Tint: 'rgba(204, 121, 167, 0.3)',
+                player2Tint: 'rgba(0, 158, 115, 0.3)',
+                player1Army: '#CC79A7',
+                player2Army: '#009E73'
+            }
+        };
+        
+        const POLICY_COOLDOWN_TURNS = 15;
+        const MAX_TOASTS = 4;
+        const TOAST_AUTO_DISMISS_MS = 4000;
+        
+        // ========================
+        // Toast Notification System
+        // ========================
+        function showToast(message, severity) {
+            severity = severity || 'info';
+            const container = document.getElementById('toast-container');
+            const toasts = container.querySelectorAll('.toast:not(.toast--dismissing)');
+            
+            // Flush oldest if more than MAX_TOASTS
+            if (toasts.length >= MAX_TOASTS) {
+                dismissToast(toasts[0]);
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast toast--' + severity;
+            toast.textContent = message;
+            toast.addEventListener('click', function() { dismissToast(toast); });
+            container.appendChild(toast);
+            
+            // Critical events persist until dismissed
+            const isCritical = severity === 'danger' && 
+                (message.toLowerCase().includes('game over') || 
+                 message.toLowerCase().includes('castle') ||
+                 message.toLowerCase().includes('destroyed'));
+            
+            if (!isCritical) {
+                setTimeout(function() { dismissToast(toast); }, TOAST_AUTO_DISMISS_MS);
+            }
+        }
+        
+        function dismissToast(toast) {
+            if (!toast || toast.classList.contains('toast--dismissing')) return;
+            toast.classList.add('toast--dismissing');
+            setTimeout(function() { toast.remove(); }, 300);
+        }
+        
+        // ========================
+        // Settings Management
+        // ========================
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem('barony_settings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    if (settings.colorblind) document.getElementById('colorblindSelect').value = settings.colorblind;
+                    if (settings.theme) document.getElementById('themeSelect').value = settings.theme;
+                    if (settings.fontSize) document.getElementById('fontSizeSelect').value = settings.fontSize;
+                    applySettings();
+                }
+            } catch (e) {
+                console.error('Error loading settings:', e);
+            }
+        }
+        
+        function applySettings() {
+            const colorblind = document.getElementById('colorblindSelect').value;
+            const theme = document.getElementById('themeSelect').value;
+            const fontSize = document.getElementById('fontSizeSelect').value;
+            
+            // Apply colorblind palette to canvas colors
+            applyColorblindMode(colorblind);
+            
+            // Apply CSS custom properties
+            const root = document.documentElement;
+            if (colorblind !== 'none') {
+                root.setAttribute('data-colorblind', colorblind);
+            } else {
+                root.removeAttribute('data-colorblind');
+            }
+            
+            if (theme !== 'dark') {
+                root.setAttribute('data-theme', theme);
+            } else {
+                root.removeAttribute('data-theme');
+            }
+            
+            if (fontSize !== 'medium') {
+                root.setAttribute('data-font-size', fontSize);
+            } else {
+                root.removeAttribute('data-font-size');
+            }
+            
+            // Persist to localStorage
+            localStorage.setItem('barony_settings', JSON.stringify({
+                colorblind: colorblind,
+                theme: theme,
+                fontSize: fontSize
+            }));
+            
+            // Redraw map if we have cached state
+            if (lastGameState) {
+                drawMap(lastGameState);
+            }
+        }
+        
+        function applyColorblindMode(mode) {
+            const preset = COLORBLIND_PALETTES[mode] || COLORBLIND_PALETTES.none;
+            PALETTE.player1Tint = preset.player1Tint;
+            PALETTE.player2Tint = preset.player2Tint;
+            PALETTE.player1Army = preset.player1Army;
+            PALETTE.player2Army = preset.player2Army;
+        }
+        
+        // ========================
+        // Stat Color Coding
+        // ========================
+        function getStatClass(value) {
+            if (value >= 90) return 'stat--good';
+            if (value >= 70) return 'stat--warn';
+            return 'stat--danger';
+        }
+        
+        function colorCodeStat(elementId, value) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.textContent = value.toFixed(1);
+            el.className = getStatClass(value);
+        }
+        
+        // ========================
+        // Session Management
+        // ========================
         function checkSession() {
             sessionId = localStorage.getItem('sessionId');
             username = localStorage.getItem('username');
             
             if (!sessionId || !username) {
-                // No session, redirect to login
                 window.location.href = '/login';
                 return false;
             }
@@ -138,21 +350,40 @@
             };
         }
         
+        // ========================
+        // UI Update
+        // ========================
         function updateUI(data) {
+            lastGameState = data;
             document.getElementById('tickCount').textContent = data.tickCount;
             document.getElementById('gameOver').textContent = data.gameOver;
             
             // Update winner display
             const winnerLine = document.getElementById('winnerLine');
+            const banner = document.getElementById('gameOverBanner');
             if (data.gameOver && data.winnerId !== null) {
                 document.getElementById('winnerId').textContent = data.winnerId;
                 winnerLine.style.display = '';
+                
+                // Show game over banner
+                const title = document.getElementById('gameOverTitle');
+                const msg = document.getElementById('gameOverMessage');
+                if (data.winnerId === 1) {
+                    title.textContent = 'Victory!';
+                    msg.textContent = 'You have conquered all enemy castles!';
+                } else {
+                    title.textContent = 'Defeat';
+                    msg.textContent = 'Player ' + data.winnerId + ' has captured your castles.';
+                }
+                banner.style.display = 'flex';
+                
                 // Stop auto-play when game is over
                 if (autoPlayInterval !== null) {
                     stopAutoPlay();
                 }
             } else {
                 winnerLine.style.display = 'none';
+                banner.style.display = 'none';
             }
             
             drawMap(data);
@@ -160,6 +391,9 @@
             updateRulerStats();
         }
         
+        // ========================
+        // Game Actions
+        // ========================
         function tick() {
             fetch('/api/session/tick', { 
                 method: 'POST',
@@ -201,13 +435,26 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error resetting game: ' + error.message);
+                    showToast('Error resetting game: ' + error.message, 'warning');
                 });
+        }
+        
+        // Auto Play toggle
+        function toggleAutoPlay() {
+            if (isAutoPlaying) {
+                stopAutoPlay();
+            } else {
+                autoPlay();
+            }
         }
         
         function autoPlay() {
             if (autoPlayInterval === null) {
                 autoPlayInterval = setInterval(tick, 1000);
+                isAutoPlaying = true;
+                const btn = document.getElementById('autoPlayToggle');
+                btn.textContent = 'Stop Auto';
+                btn.classList.add('auto-playing');
             }
         }
         
@@ -216,6 +463,10 @@
                 clearInterval(autoPlayInterval);
                 autoPlayInterval = null;
             }
+            isAutoPlaying = false;
+            const btn = document.getElementById('autoPlayToggle');
+            btn.textContent = 'Auto Play';
+            btn.classList.remove('auto-playing');
         }
         
         function changePolicy(category) {
@@ -232,20 +483,17 @@
             })
             .then(response => {
                 if (!response.ok) {
-                    // Handle error responses
                     if (response.status === 409) {
-                        throw new Error('Policy change on cooldown. You must wait 15 turns between policy changes. Check "Next Decision In" in the Policies section.');
+                        throw new Error('Policy cooldown active — wait for the cooldown to expire before changing policies.');
                     }
-                    // Try to parse error response
                     return response.json()
                         .then(errorData => {
                             const errorMsg = errorData.error || errorData.message || 'Failed to change policy';
                             throw new Error(errorMsg);
                         })
                         .catch(parseError => {
-                            // If JSON parsing fails or no useful error message
-                            if (parseError.message.includes('Policy change on cooldown')) {
-                                throw parseError; // Re-throw our custom message
+                            if (parseError.message.includes('Policy cooldown')) {
+                                throw parseError;
                             }
                             throw new Error('Failed to change policy: ' + response.statusText);
                         });
@@ -254,9 +502,14 @@
             })
             .then(data => {
                 updateUI(data);
+                showToast('Policy applied successfully', 'success');
             })
             .catch(error => {
-                alert('Error changing policy: ' + error.message);
+                if (error.message.includes('cooldown')) {
+                    showToast(error.message, 'warning');
+                } else {
+                    showToast('Error changing policy: ' + error.message, 'danger');
+                }
                 console.error('Policy change error:', error);
             });
         }
@@ -274,18 +527,28 @@
                 })
                 .then(stats => {
                     if (!stats) return;
-                    document.getElementById('avgStability').textContent = stats.averageStability.toFixed(1);
-                    document.getElementById('avgMorale').textContent = stats.averageMorale.toFixed(1);
-                    document.getElementById('avgLoyalty').textContent = stats.averageLoyalty.toFixed(1);
+                    
+                    // Color-coded stats
+                    colorCodeStat('avgStability', stats.averageStability);
+                    colorCodeStat('avgMorale', stats.averageMorale);
+                    colorCodeStat('avgLoyalty', stats.averageLoyalty);
                     document.getElementById('totalPop').textContent = stats.totalPopulation;
+                    
                     document.getElementById('economicPolicy').textContent = stats.economicPolicy;
                     document.getElementById('militaryPolicy').textContent = stats.militaryPolicy;
                     document.getElementById('populationPolicy').textContent = stats.populationPolicy;
                     document.getElementById('ticksUntilNext').textContent = stats.ticksUntilNextDecision;
+                    
+                    // Update progress bar
+                    const pct = Math.max(0, Math.min(100, ((POLICY_COOLDOWN_TURNS - stats.ticksUntilNextDecision) / POLICY_COOLDOWN_TURNS) * 100));
+                    document.getElementById('policyProgressFill').style.width = pct + '%';
                 })
                 .catch(error => console.error('Error:', error));
         }
         
+        // ========================
+        // Canvas Drawing
+        // ========================
         function drawMap(gameState) {
             const canvas = document.getElementById('mapCanvas');
             const ctx = canvas.getContext('2d');
@@ -295,7 +558,7 @@
             const cellHeight = canvas.height / height;
             
             // Fill canvas with background color
-            ctx.fillStyle = '#1a1510';
+            ctx.fillStyle = PALETTE.background;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Draw tiles
@@ -307,34 +570,34 @@
                     
                     // Draw tile background based on owner
                     if (tile.ownerId === 1) {
-                        ctx.fillStyle = 'rgba(100, 150, 255, 0.3)';
+                        ctx.fillStyle = PALETTE.player1Tint;
                     } else if (tile.ownerId === 2) {
-                        ctx.fillStyle = 'rgba(255, 100, 100, 0.3)';
+                        ctx.fillStyle = PALETTE.player2Tint;
                     } else {
-                        ctx.fillStyle = 'rgba(200, 200, 200, 0.05)';
+                        ctx.fillStyle = PALETTE.neutralTint;
                     }
                     ctx.fillRect(px, py, cellWidth, cellHeight);
                     
                     // Draw tile type
                     if (tile.type === 'CASTLE') {
-                        ctx.fillStyle = '#888';
+                        ctx.fillStyle = PALETTE.castle;
                         ctx.fillRect(px + cellWidth * 0.25, py + cellHeight * 0.25, 
                                    cellWidth * 0.5, cellHeight * 0.5);
-                        ctx.strokeStyle = '#aaa';
+                        ctx.strokeStyle = PALETTE.castleBorder;
                         ctx.strokeRect(px + cellWidth * 0.25, py + cellHeight * 0.25, 
                                      cellWidth * 0.5, cellHeight * 0.5);
                     } else if (tile.type === 'VILLAGE') {
-                        ctx.fillStyle = '#a0724a';
+                        ctx.fillStyle = PALETTE.village;
                         ctx.beginPath();
                         ctx.arc(px + cellWidth / 2, py + cellHeight / 2, 
                               Math.min(cellWidth, cellHeight) * 0.25, 0, 2 * Math.PI);
                         ctx.fill();
-                        ctx.strokeStyle = '#c0926a';
+                        ctx.strokeStyle = PALETTE.villageBorder;
                         ctx.stroke();
                     }
                     
                     // Draw grid
-                    ctx.strokeStyle = '#3a3228';
+                    ctx.strokeStyle = PALETTE.grid;
                     ctx.strokeRect(px, py, cellWidth, cellHeight);
                 }
             }
@@ -345,7 +608,7 @@
                 const py = army.y * cellHeight + cellHeight / 2;
                 const radius = Math.min(cellWidth, cellHeight) * 0.3;
                 
-                ctx.fillStyle = army.playerId === 1 ? '#0066FF' : '#FF0000';
+                ctx.fillStyle = army.playerId === 1 ? PALETTE.player1Army : PALETTE.player2Army;
                 ctx.beginPath();
                 ctx.arc(px, py, radius, 0, 2 * Math.PI);
                 ctx.fill();
@@ -353,15 +616,30 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
+                // Draw selection highlight ring
+                if (selectedArmy && army.id === selectedArmy.id) {
+                    ctx.strokeStyle = PALETTE.selectionRing;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(px, py, radius + 4, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+                
                 // Draw soldier count
-                ctx.fillStyle = '#FFF';
+                ctx.fillStyle = PALETTE.textWhite;
                 ctx.font = '12px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(army.soldiers.toString(), px, py);
             });
+            
+            // Reset lineWidth
+            ctx.lineWidth = 1;
         }
         
+        // ========================
+        // Armies List
+        // ========================
         function updateArmiesList(armies) {
             const container = document.getElementById('armiesList');
             container.innerHTML = '';
@@ -387,16 +665,46 @@
                 if (army.playerId === 1 && army.soldiers > 1) {
                     const actionsDiv = document.createElement('div');
                     actionsDiv.className = 'army-actions';
-                    actionsDiv.innerHTML = `
-                        <input type="number" 
-                               id="splitAmount-${army.id}"
-                               min="1" 
-                               max="${army.soldiers - 1}" 
-                               value="1" 
-                               class="split-input"
-                               placeholder="Amount">
-                        <button onclick="splitArmy(${army.id})" class="split-button">Split Army</button>
-                    `;
+                    
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.id = 'splitAmount-' + army.id;
+                    input.min = '1';
+                    input.max = String(army.soldiers - 1);
+                    input.value = '1';
+                    input.className = 'split-input';
+                    input.placeholder = 'Amount';
+                    
+                    const splitBtn = document.createElement('button');
+                    splitBtn.className = 'split-button';
+                    splitBtn.textContent = 'Split Army';
+                    splitBtn.addEventListener('click', function() { splitArmy(army.id); });
+                    
+                    const validationMsg = document.createElement('span');
+                    validationMsg.className = 'split-validation-msg';
+                    validationMsg.id = 'splitMsg-' + army.id;
+                    
+                    // Inline validation on input change
+                    input.addEventListener('input', function() {
+                        const val = parseInt(input.value);
+                        const maxSplit = parseInt(input.max);
+                        if (isNaN(val) || val < 1) {
+                            input.setCustomValidity('Enter a valid amount (at least 1)');
+                            validationMsg.textContent = 'Enter a valid amount (at least 1)';
+                            validationMsg.style.display = 'block';
+                        } else if (val > maxSplit) {
+                            input.setCustomValidity('Cannot exceed ' + maxSplit + ' soldiers');
+                            validationMsg.textContent = 'Cannot exceed ' + maxSplit + ' soldiers';
+                            validationMsg.style.display = 'block';
+                        } else {
+                            input.setCustomValidity('');
+                            validationMsg.style.display = 'none';
+                        }
+                    });
+                    
+                    actionsDiv.appendChild(input);
+                    actionsDiv.appendChild(splitBtn);
+                    actionsDiv.appendChild(validationMsg);
                     div.appendChild(actionsDiv);
                 }
                 
@@ -406,16 +714,25 @@
         
         function splitArmy(armyId) {
             const splitAmountInput = document.getElementById('splitAmount-' + armyId);
+            const validationMsg = document.getElementById('splitMsg-' + armyId);
             const splitAmount = parseInt(splitAmountInput.value);
             const maxSplit = parseInt(splitAmountInput.max);
             
             if (isNaN(splitAmount) || splitAmount < 1) {
-                alert('Please enter a valid split amount (at least 1)');
+                splitAmountInput.setCustomValidity('Enter a valid amount (at least 1)');
+                if (validationMsg) {
+                    validationMsg.textContent = 'Enter a valid amount (at least 1)';
+                    validationMsg.style.display = 'block';
+                }
                 return;
             }
             
             if (splitAmount > maxSplit) {
-                alert('Split amount cannot exceed ' + maxSplit + ' soldiers');
+                splitAmountInput.setCustomValidity('Cannot exceed ' + maxSplit + ' soldiers');
+                if (validationMsg) {
+                    validationMsg.textContent = 'Cannot exceed ' + maxSplit + ' soldiers';
+                    validationMsg.style.display = 'block';
+                }
                 return;
             }
             
@@ -441,20 +758,62 @@
             })
             .then(data => {
                 updateUI(data);
+                showToast('Army split successfully', 'success');
             })
             .catch(error => {
                 const errorMsg = error.message || 'Network error occurred';
-                alert('Error splitting army: ' + errorMsg);
+                showToast('Error splitting army: ' + errorMsg, 'danger');
                 console.error('Error:', error);
             });
         }
         
-        // Initial load
+        // ========================
+        // Canvas Tooltip
+        // ========================
+        function getTooltipText(gridX, gridY, gameState) {
+            if (!gameState || !gameState.grid) return null;
+            if (gridX < 0 || gridX >= gameState.width || gridY < 0 || gridY >= gameState.height) return null;
+            
+            // Check for army at this position
+            const army = gameState.armies.find(a => a.x === gridX && a.y === gridY);
+            if (army) {
+                let text = 'Army #' + army.id + ' (Player ' + army.playerId + ') \u2014 Soldiers: ' + army.soldiers + ' | Morale: ' + army.morale + ' | Loyalty: ' + army.loyalty;
+                if (army.destinationX !== undefined && army.destinationX !== null) {
+                    text += ' | Moving to: (' + army.destinationX + ', ' + army.destinationY + ')';
+                }
+                return text;
+            }
+            
+            const tile = gameState.grid[gridX][gridY];
+            if (tile.type === 'CASTLE') {
+                if (tile.ownerId === 0) {
+                    return 'Castle \u2014 neutral. Occupy for 3 consecutive turns to capture.';
+                }
+                if (tile.occupationTicks > 0) {
+                    return 'Castle \u2014 Player ' + tile.ownerId + '. Capture progress: ' + tile.occupationTicks + '/3';
+                }
+                return 'Castle \u2014 Player ' + tile.ownerId + '. Hold for 3 consecutive turns to capture.';
+            }
+            
+            if (tile.type === 'VILLAGE') {
+                if (tile.ownerId === 0) {
+                    return 'Village \u2014 neutral. Occupy with an army to capture and generate soldiers.';
+                }
+                return 'Village \u2014 Player ' + tile.ownerId + '. Generating +1 soldier/turn for stationed armies.';
+            }
+            
+            return 'Empty \u2014 move an army here to occupy.';
+        }
+        
+        // ========================
+        // Initialization
+        // ========================
         document.addEventListener('DOMContentLoaded', function() {
-            // Check session first
             if (!checkSession()) {
                 return;
             }
+            
+            loadSettings();
             
             fetch('/api/session/state', {
                 headers: getSessionHeaders()
@@ -476,74 +835,105 @@
                     console.error('Error loading game state:', error);
                     showError('Error loading game: ' + error.message);
                 });
-        });
-        
-        // Canvas click handler for army movement
-        document.getElementById('mapCanvas').addEventListener('click', function(e) {
-            fetch('/api/session/state', {
-                headers: getSessionHeaders()
-            })
-                .then(response => {
-                    if (response.status === 401) {
-                        logout();
+            
+            // Canvas click handler for army selection and movement
+            const canvas = document.getElementById('mapCanvas');
+            
+            canvas.addEventListener('click', function(e) {
+                if (!lastGameState) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const cellWidth = canvas.width / lastGameState.width;
+                const cellHeight = canvas.height / lastGameState.height;
+                const gridX = Math.floor(x / cellWidth);
+                const gridY = Math.floor(y / cellHeight);
+                
+                if (!selectedArmy) {
+                    // Try to select an army at this position
+                    const army = lastGameState.armies.find(a => a.x === gridX && a.y === gridY && a.playerId === 1);
+                    if (army) {
+                        selectedArmy = army;
+                        showToast('Army #' + army.id + ' selected. Click a tile to move.', 'info');
+                        drawMap(lastGameState);
+                    }
+                } else {
+                    // Check if clicking on an empty area (no player 1 army) to deselect
+                    const clickedArmy = lastGameState.armies.find(a => a.x === gridX && a.y === gridY && a.playerId === 1);
+                    if (clickedArmy && clickedArmy.id !== selectedArmy.id) {
+                        // Select the new army instead
+                        selectedArmy = clickedArmy;
+                        showToast('Army #' + clickedArmy.id + ' selected. Click a tile to move.', 'info');
+                        drawMap(lastGameState);
                         return;
                     }
-                    if (!response.ok) {
-                        throw new Error('Failed to load game state');
-                    }
-                    return response.json();
-                })
-                .then(gameState => {
-                    if (!gameState) return;
                     
-                    const canvas = document.getElementById('mapCanvas');
-                    const rect = canvas.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const cellWidth = canvas.width / gameState.width;
-                    const cellHeight = canvas.height / gameState.height;
-                    const gridX = Math.floor(x / cellWidth);
-                    const gridY = Math.floor(y / cellHeight);
-                    
-                    if (!selectedArmy) {
-                        // Try to select an army at this position
-                        const army = gameState.armies.find(a => a.x === gridX && a.y === gridY && a.playerId === 1);
-                        if (army) {
-                            selectedArmy = army;
-                            alert('Army #' + army.id + ' selected. Click a tile to move.');
+                    // Move selected army
+                    fetch('/api/session/command', {
+                        method: 'POST',
+                        headers: getSessionHeaders(),
+                        body: JSON.stringify({
+                            type: 'MOVE',
+                            armyId: selectedArmy.id,
+                            targetX: gridX,
+                            targetY: gridY
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to move army: ' + response.status);
                         }
-                    } else {
-                        // Move selected army
-                        fetch('/api/session/command', {
-                            method: 'POST',
-                            headers: getSessionHeaders(),
-                            body: JSON.stringify({
-                                type: 'MOVE',
-                                armyId: selectedArmy.id,
-                                targetX: gridX,
-                                targetY: gridY
-                            })
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Failed to move army: ' + response.status);
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            updateUI(data);
-                            selectedArmy = null;
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert('Error moving army: ' + error.message);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading game state:', error);
-                    alert('Error: ' + error.message);
-                });
+                        return response.json();
+                    })
+                    .then(data => {
+                        updateUI(data);
+                        selectedArmy = null;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Error moving army: ' + error.message, 'danger');
+                    });
+                }
+            });
+            
+            // Right-click to deselect
+            canvas.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                if (selectedArmy) {
+                    selectedArmy = null;
+                    if (lastGameState) drawMap(lastGameState);
+                    showToast('Army deselected', 'info');
+                }
+            });
+            
+            // Hover tooltip
+            const tooltip = document.getElementById('canvasTooltip');
+            canvas.addEventListener('mousemove', function(e) {
+                if (!lastGameState) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const cellWidth = canvas.width / lastGameState.width;
+                const cellHeight = canvas.height / lastGameState.height;
+                const gridX = Math.floor(x / cellWidth);
+                const gridY = Math.floor(y / cellHeight);
+                
+                const text = getTooltipText(gridX, gridY, lastGameState);
+                if (text) {
+                    tooltip.textContent = text;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+                    tooltip.style.top = (e.clientY - rect.top - 8) + 'px';
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            });
+            
+            canvas.addEventListener('mouseleave', function() {
+                tooltip.style.display = 'none';
+            });
         });
     </script>
 </body>
