@@ -313,3 +313,315 @@ input[type="text"]:focus {
 #armiesList::-webkit-scrollbar-thumb:hover {
     background: #a08868;
 }
+
+/* ========================
+   Toast Notification System
+   ======================== */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    max-width: 360px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: 6px;
+    color: #f0e8d8;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    animation: toast-slide-in 0.3s ease forwards;
+    cursor: pointer;
+    position: relative;
+    border-left: 4px solid transparent;
+}
+
+.toast--info {
+    background: #3a3832;
+    border-left-color: #8a8278;
+}
+
+.toast--success {
+    background: #2a3a2a;
+    border-left-color: #5a9a5a;
+}
+
+.toast--warning {
+    background: #3a3520;
+    border-left-color: #c9a96e;
+}
+
+.toast--danger {
+    background: #3d1a1a;
+    border-left-color: #e05050;
+    animation: toast-slide-in 0.3s ease forwards, toast-pulse 2s ease-in-out infinite;
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes toast-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes toast-fade-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.toast.toast--dismissing {
+    animation: toast-fade-out 0.3s ease forwards;
+}
+
+/* ========================
+   Canvas Tooltip
+   ======================== */
+.canvas-tooltip {
+    position: absolute;
+    background: rgba(30, 25, 20, 0.95);
+    color: #d4cfc8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 100;
+    border: 1px solid #5a4e3c;
+    max-width: 280px;
+    line-height: 1.4;
+    display: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ========================
+   Stat Color Coding
+   ======================== */
+.stat--good {
+    color: #5a9a5a;
+}
+
+.stat--warn {
+    color: #c9a96e;
+}
+
+.stat--danger {
+    color: #e05050;
+}
+
+/* ========================
+   Policy Cooldown Progress Bar
+   ======================== */
+.policy-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.policy-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #2b2520;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #5a4e3c;
+}
+
+.policy-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5a9a5a, #c9a96e);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.policy-progress-label {
+    font-size: 12px;
+    color: #8a8278;
+    white-space: nowrap;
+}
+
+/* ========================
+   Game Over Banner
+   ======================== */
+.game-over-banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 50;
+    pointer-events: none;
+}
+
+.game-over-banner-content {
+    background: linear-gradient(135deg, #2b2520, #3a3228);
+    border: 3px solid #c9a96e;
+    border-radius: 12px;
+    padding: 30px 50px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.game-over-banner-content h2 {
+    color: #c9a96e;
+    font-size: 2em;
+    margin: 0 0 10px 0;
+}
+
+.game-over-banner-content p {
+    color: #d4cfc8;
+    font-size: 1.2em;
+    margin: 0;
+}
+
+/* ========================
+   Auto Play Toggle
+   ======================== */
+#autoPlayToggle.auto-playing {
+    background: #8a6d2f;
+    box-shadow: 0 0 8px rgba(201, 169, 110, 0.4);
+}
+
+#autoPlayToggle.auto-playing:hover {
+    background: #9a7d3f;
+}
+
+/* ========================
+   Army Selection Ring (canvas helper)
+   ======================== */
+#gameCanvas {
+    position: relative;
+}
+
+/* ========================
+   Inline Split Validation
+   ======================== */
+.split-input:invalid {
+    border-color: #e05050;
+}
+
+.split-validation-msg {
+    color: #e05050;
+    font-size: 12px;
+    margin-top: 2px;
+    display: none;
+}
+
+.split-input:invalid + .split-button + .split-validation-msg,
+.split-input.invalid + .split-button + .split-validation-msg {
+    display: block;
+}
+
+/* ========================
+   Theme & Colorblind CSS Custom Properties
+   ======================== */
+:root {
+    --player1-color: rgba(100, 150, 255, 0.3);
+    --player2-color: rgba(255, 100, 100, 0.3);
+    --player1-army: #0066FF;
+    --player2-army: #FF0000;
+    --font-size-base: 14px;
+}
+
+:root[data-colorblind="deuteranopia"] {
+    --player1-color: rgba(0, 114, 178, 0.3);
+    --player2-color: rgba(230, 159, 0, 0.3);
+    --player1-army: #0072B2;
+    --player2-army: #E69F00;
+}
+
+:root[data-colorblind="protanopia"] {
+    --player1-color: rgba(240, 228, 66, 0.3);
+    --player2-color: rgba(213, 94, 0, 0.3);
+    --player1-army: #F0E442;
+    --player2-army: #D55E00;
+}
+
+:root[data-colorblind="tritanopia"] {
+    --player1-color: rgba(204, 121, 167, 0.3);
+    --player2-color: rgba(0, 158, 115, 0.3);
+    --player1-army: #CC79A7;
+    --player2-army: #009E73;
+}
+
+:root[data-theme="classic"] {
+    --bg-primary: #f5f0e8;
+    --bg-secondary: #e8e0d4;
+    --text-primary: #2a2218;
+    --text-secondary: #5a4e3c;
+    --accent: #8b7355;
+}
+
+:root[data-theme="high-contrast"] {
+    --bg-primary: #000000;
+    --bg-secondary: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --accent: #ffff00;
+}
+
+:root[data-font-size="small"] {
+    --font-size-base: 12px;
+}
+
+:root[data-font-size="large"] {
+    --font-size-base: 16px;
+}
+
+/* ========================
+   Settings Panel
+   ======================== */
+.settings-panel {
+    background: #352f28;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #c9a96e;
+}
+
+.settings-panel h3 {
+    margin-top: 0;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.settings-row label {
+    min-width: 120px;
+    font-weight: bold;
+}
+
+.settings-row select {
+    padding: 6px 10px;
+    border: 1px solid #5a4e3c;
+    border-radius: 4px;
+    background: #2b2520;
+    color: #d4cfc8;
+    font-size: 14px;
+}
