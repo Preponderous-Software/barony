@@ -562,7 +562,7 @@ Improve the game's accessibility and allow players to customize the visual exper
 - Implement high-contrast UI theme (dark background, bright text borders)
 - Add font size options: Small, Medium (default), Large
 - Add color theme selector with at least two built-in themes (Classic, Dark)
-- Persist settings across sessions (save to `~/.barony/settings.json`)
+- Persist settings across sessions (save to `.barony/settings.json` in the user's home directory)
 - Show live preview of theme/color changes in settings panel
 - All existing UI elements must respect theme and accessibility settings
 
@@ -787,7 +787,7 @@ Add an achievement system that tracks player accomplishments across play session
   - "Outnumbered" – Win a game where the AI had double your army size at any point
 - Add `AchievementService` that evaluates unlock conditions after each tick
 - Add `GET /api/achievements` endpoint (returns all achievements with unlock status)
-- Persist unlocked achievements to a JSON file in `~/.barony/achievements.json`
+- Persist unlocked achievements to a JSON file in the user's home directory (`.barony/achievements.json`)
 - Add 6+ unit tests for achievement condition checking
 
 **Frontend:**
@@ -851,7 +851,7 @@ Add configurable difficulty settings and new-game options so players can tailor 
 - Add "New Game" setup screen before starting a game (accessible from main menu and after game over)
 - Provide UI controls for all `GameConfig` fields with descriptions of each option
 - Show estimated game length based on settings (e.g., "~10 min on Normal/Medium")
-- Persist last-used settings in `~/.barony/settings.json`
+- Persist last-used settings in a config file under the user's home directory (for example, `.barony/settings.json`)
 
 **Documentation:**
 - Add difficulty descriptions to PLAYER_GUIDE.md
@@ -879,7 +879,7 @@ Add configurable difficulty settings and new-game options so players can tailor 
 
 ---
 
-## Narrative Element Tickets
+## Narrative Elements Tickets
 
 ---
 
@@ -910,11 +910,11 @@ Add lore and world-building text that gives the game world a sense of history an
 - Display village and castle names as small text labels below/above their tile on the map
 - Show realm name and ruler name in the HUD header (e.g., "Aldenmoor – Turn 12")
 - Display a random flavor text string in the status bar for major events:
-  - Village captured: "The villagers of [name] submit to [realm]."
-  - Castle captured: "[Ruler] raises their banner over [castle name]."
-  - Policy change: "Word spreads of the new [policy name] decree across [realm]."
-  - Victory: "Songs will be sung of [realm]'s conquest."
-  - Defeat: "The chronicles record the fall of [realm]."
+  - Village captured: "The villagers of {villageName} submit to {realm}."
+  - Castle captured: "{ruler} raises their banner over {castleName}."
+  - Policy change: "Word spreads of the new {policyName} decree across {realm}."
+  - Victory: "Songs will be sung of {realm}'s conquest."
+  - Defeat: "The chronicles record the fall of {realm}."
 - Add "Lore Codex" screen accessible from the menu (`F3` key) with realm descriptions, ruler biography stubs, and a world-history paragraph
 - Lore text is displayed only; it does not affect game mechanics
 
