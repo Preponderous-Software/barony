@@ -72,9 +72,10 @@ The game board is a 10x10 grid with different tile types:
 - **SPACE** - Advance one turn
 - **S** - Enter split mode for first army (press 1-9 to choose split amount, S/ESC to cancel)
 - **R** - Play again (when game ends)
-- **ESC** - Quit game
+- **F9** - Open Settings panel (colorblind mode, theme, font size)
+- **ESC** - Quit game / Close panel
 
-**Tip:** Hover over any tile or army to see detailed information.
+**Tip:** Hover over any tile or army to see detailed information. In-game tooltips now cover most of what previously required consulting this guide mid-session.
 
 ### Basic Strategy
 
@@ -268,8 +269,50 @@ Game event log showing recent actions:
 Shows your realm statistics:
 - Current policies in each category
 - Policy change cooldown timer
-- Average stability, morale, loyalty
+- Average stability, morale, loyalty (color-coded: green ≥ 90, amber 70–89, red < 70)
 - Total population
+
+## Accessibility & Visual Settings
+
+### Desktop Client (F9)
+Press **F9** to open the Settings panel. Use arrow keys to navigate and change options:
+
+- **Colorblind Mode:** None (default), Deuteranopia, Protanopia, Tritanopia
+  - Applies to faction colors and map ownership indicators
+- **Theme:** Dark (default), Classic, High Contrast
+- **Font Size:** Small, Medium (default), Large
+
+Settings are automatically saved to `~/.barony/settings.json`.
+
+### Web Client (Settings Panel)
+The Settings panel appears in the game info area. Changes apply immediately:
+
+- **Colorblind Mode:** Same options as desktop
+- **Theme:** Dark (default), Classic, High Contrast
+- **Font Size:** Small, Medium (default), Large
+
+Settings are saved to your browser's `localStorage`.
+
+### Notifications
+Both clients use non-blocking toast notifications instead of modal pop-ups:
+- **Info** (gray): Turn advances, army selection
+- **Success** (green): Village captured, policy applied
+- **Warning** (amber): Policy cooldown, game reset errors
+- **Danger** (red): Army destroyed, castle under attack
+
+Toasts auto-dismiss after 4 seconds. Critical events persist until dismissed.
+
+### Canvas Tooltips (Web Client)
+Hover over any tile on the canvas to see:
+- Tile type and ownership
+- Army stats (soldiers, morale, loyalty, destination)
+- Castle capture progress
+- Village generation info
+
+### Selection Feedback (Web Client)
+- Click an army to select it — a gold highlight ring appears
+- Right-click the canvas to deselect
+- Clicking another army switches selection
 
 ## Tips for New Players
 
