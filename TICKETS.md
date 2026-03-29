@@ -528,3 +528,592 @@ Example labels to create:
 - `frontend`
 - `documentation`
 - `testing`
+
+---
+
+## Post-MVP Improvement Tickets
+
+The following tickets document potential improvements to the UI, gameplay, and narrative elements of Barony. They are intended as post-MVP enhancements and do not need to be addressed during initial development.
+
+---
+
+## UI Improvement Tickets
+
+---
+
+## Ticket 9: Accessibility and Visual Customization
+
+**Priority:** Medium  
+**Estimate:** 2-3 agent sessions  
+**Dependencies:** Ticket 6 (requires UI foundation)
+
+### Description
+
+Improve the game's accessibility and allow players to customize the visual experience. This includes a colorblind-friendly mode, adjustable font sizes, high-contrast options, and selectable color themes so the game is enjoyable for the widest possible audience.
+
+### Acceptance Criteria
+
+**Frontend:**
+- Add settings menu accessible from the main screen (configurable keybinding; suggest `F9` or `Esc → Settings`; avoid `F11` as it is the system fullscreen shortcut on most platforms)
+- Implement colorblind mode with three presets:
+  - Deuteranopia (red-green, replaces red/green with orange/blue)
+  - Protanopia (red-blind, replaces red tones with high-contrast yellow)
+  - Tritanopia (blue-yellow, replaces blue/yellow with pink/green)
+- Implement high-contrast UI theme (dark background, bright text borders)
+- Add font size options: Small, Medium (default), Large
+- Add color theme selector with at least two built-in themes (Classic, Dark)
+- Persist settings across sessions (save to `.barony/settings.json` in the user's home directory)
+- Show live preview of theme/color changes in settings panel
+- All existing UI elements must respect theme and accessibility settings
+
+**Backend:**
+- No backend changes required
+
+**Documentation:**
+- Update README.md with a note on accessibility settings
+- Document keybinding for settings panel
+
+### Technical Notes
+
+- Store color palette as named constants so theme switching replaces the palette map rather than individual calls
+- Use a single `ThemeManager` class to centralize color lookups; each render call fetches colors from it
+- Font rendering should scale uniformly from a base size constant
+- Colorblind presets should only affect faction colors and map ownership indicators, not status icons
+
+### Files to Create/Modify
+
+- `frontend/src/main/java/com/barony/frontend/ui/SettingsPanel.java` (create)
+- `frontend/src/main/java/com/barony/frontend/rendering/ThemeManager.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `frontend/src/main/resources/settings/` (new directory for default theme JSON files)
+- `README.md`
+
+---
+
+## Ticket 10: Interactive Tutorial and Onboarding
+
+**Priority:** Medium  
+**Estimate:** 2 agent sessions  
+**Dependencies:** Tickets 4, 6, 7 (requires complete gameplay loop and UI)
+
+### Description
+
+Add a guided interactive tutorial that walks a new player through their first game. The tutorial should highlight UI elements, explain mechanics step by step, and complete with a short scripted scenario before handing control to the player.
+
+### Acceptance Criteria
+
+**Frontend:**
+- Add "Tutorial" option on the main menu
+- Implement a `TutorialManager` that tracks tutorial step progress
+- Display contextual tutorial tooltips (highlighted panel with arrow pointer):
+  - Step 1: Select an army (highlight army circle, explain click-to-select)
+  - Step 2: Move the army (highlight destination tile, explain click-to-move)
+  - Step 3: Capture a village (explain village ownership and soldier generation)
+  - Step 4: Advance a turn (explain `SPACE` keybinding)
+  - Step 5: Open policy menu (explain `P` keybinding and policy effects)
+  - Step 6: Win condition (explain castle capture timer)
+- Block player actions that are out of sequence during the tutorial
+- Allow the player to skip the tutorial at any step
+- Show a "Tutorial Complete" screen at the end with a "Start New Game" button
+- Store tutorial-completed flag in settings so it is not auto-launched again
+
+**Backend:**
+- No backend changes required (tutorial uses existing endpoints)
+
+**Documentation:**
+- Update PLAYER_GUIDE.md with tutorial information
+- Add "First Time?" note to README.md pointing to tutorial
+
+### Technical Notes
+
+- Tutorial steps are defined in a JSON config file (`tutorial-steps.json`) for easy editing
+- Tutorial overlay renders on top of the game canvas without blocking the underlying render
+- Tutorial state is frontend-only (no backend session impact)
+- "Skip Tutorial" button must always be reachable via keyboard (suggest `Ctrl+T`)
+
+### Files to Create/Modify
+
+- `frontend/src/main/java/com/barony/frontend/tutorial/TutorialManager.java` (create)
+- `frontend/src/main/java/com/barony/frontend/tutorial/TutorialStep.java` (create)
+- `frontend/src/main/resources/tutorial/tutorial-steps.json` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `PLAYER_GUIDE.md`
+- `README.md`
+
+---
+
+## Ticket 11: Minimap and Enhanced Map Navigation
+
+**Priority:** Low  
+**Estimate:** 2 agent sessions  
+**Dependencies:** Ticket 6 (requires UI foundation)
+
+### Description
+
+Add a minimap to the HUD showing the full game map at reduced scale, and implement map zoom and scroll controls so players can navigate larger maps comfortably without losing situational awareness.
+
+### Acceptance Criteria
+
+**Frontend:**
+- Render a minimap in the lower-right corner of the screen (configurable size, default 180×180 px)
+- Minimap must show:
+  - Tile ownership colors (player blue, enemy red, neutral gray)
+  - Army positions as colored dots
+  - Castle and village icons (single-pixel or small icon)
+  - Current viewport rectangle as a white outline overlay
+- Clicking on the minimap centers the main viewport on that map position
+- Implement viewport scroll via:
+  - Arrow keys (pan 1 tile per key press)
+  - Click-and-drag on empty map area
+  - WASD keys as alternative pan
+- Implement zoom controls:
+  - Mouse scroll wheel to zoom in/out
+  - `+` / `-` keyboard keys
+  - Zoom range: 0.5× to 2× (default 1×)
+- Minimap toggles with `M` key
+- Add zoom level indicator in HUD (e.g., "Zoom: 100%")
+
+**Backend:**
+- No backend changes required
+
+**Documentation:**
+- Update README.md with minimap controls
+- Update PLAYER_GUIDE.md with navigation section
+
+### Technical Notes
+
+- Minimap renders a scaled-down copy of the current tile grid each frame
+- Viewport rectangle on minimap reflects the actual visible tile range
+- Zoom changes tile render size; army selection click coordinates must be recalculated accordingly
+- Pan and zoom state lives in a `CameraState` value object
+
+### Files to Create/Modify
+
+- `frontend/src/main/java/com/barony/frontend/rendering/MinimapRenderer.java` (create)
+- `frontend/src/main/java/com/barony/frontend/rendering/CameraState.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `README.md`
+- `PLAYER_GUIDE.md`
+
+---
+
+## Gameplay Improvement Tickets
+
+---
+
+## Ticket 12: Campaign Mode with Progressive Missions
+
+**Priority:** Medium  
+**Estimate:** 4-5 agent sessions  
+**Dependencies:** Tickets 1-7 (requires complete MVP feature set)
+
+### Description
+
+Add a structured single-player campaign consisting of a series of scenarios with escalating difficulty, custom starting conditions, and varied victory objectives. The campaign gives players a directed path to learn the game while providing a meaningful challenge arc.
+
+### Acceptance Criteria
+
+**Backend:**
+- Add `ScenarioConfig` model defining:
+  - Map layout (tile types, starting armies, village/castle positions)
+  - Player and AI starting conditions (armies, resources, policies)
+  - Victory condition type: `CONQUEST`, `SURVIVAL`, `ECONOMIC`, `TIME_TRIAL`
+  - Optional defeat condition (e.g., "do not lose your castle for 50 ticks")
+  - Turn/tick limit (optional)
+- Add `CampaignState` model tracking:
+  - Current mission index
+  - Missions completed
+  - Overall campaign score
+- Add `POST /api/campaign/start` endpoint (accepts mission index)
+- Add `GET /api/campaign/state` endpoint
+- Implement at least 5 campaign scenarios stored as JSON in `backend/src/main/resources/scenarios/`
+- Add 8+ unit tests for scenario loading and victory condition checking
+
+**Frontend:**
+- Add "Campaign" button on the main menu
+- Add mission selection screen listing available missions, locked/unlocked status, and completion stars
+- Show mission briefing screen before each scenario (map preview + objectives text)
+- Display mission objective progress in HUD during gameplay (e.g., "Castles captured: 1/2")
+- Show mission completion screen with score and "Next Mission" / "Replay" buttons
+- Lock subsequent missions until the preceding one is completed
+
+**Documentation:**
+- Add Campaign section to PLAYER_GUIDE.md
+- Document `ScenarioConfig` JSON schema in DOCS.md
+
+### Technical Notes
+
+- Scenario JSON files are loaded at startup and cached in memory
+- Campaign progress is stored in the session (not persisted to disk for MVP)
+- Victory condition checking runs inside the existing `tick()` after `checkWinCondition()`
+- Use the existing session API endpoints with scenario-aware initialization
+
+### Files to Create/Modify
+
+- `backend/src/main/java/com/barony/backend/model/ScenarioConfig.java` (create)
+- `backend/src/main/java/com/barony/backend/model/CampaignState.java` (create)
+- `backend/src/main/java/com/barony/backend/service/CampaignService.java` (create)
+- `backend/src/main/java/com/barony/backend/controller/CampaignController.java` (create)
+- `backend/src/main/resources/scenarios/` (new directory with 5 mission JSON files)
+- `backend/src/test/java/com/barony/backend/service/CampaignServiceTest.java` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/CampaignMenu.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `PLAYER_GUIDE.md`
+- `DOCS.md`
+
+---
+
+## Ticket 13: Achievement System
+
+**Priority:** Low  
+**Estimate:** 2-3 agent sessions  
+**Dependencies:** Tickets 1-7 (requires complete gameplay metrics)
+
+### Description
+
+Add an achievement system that tracks player accomplishments across play sessions and rewards engagement with unlockable cosmetic content. Achievements give players long-term goals and record notable gameplay moments.
+
+### Acceptance Criteria
+
+**Backend:**
+- Define `Achievement` model with: id, name, description, category, unlock condition
+- Define achievement categories: `VICTORY`, `MILITARY`, `ECONOMIC`, `CHALLENGE`, `EXPLORATION`
+- Implement at least 20 achievements, for example:
+  - "First Blood" – Win your first game
+  - "Speed Conquest" – Win a game in under 50 ticks
+  - "Iron Fist" – Capture 10 villages in a single game
+  - "Pacifist" – Win without initiating any combat
+  - "Policy Master" – Change policies in all three categories in one game
+  - "Outnumbered" – Win a game where the AI had double your army size at any point
+- Add `AchievementService` that evaluates unlock conditions after each tick
+- Add `GET /api/achievements` endpoint (returns all achievements with unlock status)
+- Persist unlocked achievements to a JSON file in the user's home directory (`.barony/achievements.json`)
+- Add 6+ unit tests for achievement condition checking
+
+**Frontend:**
+- Add achievement panel accessible via `F2` key
+- Display achievements grouped by category with lock/unlock icons
+- Show achievement notification toast (bottom of screen, 3-second display) when an achievement unlocks
+- Show achievement progress counters for multi-step achievements (e.g., "Villages captured: 7/10")
+
+**Documentation:**
+- List all achievements in PLAYER_GUIDE.md
+- Add achievements section to DOCS.md
+
+### Technical Notes
+
+- Achievement conditions are evaluated as predicates against `GameState` and `GameStatistics`
+- Unlock is idempotent (re-evaluating on a completed achievement does not fire the notification again)
+- Achievements are read-only once unlocked; no revocation mechanic
+- Cosmetic unlocks (map themes, army color palette) are toggled via `ThemeManager` from Ticket 9
+
+### Files to Create/Modify
+
+- `backend/src/main/java/com/barony/backend/model/Achievement.java` (create)
+- `backend/src/main/java/com/barony/backend/service/AchievementService.java` (create)
+- `backend/src/main/java/com/barony/backend/controller/AchievementController.java` (create)
+- `backend/src/test/java/com/barony/backend/service/AchievementServiceTest.java` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/AchievementPanel.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `PLAYER_GUIDE.md`
+- `DOCS.md`
+
+---
+
+## Ticket 14: Difficulty Settings and Replayability Options
+
+**Priority:** Medium  
+**Estimate:** 2 agent sessions  
+**Dependencies:** Ticket 5 (requires AI opponent)
+
+### Description
+
+Add configurable difficulty settings and new-game options so players can tailor the challenge level and game variety. Provide map size, AI difficulty, starting conditions, and optional handicap settings accessible from a pre-game setup menu.
+
+### Acceptance Criteria
+
+**Backend:**
+- Add `GameConfig` model with fields:
+  - `mapSize`: `SMALL` (10×10), `MEDIUM` (15×15), `LARGE` (20×20)
+  - `aiDifficulty`: `EASY`, `NORMAL`, `HARD`
+  - `playerStartSoldiers`: integer (default 20)
+  - `aiStartSoldiers`: integer (default 20)
+  - `handicap`: `NONE`, `PLAYER_ADVANTAGE` (+50% start soldiers for player), `AI_ADVANTAGE` (+50% for AI)
+- Update `POST /api/session/reset` to accept a `GameConfig` JSON body
+- Implement AI behavior variations per difficulty:
+  - **Easy**: AI skips attack decisions 40% of the time and never uses army splitting (the `SPLIT` command from Ticket 3 that divides one army into two)
+  - **Normal**: Current behavior (existing Ticket 5 implementation)
+  - **Hard**: AI evaluates all moves optimally, uses army splitting to pursue multiple objectives simultaneously, and reacts to threats within 2 tiles
+- Update map generation to support configurable sizes
+- Add 6+ unit tests for difficulty-based AI behavior differences and map size generation
+
+**Frontend:**
+- Add "New Game" setup screen before starting a game (accessible from main menu and after game over)
+- Provide UI controls for all `GameConfig` fields with descriptions of each option
+- Show estimated game length based on settings (e.g., "~10 min on Normal/Medium")
+- Persist last-used settings in a config file under the user's home directory (for example, `.barony/settings.json`)
+
+**Documentation:**
+- Add difficulty descriptions to PLAYER_GUIDE.md
+- Document `GameConfig` in DOCS.md
+
+### Technical Notes
+
+- Difficulty AI variations are implemented as strategy subclasses of a common `AIStrategy` interface
+- Map size only affects grid dimensions; all gameplay logic remains map-size-agnostic
+- Handicap modifies only starting army size; economy and mechanics are unchanged
+
+### Files to Create/Modify
+
+- `backend/src/main/java/com/barony/backend/model/GameConfig.java` (create)
+- `backend/src/main/java/com/barony/backend/service/GameService.java`
+- `backend/src/main/java/com/barony/backend/ai/AIStrategy.java` (create)
+- `backend/src/main/java/com/barony/backend/ai/EasyAIStrategy.java` (create)
+- `backend/src/main/java/com/barony/backend/ai/NormalAIStrategy.java` (create)
+- `backend/src/main/java/com/barony/backend/ai/HardAIStrategy.java` (create)
+- `backend/src/test/java/com/barony/backend/ai/AIStrategyTest.java` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/NewGameMenu.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `PLAYER_GUIDE.md`
+- `DOCS.md`
+
+---
+
+## Narrative Elements Tickets
+
+---
+
+## Ticket 15: World-Building Lore and Realm Flavor Text
+
+**Priority:** Low  
+**Estimate:** 1-2 agent sessions  
+**Dependencies:** Ticket 6 (requires HUD and tooltip infrastructure)
+
+### Description
+
+Add lore and world-building text that gives the game world a sense of history and place. This includes named realms, named rulers, village and castle names displayed on the map, and a lore codex accessible from the menu. Flavor text enriches the game without adding mechanical complexity.
+
+### Acceptance Criteria
+
+**Backend:**
+- Add `LoreService` that loads lore data from JSON at startup
+- Define a `LoreData` model holding:
+  - Realm names for each player faction (e.g., "Kingdom of Aldenmoor" for Player 1, "Duchy of Varnholt" for Player 2)
+  - Ruler names and short epithets (e.g., "Queen Isolde the Unyielding")
+  - A pool of 20+ village names (e.g., "Millhaven", "Thornford", "Crestwick")
+  - A pool of 10+ castle names (e.g., "Stormwall Keep", "Redwall Fortress"); story-mission-specific castle names (e.g., "Irongate") should be excluded from this random pool to avoid naming conflicts with campaign scenarios
+  - 30+ flavor text strings for game events (village capture, battle, policy change)
+- Assign village/castle names at map initialization and include them in `Tile` model (`name` field)
+- Add `GET /api/lore` endpoint returning realm and ruler names for the current session
+
+**Frontend:**
+- Display village and castle names as small text labels below/above their tile on the map
+- Show realm name and ruler name in the HUD header (e.g., "Aldenmoor – Turn 12")
+- Display a random flavor text string in the status bar for major events:
+  - Village captured: "The villagers of {villageName} submit to {realm}."
+  - Castle captured: "{ruler} raises their banner over {castleName}."
+  - Policy change: "Word spreads of the new {policyName} decree across {realm}."
+  - Victory: "Songs will be sung of {realm}'s conquest."
+  - Defeat: "The chronicles record the fall of {realm}."
+- Add "Lore Codex" screen accessible from the menu (`F3` key) with realm descriptions, ruler biography stubs, and a world-history paragraph
+- Lore text is displayed only; it does not affect game mechanics
+
+**Documentation:**
+- Add a "Lore & Setting" section to PLAYER_GUIDE.md
+- Store all lore strings in `backend/src/main/resources/lore/lore-data.json` for easy editing
+
+### Technical Notes
+
+- Lore JSON is the single source of truth; do not hardcode names in Java source files
+- Village name assignment uses a shuffled pool; if the pool is exhausted, fall back to "Village #N"
+- Flavor text selection uses a seeded random tied to the game session (repeatable for the same session)
+- Realm and ruler names are fixed per session (not re-randomized mid-game)
+
+### Files to Create/Modify
+
+- `backend/src/main/java/com/barony/backend/model/LoreData.java` (create)
+- `backend/src/main/java/com/barony/backend/service/LoreService.java` (create)
+- `backend/src/main/java/com/barony/backend/controller/LoreController.java` (create)
+- `backend/src/main/java/com/barony/backend/model/Tile.java` (add `name` field)
+- `backend/src/main/resources/lore/lore-data.json` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/LoreCodex.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `PLAYER_GUIDE.md`
+
+---
+
+## Ticket 16: Narrative Event System with Player Choices
+
+**Priority:** Low  
+**Estimate:** 3-4 agent sessions  
+**Dependencies:** Tickets 7, 15 (requires ruler decision system and lore foundation)
+
+### Description
+
+Add a narrative event system that periodically presents the player with story-driven scenarios requiring a decision. Each event has flavor text, two or three choices, and mechanical consequences expressed through the existing ruler decision/modifier system. Events make the player feel like a ruler responding to their realm rather than just a game piece.
+
+### Acceptance Criteria
+
+**Backend:**
+- Define `NarrativeEvent` model with:
+  - `id`, `title`, `description` (flavor text, 2-4 sentences)
+  - `triggerCondition`: `TICK_THRESHOLD`, `VILLAGE_CAPTURED`, `ARMY_DEFEATED`, `POLICY_CHANGED`, `RANDOM`
+  - `triggerValue`: numeric or string parameter for the condition
+  - `choices`: list of `EventChoice` (label string, short outcome description, list of `StatModifier`)
+  - `cooldownTicks`: minimum ticks before this event can recur (default 30)
+- Define `StatModifier` model matching existing stat system (stability, morale, loyalty, income multiplier)
+- Define `EventChoice` model (label, outcome description, list of stat modifiers)
+- Add `NarrativeEventService`:
+  - Load events from `backend/src/main/resources/narrative/events.json` at startup
+  - Evaluate trigger conditions each tick; queue up to 1 event at a time
+  - Apply chosen modifiers via the existing `RulerDecision` stat pipeline
+  - Track event history (last 10 events) on `GameState`
+- Add `GET /api/narrative/event` endpoint (returns pending event, or 204 if none)
+- Add `POST /api/narrative/event/choose` endpoint (accepts event id and choice index)
+- Implement at least 15 narrative events covering:
+  - Economic crises and windfalls
+  - Military morale events
+  - Population and stability events
+  - Village-specific story hooks
+  - Rival ruler taunts and diplomatic gestures (flavor-only; no multiplayer mechanic)
+- Add 8+ unit tests for event trigger evaluation and modifier application
+
+**Frontend:**
+- Display a narrative event modal dialog when a pending event is available:
+  - Title and flavor text (with realm/village/ruler names filled in from `LoreService`)
+  - Choice buttons (2-3) each showing the choice label and a brief effect preview
+  - "Dismiss" option (treated as neutral choice with no modifier)
+- Animate modal slide-in from the top of the screen
+- Add event history log accessible via `F4` key showing the last 10 events and choices
+- Pause tick auto-advance while a modal is open (if auto-advance is implemented)
+
+**Documentation:**
+- Document the `NarrativeEvent` JSON schema in DOCS.md
+- Add "Events" section to PLAYER_GUIDE.md explaining event system
+- List example events in PLAYER_GUIDE.md so players know what to expect
+
+### Technical Notes
+
+- Events are purely additive to the existing stat system; they do not introduce new mechanics
+- Event JSON is the single source of truth; do not hardcode event strings in Java
+- Flavor text supports simple token substitution (`{realm}`, `{ruler}`, `{village}`, `{castle}`) resolved by `LoreService`
+- The "Dismiss" fallback ensures the game is never blocked waiting for an event response
+- Trigger condition evaluation is lightweight (no lookahead, no pathfinding)
+
+### Files to Create/Modify
+
+- `backend/src/main/java/com/barony/backend/model/NarrativeEvent.java` (create)
+- `backend/src/main/java/com/barony/backend/model/EventChoice.java` (create)
+- `backend/src/main/java/com/barony/backend/model/StatModifier.java` (create)
+- `backend/src/main/java/com/barony/backend/service/NarrativeEventService.java` (create)
+- `backend/src/main/java/com/barony/backend/controller/NarrativeEventController.java` (create)
+- `backend/src/main/resources/narrative/events.json` (create)
+- `backend/src/test/java/com/barony/backend/service/NarrativeEventServiceTest.java` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/NarrativeEventModal.java` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/EventHistoryLog.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `PLAYER_GUIDE.md`
+- `DOCS.md`
+
+---
+
+## Ticket 17: Campaign Story Missions with Narrative Framing
+
+**Priority:** Low  
+**Estimate:** 2-3 agent sessions  
+**Dependencies:** Tickets 12, 15, 16 (requires campaign mode, lore, and narrative event systems)
+
+### Description
+
+Expand the campaign mode (Ticket 12) with story-driven mission briefings, mid-mission narrative events, and post-mission epilogue text. Each mission feels like a chapter in a larger story of conquest, creating a narrative arc across the full campaign.
+
+### Acceptance Criteria
+
+**Backend:**
+- Extend `ScenarioConfig` with narrative fields:
+  - `storyTitle`: mission title shown on the selection screen
+  - `briefingText`: multi-paragraph pre-mission briefing (2-5 paragraphs)
+  - `epilogueVictoryText`: story text shown on mission victory (1-2 paragraphs)
+  - `epilogueDefeatText`: story text shown on mission defeat (1-2 paragraphs)
+  - `midMissionEvents`: list of `NarrativeEvent` IDs to inject at specific tick thresholds
+- Implement mission-scoped narrative event injection in `CampaignService` that fires `midMissionEvents` at their configured tick thresholds
+- Add `GET /api/campaign/mission/{index}/briefing` endpoint
+- Implement 5 story missions forming a connected narrative:
+  - Mission 1: "The Disputed Valley" – Introductory conquest (standard victory)
+  - Mission 2: "Siege of Irongate" – Castle defense (survival for 60 ticks)
+  - Mission 3: "The Merchant's Road" – Economic victory (reach 500 gold)
+  - Mission 4: "Winter Advance" – Conquest with harsh winter event at tick 25
+  - Mission 5: "The Final Stand" – AI starts with 2× advantage; player must overcome
+- Write cohesive lore connecting all 5 missions in `backend/src/main/resources/scenarios/campaign-lore.md`
+
+**Frontend:**
+- Display mission briefing screen before each mission:
+  - Full-screen or large modal with story text and map preview
+  - "Begin Mission" and "Back to Campaign" buttons
+  - Background uses map theme from `ThemeManager`
+- Display epilogue screen after mission completion/failure:
+  - Victory or defeat flavor illustration placeholder (simple colored banner)
+  - Victory/defeat epilogue text
+  - Campaign score summary
+  - "Next Mission" or "Retry" button
+- Inject mid-mission narrative events via existing `NarrativeEventModal` (Ticket 16)
+
+**Documentation:**
+- Add campaign story summary to PLAYER_GUIDE.md
+- Document `storyTitle`, `briefingText`, and `epilogueVictoryText`/`epilogueDefeatText` fields in DOCS.md
+
+### Technical Notes
+
+- Briefing and epilogue text supports `{realm}`, `{ruler}`, `{castle}` token substitution from `LoreService`
+- Mid-mission narrative events reuse the `NarrativeEventService` pipeline; no separate injection code needed beyond scheduling
+- All story text lives in the scenario JSON files, not in Java source
+- The 5-mission narrative arc should stand alone; it does not require external knowledge of other game modes
+
+### Files to Create/Modify
+
+- `backend/src/main/java/com/barony/backend/model/ScenarioConfig.java` (add narrative fields)
+- `backend/src/main/java/com/barony/backend/service/CampaignService.java` (add mid-mission event injection)
+- `backend/src/main/java/com/barony/backend/controller/CampaignController.java` (add briefing endpoint)
+- `backend/src/main/resources/scenarios/mission-01-disputed-valley.json` (create)
+- `backend/src/main/resources/scenarios/mission-02-siege-of-irongate.json` (create)
+- `backend/src/main/resources/scenarios/mission-03-merchants-road.json` (create)
+- `backend/src/main/resources/scenarios/mission-04-winter-advance.json` (create)
+- `backend/src/main/resources/scenarios/mission-05-final-stand.json` (create)
+- `backend/src/main/resources/scenarios/campaign-lore.md` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/MissionBriefingScreen.java` (create)
+- `frontend/src/main/java/com/barony/frontend/ui/MissionEpilogueScreen.java` (create)
+- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `PLAYER_GUIDE.md`
+- `DOCS.md`
+
+---
+
+## Post-MVP Implementation Order
+
+**Recommended sequence for post-MVP tickets:**
+
+1. Ticket 9 (Accessibility & Visual Customization) – foundational for all subsequent UI work
+2. Ticket 14 (Difficulty Settings) – high player-impact, low complexity
+3. Ticket 11 (Minimap & Navigation) – quality-of-life for growing map sizes
+4. Ticket 10 (Tutorial) – helps new players; depends on stable UI
+5. Ticket 13 (Achievement System) – extends engagement; depends on full game loop
+6. Ticket 12 (Campaign Mode) – first major content addition
+7. Ticket 15 (Lore & Flavor Text) – narrative foundation for Tickets 16 and 17
+8. Ticket 16 (Narrative Event System) – interactive narrative layer
+9. Ticket 17 (Story Missions) – full narrative campaign experience
+
+**Total estimated effort:** 21-30 additional agent sessions
+
+---
+
+## Post-MVP Labels
+
+When creating these as GitHub issues, use the following additional labels:
+
+- `ui-improvement`
+- `gameplay-improvement`
+- `narrative`
+- `post-mvp`
+- `accessibility`
+- `campaign`
+- `lore`
