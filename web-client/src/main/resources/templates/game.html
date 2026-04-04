@@ -947,9 +947,11 @@
             const tooltip = document.getElementById('canvasTooltip');
             let latestTooltipMouseEvent = null;
             let tooltipFramePending = false;
+            let touchTooltipTimer = null;
             
             function hideTooltip() {
                 tooltip.style.display = 'none';
+                clearTimeout(touchTooltipTimer);
             }
             
             function updateTooltip() {
@@ -988,8 +990,8 @@
                 hideTooltip();
             });
 
-            // Touch-tap tooltip for mobile: show tile info on tap, auto-dismiss after 3s
-            let touchTooltipTimer = null;
+            // Touch-tap tooltip for mobile: show tile info on tap, auto-dismiss after 3s.
+            // Does not preventDefault — click events still fire for army selection/movement.
             canvas.addEventListener('touchstart', function(e) {
                 if (!lastGameState || e.touches.length !== 1) return;
                 const touch = e.touches[0];
