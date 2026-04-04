@@ -197,7 +197,11 @@
         // Toast Notification System
         // ========================
         function showToast(message, severity) {
-            severity = severity || 'info';
+            // Normalize severity to a valid lowercase value
+            var VALID_SEVERITIES = ['info', 'success', 'warning', 'danger'];
+            severity = String(severity || 'info').toLowerCase();
+            if (VALID_SEVERITIES.indexOf(severity) === -1) severity = 'info';
+
             const container = document.getElementById('toast-container');
             const toasts = container.querySelectorAll('.toast:not(.toast--dismissing)');
             
@@ -209,7 +213,12 @@
             const toast = document.createElement('div');
             toast.className = 'toast toast--' + severity;
             toast.textContent = message;
+            toast.setAttribute('role', 'button');
+            toast.setAttribute('tabindex', '0');
             toast.addEventListener('click', function() { dismissToast(toast); });
+            toast.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dismissToast(toast); }
+            });
             container.appendChild(toast);
             
             // Critical events persist until dismissed

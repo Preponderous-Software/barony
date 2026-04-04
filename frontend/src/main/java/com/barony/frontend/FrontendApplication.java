@@ -774,10 +774,10 @@ public class FrontendApplication {
             }
         }
         
-        // Render overlay UI components (highest Z-order)
-        toastOverlay.render(windowWidth, windowHeight);
+        // Render overlay UI components — panels first, toasts last (highest Z-order)
         settingsPanel.render(windowWidth, windowHeight);
         notificationLogPanel.render(windowWidth, windowHeight);
+        toastOverlay.render(windowWidth, windowHeight);
     }
     
     private void updateHoveredTile() {

@@ -92,12 +92,32 @@ public class ThemeManager {
     }
 
     public void setTheme(String theme) {
-        this.themeName = theme;
+        if (theme == null || theme.trim().isEmpty()) {
+            this.themeName = "dark";
+        } else {
+            String normalized = theme.trim().toLowerCase();
+            switch (normalized) {
+                case "classic":
+                    this.themeName = "classic";
+                    break;
+                case "high contrast":
+                case "high-contrast":
+                    this.themeName = "high contrast";
+                    break;
+                default:
+                    this.themeName = "dark";
+                    break;
+            }
+        }
         applyTheme();
     }
 
     public void setColorblindMode(String mode) {
-        this.colorblindMode = mode;
+        if (mode == null || mode.trim().isEmpty()) {
+            this.colorblindMode = "none";
+        } else {
+            this.colorblindMode = mode.trim().toLowerCase();
+        }
         applyColorblindPalette();
     }
 
