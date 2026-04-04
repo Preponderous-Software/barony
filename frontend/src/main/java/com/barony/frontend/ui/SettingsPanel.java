@@ -29,16 +29,31 @@ public class SettingsPanel {
     private int themeIndex = 0;
     private int fontSizeIndex = 1; // Medium default
 
+    private boolean dirty = false;
+
     public boolean isVisible() { return visible; }
 
     public void toggle() {
         visible = !visible;
         if (visible) {
             loadFromThemeManager();
+            dirty = false;
+        } else {
+            saveIfDirty();
         }
     }
 
-    public void hide() { visible = false; }
+    public void hide() {
+        visible = false;
+        saveIfDirty();
+    }
+
+    private void saveIfDirty() {
+        if (dirty) {
+            ThemeManager.getInstance().save();
+            dirty = false;
+        }
+    }
 
     private String normalizeThemeName(String name) {
         if (name == null) return "";
@@ -99,7 +114,7 @@ public class SettingsPanel {
             default: scale = 1.0f; break;
         }
         tm.setFontScale(scale);
-        tm.save();
+        dirty = true;
     }
 
     public void render(int windowWidth, int windowHeight) {

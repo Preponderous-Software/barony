@@ -600,15 +600,17 @@ input[type="text"]:focus {
    Settings Panel
    ======================== */
 .settings-panel {
-    background: #352f28;
+    background: var(--bg-secondary, #352f28);
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
-    border-left: 4px solid #c9a96e;
+    border-left: 4px solid var(--accent, #c9a96e);
+    color: var(--text-primary, #d4cfc8);
 }
 
 .settings-panel h3 {
     margin-top: 0;
+    color: var(--accent, #c9a96e);
 }
 
 .settings-row {
@@ -621,13 +623,14 @@ input[type="text"]:focus {
 .settings-row label {
     min-width: 120px;
     font-weight: bold;
+    color: var(--text-primary, #d4cfc8);
 }
 
 .settings-row select {
     padding: 6px 10px;
-    border: 1px solid #5a4e3c;
+    border: 1px solid var(--text-secondary, #5a4e3c);
     border-radius: 4px;
-    background: #2b2520;
-    color: #d4cfc8;
-    font-size: 14px;
+    background: var(--bg-primary, #2b2520);
+    color: var(--text-primary, #d4cfc8);
+    font-size: var(--font-size-base, 14px);
 }

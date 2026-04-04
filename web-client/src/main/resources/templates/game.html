@@ -212,10 +212,11 @@
             container.appendChild(toast);
             
             // Critical events persist until dismissed
+            const msgLower = String(message || '').toLowerCase();
             const isCritical = severity === 'danger' && 
-                (message.toLowerCase().includes('game over') || 
-                 message.toLowerCase().includes('castle') ||
-                 message.toLowerCase().includes('destroyed'));
+                (msgLower.includes('game over') || 
+                 msgLower.includes('castle') ||
+                 msgLower.includes('destroyed'));
             
             if (!isCritical) {
                 setTimeout(function() { dismissToast(toast); }, TOAST_AUTO_DISMISS_MS);
@@ -907,14 +908,27 @@
                 }
             });
             
-            // Hover tooltip
+            // Hover tooltip (throttled via requestAnimationFrame)
             const tooltip = document.getElementById('canvasTooltip');
-            canvas.addEventListener('mousemove', function(e) {
-                if (!lastGameState) return;
-                
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+            let latestTooltipMouseEvent = null;
+            let tooltipFramePending = false;
+            
+            function hideTooltip() {
+                tooltip.style.display = 'none';
+            }
+            
+            function updateTooltip() {
+                tooltipFramePending = false;
+                if (!lastGameState || !latestTooltipMouseEvent) {
+                    hideTooltip();
+                    return;
+                }
+                const e = latestTooltipMouseEvent;
+                const canvasContainer = document.getElementById('gameCanvas');
+                const containerRect = canvasContainer.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = e.clientX - canvasRect.left;
+                const y = e.clientY - canvasRect.top;
                 const cellWidth = canvas.width / lastGameState.width;
                 const cellHeight = canvas.height / lastGameState.height;
                 const gridX = Math.floor(x / cellWidth);
@@ -924,15 +938,25 @@
                 if (text) {
                     tooltip.textContent = text;
                     tooltip.style.display = 'block';
-                    tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
-                    tooltip.style.top = (e.clientY - rect.top - 8) + 'px';
+                    // Position relative to #gameCanvas container
+                    tooltip.style.left = (canvasRect.left - containerRect.left + x + 12) + 'px';
+                    tooltip.style.top = (canvasRect.top - containerRect.top + y - 8) + 'px';
                 } else {
-                    tooltip.style.display = 'none';
+                    hideTooltip();
+                }
+            }
+            
+            canvas.addEventListener('mousemove', function(e) {
+                latestTooltipMouseEvent = e;
+                if (!tooltipFramePending) {
+                    tooltipFramePending = true;
+                    requestAnimationFrame(updateTooltip);
                 }
             });
             
             canvas.addEventListener('mouseleave', function() {
-                tooltip.style.display = 'none';
+                latestTooltipMouseEvent = null;
+                hideTooltip();
             });
         });
     </script>

@@ -52,8 +52,12 @@ public class NotificationManager {
 
     /**
      * Show a toast notification. Critical events (DANGER with certain keywords) persist until dismissed.
+     * Null messages are ignored; null severity defaults to INFO.
      */
     public void show(String message, Severity severity) {
+        if (message == null) return;
+        if (severity == null) severity = Severity.INFO;
+
         boolean isCritical = severity == Severity.DANGER &&
             (message.toLowerCase().contains("game over") ||
              message.toLowerCase().contains("castle") ||

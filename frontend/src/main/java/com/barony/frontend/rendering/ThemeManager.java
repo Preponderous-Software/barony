@@ -159,14 +159,17 @@ public class ThemeManager {
                 Gson gson = new Gson();
                 @SuppressWarnings("unchecked")
                 Map<String, Object> settings = gson.fromJson(json, Map.class);
-                if (settings.containsKey("colorblindMode")) {
-                    colorblindMode = (String) settings.get("colorblindMode");
+                Object cbValue = settings.get("colorblindMode");
+                if (cbValue instanceof String && !((String) cbValue).isEmpty()) {
+                    colorblindMode = (String) cbValue;
                 }
-                if (settings.containsKey("theme")) {
-                    themeName = (String) settings.get("theme");
+                Object themeValue = settings.get("theme");
+                if (themeValue instanceof String && !((String) themeValue).isEmpty()) {
+                    themeName = (String) themeValue;
                 }
-                if (settings.containsKey("fontScale")) {
-                    setFontScale(((Number) settings.get("fontScale")).floatValue());
+                Object scaleValue = settings.get("fontScale");
+                if (scaleValue instanceof Number) {
+                    setFontScale(((Number) scaleValue).floatValue());
                 }
                 applyTheme();
                 applyColorblindPalette();
