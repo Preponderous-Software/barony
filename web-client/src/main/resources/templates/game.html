@@ -983,8 +983,12 @@
             });
 
             // Redraw on viewport resize so canvas fits available space
+            let resizeTimer = null;
             window.addEventListener('resize', function() {
-                if (lastGameState) drawMap(lastGameState);
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (lastGameState) drawMap(lastGameState);
+                }, 150);
             });
         });
     </script>
