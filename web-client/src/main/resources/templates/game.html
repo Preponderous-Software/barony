@@ -863,16 +863,28 @@
             // Canvas click handler for army selection and movement
             const canvas = document.getElementById('mapCanvas');
             
+            // Convert a mouse/touch event to grid coordinates, accounting for
+            // any CSS scaling between the canvas display size and pixel buffer.
+            function eventToGrid(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                const cellWidth = canvas.width / lastGameState.width;
+                const cellHeight = canvas.height / lastGameState.height;
+                return {
+                    gridX: Math.floor(x / cellWidth),
+                    gridY: Math.floor(y / cellHeight),
+                    cssX: e.clientX - rect.left,
+                    cssY: e.clientY - rect.top
+                };
+            }
+            
             canvas.addEventListener('click', function(e) {
                 if (!lastGameState) return;
                 
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const cellWidth = canvas.width / lastGameState.width;
-                const cellHeight = canvas.height / lastGameState.height;
-                const gridX = Math.floor(x / cellWidth);
-                const gridY = Math.floor(y / cellHeight);
+                const { gridX, gridY } = eventToGrid(e);
                 
                 if (!selectedArmy) {
                     // Try to select an army at this position
@@ -946,24 +958,18 @@
                     hideTooltip();
                     return;
                 }
-                const e = latestTooltipMouseEvent;
+                const { gridX, gridY, cssX, cssY } = eventToGrid(latestTooltipMouseEvent);
                 const canvasContainer = document.getElementById('gameCanvas');
                 const containerRect = canvasContainer.getBoundingClientRect();
                 const canvasRect = canvas.getBoundingClientRect();
-                const x = e.clientX - canvasRect.left;
-                const y = e.clientY - canvasRect.top;
-                const cellWidth = canvas.width / lastGameState.width;
-                const cellHeight = canvas.height / lastGameState.height;
-                const gridX = Math.floor(x / cellWidth);
-                const gridY = Math.floor(y / cellHeight);
                 
                 const text = getTooltipText(gridX, gridY, lastGameState);
                 if (text) {
                     tooltip.textContent = text;
                     tooltip.style.display = 'block';
                     // Position relative to #gameCanvas container
-                    tooltip.style.left = (canvasRect.left - containerRect.left + x + 12) + 'px';
-                    tooltip.style.top = (canvasRect.top - containerRect.top + y - 8) + 'px';
+                    tooltip.style.left = (canvasRect.left - containerRect.left + cssX + 12) + 'px';
+                    tooltip.style.top = (canvasRect.top - containerRect.top + cssY - 8) + 'px';
                 } else {
                     hideTooltip();
                 }
@@ -980,6 +986,29 @@
             canvas.addEventListener('mouseleave', function() {
                 latestTooltipMouseEvent = null;
                 hideTooltip();
+            });
+
+            // Touch-tap tooltip for mobile: show tile info on tap, auto-dismiss after 3s
+            let touchTooltipTimer = null;
+            canvas.addEventListener('touchstart', function(e) {
+                if (!lastGameState || e.touches.length !== 1) return;
+                const touch = e.touches[0];
+                const { gridX, gridY, cssX, cssY } = eventToGrid(touch);
+                const text = getTooltipText(gridX, gridY, lastGameState);
+                if (text) {
+                    const canvasContainer = document.getElementById('gameCanvas');
+                    const containerRect = canvasContainer.getBoundingClientRect();
+                    const canvasRect = canvas.getBoundingClientRect();
+                    tooltip.textContent = text;
+                    tooltip.style.display = 'block';
+                    // Position below touch point so the finger doesn't obscure it
+                    tooltip.style.left = (canvasRect.left - containerRect.left + cssX + 12) + 'px';
+                    tooltip.style.top = (canvasRect.top - containerRect.top + cssY + 24) + 'px';
+                    clearTimeout(touchTooltipTimer);
+                    touchTooltipTimer = setTimeout(hideTooltip, 3000);
+                } else {
+                    hideTooltip();
+                }
             });
 
             // Redraw on viewport resize so canvas fits available space

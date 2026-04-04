@@ -815,15 +815,9 @@ input[type="text"]:focus {
         width: 100%;
     }
 
-    /* Hide canvas tooltip on mobile (no hover) */
+    /* Reposition tooltip for small screens — show below touch point */
     .canvas-tooltip {
-        display: none !important;
-    }
-}
-
-/* Also suppress tooltip for any device that primarily uses touch */
-@media (hover: none) {
-    .canvas-tooltip {
-        display: none !important;
+        max-width: 240px;
+        font-size: 12px;
     }
 }
