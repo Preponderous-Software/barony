@@ -213,11 +213,12 @@
             const toast = document.createElement('div');
             toast.className = 'toast toast--' + severity;
             toast.textContent = message;
-            toast.setAttribute('role', 'button');
             toast.setAttribute('tabindex', '0');
+            toast.setAttribute('aria-label', message + ' — press Enter to dismiss');
             toast.addEventListener('click', function() { dismissToast(toast); });
             toast.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dismissToast(toast); }
+                if (e.key === ' ') e.preventDefault(); // prevent scroll on Space regardless
+                if (e.key === 'Enter' || e.key === ' ') dismissToast(toast);
             });
             container.appendChild(toast);
             
