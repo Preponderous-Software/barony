@@ -634,3 +634,140 @@ input[type="text"]:focus {
     color: var(--text-primary, #d4cfc8);
     font-size: var(--font-size-base, 14px);
 }
+
+/* ========================
+   Mobile / Responsive Layout
+   ======================== */
+@media (max-width: 768px) {
+    /* Reduce body padding and container chrome */
+    body {
+        padding: 8px;
+    }
+
+    .container {
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    h1 {
+        font-size: 1.6em;
+        margin-bottom: 16px;
+    }
+
+    /* Stack the HUD grid into a single column */
+    .game-info {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    /* Scale canvas to fill viewport width */
+    #gameCanvas {
+        overflow: hidden;
+    }
+
+    #mapCanvas {
+        width: 100%;
+        height: auto;
+    }
+
+    /* Stack policy controls vertically */
+    .policy-section {
+        flex-wrap: wrap;
+    }
+
+    .policy-section label {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .policy-section select {
+        width: 100%;
+        flex: unset;
+    }
+
+    /* Minimum 44×44px tap targets for buttons and selects */
+    .controls button,
+    .policy-section button,
+    .split-button,
+    .user-info .logout-button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 20px;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    .policy-section select,
+    .settings-row select {
+        min-height: 44px;
+    }
+
+    /* Settings panel: scrollable and wrappable */
+    .settings-panel {
+        max-height: 50vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .settings-row {
+        flex-wrap: wrap;
+    }
+
+    .settings-row label {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .settings-row select {
+        width: 100%;
+    }
+
+    /* Toast notifications: full-width at bottom, no clipping */
+    #toast-container {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        max-width: none;
+    }
+
+    .toast {
+        font-size: var(--font-size-base, 14px);
+    }
+
+    /* Game over banner: smaller padding for narrow screens */
+    .game-over-banner-content {
+        padding: 20px 24px;
+    }
+
+    .game-over-banner-content h2 {
+        font-size: 1.5em;
+    }
+
+    .game-over-banner-content p {
+        font-size: 1em;
+    }
+
+    /* Army list: smaller padding */
+    .armies-list {
+        padding: 12px;
+    }
+
+    .army-actions {
+        flex-wrap: wrap;
+    }
+
+    .split-input {
+        width: 100%;
+    }
+
+    /* Hide canvas tooltip on touch devices (no hover) */
+    .canvas-tooltip {
+        display: none !important;
+    }
+}
+
+/* Also suppress tooltip for any device that primarily uses touch */
+@media (hover: none) {
+    .canvas-tooltip {
+        display: none !important;
+    }
+}
