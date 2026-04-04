@@ -641,48 +641,85 @@ input[type="text"]:focus {
 @media (max-width: 768px) {
     /* Reduce body padding and container chrome */
     body {
-        padding: 8px;
+        padding: 4px;
     }
 
     .container {
-        padding: 12px;
-        border-radius: 8px;
+        padding: 8px;
+        border-radius: 6px;
     }
 
     h1 {
-        font-size: 1.6em;
-        margin-bottom: 16px;
+        font-size: 1.4em;
+        margin-bottom: 10px;
+    }
+
+    h3 {
+        font-size: 1em;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
     }
 
     /* Stack the HUD grid into a single column */
     .game-info {
         grid-template-columns: 1fr;
-        gap: 12px;
+        gap: 8px;
+        margin-bottom: 10px;
     }
 
-    /* Scale canvas to fill viewport width */
+    .info-section {
+        padding: 8px 10px;
+    }
+
+    .info-section p {
+        margin: 4px 0;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    /* Canvas scales dynamically via resizeCanvas(); prevent CSS override */
     #gameCanvas {
         overflow: hidden;
+        margin: 8px 0;
     }
 
     #mapCanvas {
-        width: 100%;
-        height: auto;
+        display: block;
+        max-width: 100%;
     }
 
-    /* Stack policy controls vertically */
+    /* Compact policy controls */
+    .policy-controls {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
     .policy-section {
         flex-wrap: wrap;
+        margin-bottom: 8px;
+        gap: 6px;
     }
 
     .policy-section label {
         min-width: unset;
         width: 100%;
+        margin-bottom: 0;
+        font-size: var(--font-size-base, 14px);
     }
 
     .policy-section select {
         width: 100%;
         flex: unset;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    .policy-section button {
+        width: 100%;
+    }
+
+    /* Compact user info */
+    .user-info {
+        padding: 6px 8px;
+        margin-bottom: 10px;
     }
 
     /* Minimum 44×44px tap targets for buttons and selects */
@@ -692,7 +729,16 @@ input[type="text"]:focus {
     .user-info .logout-button {
         min-height: 44px;
         min-width: 44px;
-        padding: 12px 20px;
+        padding: 10px 16px;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    .controls {
+        margin-bottom: 10px;
+    }
+
+    .controls button {
+        padding: 10px 14px;
         font-size: var(--font-size-base, 14px);
     }
 
@@ -735,20 +781,30 @@ input[type="text"]:focus {
 
     /* Game over banner: smaller padding for narrow screens */
     .game-over-banner-content {
-        padding: 20px 24px;
+        padding: 16px 20px;
     }
 
     .game-over-banner-content h2 {
-        font-size: 1.5em;
+        font-size: 1.3em;
     }
 
     .game-over-banner-content p {
-        font-size: 1em;
+        font-size: 0.95em;
     }
 
     /* Army list: smaller padding */
     .armies-list {
-        padding: 12px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    #armiesList {
+        max-height: 250px;
+    }
+
+    .army-item {
+        padding: 8px;
+        margin: 4px 0;
     }
 
     .army-actions {
@@ -759,7 +815,7 @@ input[type="text"]:focus {
         width: 100%;
     }
 
-    /* Hide canvas tooltip on touch devices (no hover) */
+    /* Hide canvas tooltip on mobile (no hover) */
     .canvas-tooltip {
         display: none !important;
     }

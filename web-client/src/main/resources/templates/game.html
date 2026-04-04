@@ -551,11 +551,33 @@
         // ========================
         // Canvas Drawing
         // ========================
+        function resizeCanvas(canvas, gridW, gridH) {
+            const container = canvas.parentElement;
+            const availableWidth = container.clientWidth;
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                // On mobile, size the canvas to fill width and use the
+                // grid aspect ratio so cells are square. Cap height at 50vh.
+                const maxHeight = window.innerHeight * 0.5;
+                const cellSize = Math.min(
+                    availableWidth / gridW,
+                    maxHeight / gridH
+                );
+                canvas.width = Math.floor(cellSize * gridW);
+                canvas.height = Math.floor(cellSize * gridH);
+            } else {
+                // Desktop: keep original 800×600 default
+                if (canvas.width !== 800) canvas.width = 800;
+                if (canvas.height !== 600) canvas.height = 600;
+            }
+        }
+
         function drawMap(gameState) {
             const canvas = document.getElementById('mapCanvas');
             const ctx = canvas.getContext('2d');
             const width = gameState.width;
             const height = gameState.height;
+            resizeCanvas(canvas, width, height);
             const cellWidth = canvas.width / width;
             const cellHeight = canvas.height / height;
             
@@ -958,6 +980,11 @@
             canvas.addEventListener('mouseleave', function() {
                 latestTooltipMouseEvent = null;
                 hideTooltip();
+            });
+
+            // Redraw on viewport resize so canvas fits available space
+            window.addEventListener('resize', function() {
+                if (lastGameState) drawMap(lastGameState);
             });
         });
     </script>
