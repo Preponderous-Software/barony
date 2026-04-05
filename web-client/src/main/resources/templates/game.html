@@ -17,32 +17,95 @@
         <div id="error" class="error" style="display: none;">
             <p id="errorMessage"></p>
         </div>
+        <div class="game-layout">
             <div class="controls">
                 <button onclick="tick()">Advance Turn</button>
                 <button onclick="reset()">Reset Game</button>
                 <button id="autoPlayToggle" onclick="toggleAutoPlay()">Auto Play</button>
             </div>
             
-            <div class="game-info">
-                <div class="info-section">
-                    <h3>Game Status</h3>
-                    <p>Turn: <span id="tickCount">0</span></p>
-                    <p>Game Over: <span id="gameOver">false</span></p>
-                    <p id="winnerLine" style="display:none;">
-                        Winner: Player <span id="winnerId">-</span>
-                    </p>
+            <div id="gameCanvas">
+                <canvas id="mapCanvas" width="800" height="600"></canvas>
+                <div class="canvas-tooltip" id="canvasTooltip"></div>
+                <div class="game-over-banner" id="gameOverBanner" style="display: none;">
+                    <div class="game-over-banner-content">
+                        <h2 id="gameOverTitle">Game Over</h2>
+                        <p id="gameOverMessage"></p>
+                    </div>
                 </div>
-                
-                <div class="info-section">
-                    <h3>Ruler Stats</h3>
-                    <p>Avg Stability: <span id="avgStability">0</span></p>
-                    <p>Avg Morale: <span id="avgMorale">0</span></p>
-                    <p>Avg Loyalty: <span id="avgLoyalty">0</span></p>
-                    <p>Total Population: <span id="totalPop">0</span></p>
+            </div>
+            
+            <details class="collapsible-section" open>
+                <summary>Game Status &amp; Stats</summary>
+                <div class="game-info">
+                    <div class="info-section">
+                        <h3>Game Status</h3>
+                        <p>Turn: <span id="tickCount">0</span></p>
+                        <p>Game Over: <span id="gameOver">false</span></p>
+                        <p id="winnerLine" style="display:none;">
+                            Winner: Player <span id="winnerId">-</span>
+                        </p>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>Ruler Stats</h3>
+                        <p>Avg Stability: <span id="avgStability">0</span></p>
+                        <p>Avg Morale: <span id="avgMorale">0</span></p>
+                        <p>Avg Loyalty: <span id="avgLoyalty">0</span></p>
+                        <p>Total Population: <span id="totalPop">0</span></p>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>Policies</h3>
+                        <p>Economic: <span id="economicPolicy">-</span></p>
+                        <p>Military: <span id="militaryPolicy">-</span></p>
+                        <p>Population: <span id="populationPolicy">-</span></p>
+                        <div class="policy-progress" id="policyProgressContainer">
+                            <span class="policy-progress-label">Next Decision In: <span id="ticksUntilNext">0</span> turns</span>
+                            <div class="policy-progress-bar">
+                                <div class="policy-progress-fill" id="policyProgressFill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
+            </details>
+            
+            <details class="collapsible-section">
+                <summary>Change Policy</summary>
+                <div class="policy-controls">
+                    <div class="policy-section">
+                        <label>Economic:</label>
+                        <select id="economicPolicySelect">
+                            <option value="HEAVY_TAXATION">Heavy Taxation (+20% income, -10% stability)</option>
+                            <option value="BALANCED_BUDGET" selected>Balanced Budget</option>
+                            <option value="INFRASTRUCTURE_INVESTMENT">Infrastructure Investment (-10% income, +10% stability)</option>
+                        </select>
+                        <button onclick="changePolicy('ECONOMIC')">Apply</button>
+                    </div>
+                    <div class="policy-section">
+                        <label>Military:</label>
+                        <select id="militaryPolicySelect">
+                            <option value="AGGRESSIVE_TRAINING">Aggressive Training (+10% morale, -5% loyalty)</option>
+                            <option value="STANDARD_SERVICE" selected>Standard Service</option>
+                            <option value="VETERAN_BENEFITS">Veteran Benefits (-10% morale, +10% loyalty)</option>
+                        </select>
+                        <button onclick="changePolicy('MILITARY')">Apply</button>
+                    </div>
+                    <div class="policy-section">
+                        <label>Population:</label>
+                        <select id="populationPolicySelect">
+                            <option value="GROWTH_FOCUS">Growth Focus (+15% growth, -5% stability)</option>
+                            <option value="STABLE_POPULATION" selected>Stable Population</option>
+                            <option value="QUALITY_OVER_QUANTITY">Quality Over Quantity (-10% growth, +10% stability)</option>
+                        </select>
+                        <button onclick="changePolicy('POPULATION')">Apply</button>
+                    </div>
+                </div>
+            </details>
+            
+            <details class="collapsible-section">
+                <summary>Settings</summary>
                 <div class="info-section settings-panel" id="settingsPanel">
-                    <h3>Settings</h3>
                     <div class="settings-row">
                         <label>Colorblind:</label>
                         <select id="colorblindSelect" onchange="applySettings()">
@@ -69,69 +132,16 @@
                         </select>
                     </div>
                 </div>
-                
-                <div class="info-section">
-                    <h3>Policies</h3>
-                    <p>Economic: <span id="economicPolicy">-</span></p>
-                    <p>Military: <span id="militaryPolicy">-</span></p>
-                    <p>Population: <span id="populationPolicy">-</span></p>
-                    <div class="policy-progress" id="policyProgressContainer">
-                        <span class="policy-progress-label">Next Decision In: <span id="ticksUntilNext">0</span> turns</span>
-                        <div class="policy-progress-bar">
-                            <div class="policy-progress-fill" id="policyProgressFill" style="width: 0%"></div>
-                        </div>
+            </details>
+            
+            <details class="collapsible-section" open>
+                <summary>Armies</summary>
+                <div class="armies-list">
+                    <div id="armiesList">
+                        <!-- Armies will be loaded dynamically via JavaScript -->
                     </div>
                 </div>
-            </div>
-            
-            <div class="policy-controls">
-                <h3>Change Policy</h3>
-                <div class="policy-section">
-                    <label>Economic:</label>
-                    <select id="economicPolicySelect">
-                        <option value="HEAVY_TAXATION">Heavy Taxation (+20% income, -10% stability)</option>
-                        <option value="BALANCED_BUDGET" selected>Balanced Budget</option>
-                        <option value="INFRASTRUCTURE_INVESTMENT">Infrastructure Investment (-10% income, +10% stability)</option>
-                    </select>
-                    <button onclick="changePolicy('ECONOMIC')">Apply</button>
-                </div>
-                <div class="policy-section">
-                    <label>Military:</label>
-                    <select id="militaryPolicySelect">
-                        <option value="AGGRESSIVE_TRAINING">Aggressive Training (+10% morale, -5% loyalty)</option>
-                        <option value="STANDARD_SERVICE" selected>Standard Service</option>
-                        <option value="VETERAN_BENEFITS">Veteran Benefits (-10% morale, +10% loyalty)</option>
-                    </select>
-                    <button onclick="changePolicy('MILITARY')">Apply</button>
-                </div>
-                <div class="policy-section">
-                    <label>Population:</label>
-                    <select id="populationPolicySelect">
-                        <option value="GROWTH_FOCUS">Growth Focus (+15% growth, -5% stability)</option>
-                        <option value="STABLE_POPULATION" selected>Stable Population</option>
-                        <option value="QUALITY_OVER_QUANTITY">Quality Over Quantity (-10% growth, +10% stability)</option>
-                    </select>
-                    <button onclick="changePolicy('POPULATION')">Apply</button>
-                </div>
-            </div>
-            
-            <div id="gameCanvas">
-                <canvas id="mapCanvas" width="800" height="600"></canvas>
-                <div class="canvas-tooltip" id="canvasTooltip"></div>
-                <div class="game-over-banner" id="gameOverBanner" style="display: none;">
-                    <div class="game-over-banner-content">
-                        <h2 id="gameOverTitle">Game Over</h2>
-                        <p id="gameOverMessage"></p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="armies-list">
-                <h3>Armies</h3>
-                <div id="armiesList">
-                    <!-- Armies will be loaded dynamically via JavaScript -->
-                </div>
-            </div>
+            </details>
         </div>
     </div>
     
@@ -144,6 +154,13 @@
         let sessionId = null;
         let username = null;
         let lastGameState = null;
+        
+        // On desktop, ensure all collapsible sections are open by default
+        (function() {
+            if (window.innerWidth > 768) {
+                document.querySelectorAll('.collapsible-section').forEach(function(d) { d.open = true; });
+            }
+        })();
         
         // Color palette for canvas drawing (swapped by colorblind modes)
         const PALETTE = {
@@ -562,8 +579,8 @@
         // Canvas Drawing
         // ========================
         function resizeCanvas(canvas, gridW, gridH) {
-            const container = canvas.parentElement;
-            const availableWidth = container.clientWidth;
+            const gameLayout = document.querySelector('.game-layout');
+            const availableWidth = gameLayout ? gameLayout.clientWidth : canvas.parentElement.clientWidth;
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
                 // On mobile, size the canvas to fill width and use the

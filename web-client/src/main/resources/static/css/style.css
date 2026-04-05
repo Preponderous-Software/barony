@@ -139,6 +139,66 @@ h3 {
     background: #4a6a2e;
 }
 
+/* Game layout flex container — enables reorder on mobile */
+.game-layout {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Collapsible sections */
+.collapsible-section {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.collapsible-section > summary {
+    cursor: pointer;
+    padding: 10px 16px;
+    background: var(--bg-secondary, #352f28);
+    color: var(--accent, #c9a96e);
+    font-weight: bold;
+    font-size: 1.1em;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent, #8b7355);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.collapsible-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.collapsible-section > summary::before {
+    content: '▸';
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.collapsible-section[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.collapsible-section[open] > summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Remove extra margins from nested elements inside collapsible sections */
+.collapsible-section .game-info {
+    margin-bottom: 0;
+}
+
+.collapsible-section .policy-controls {
+    margin-bottom: 0;
+}
+
+.collapsible-section .armies-list {
+    margin-top: 0;
+}
+
 #gameCanvas {
     text-align: center;
     margin: 20px 0;
@@ -671,6 +731,47 @@ input[type="text"]:focus {
         padding-bottom: 4px;
     }
 
+    /* Reorder game layout so canvas + controls are first on mobile */
+    .game-layout {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .game-layout > .controls {
+        order: 1;
+    }
+
+    .game-layout > #gameCanvas {
+        order: 2;
+    }
+
+    .game-layout > .collapsible-section:nth-of-type(1) {
+        order: 3; /* Game Status & Stats */
+    }
+
+    .game-layout > .collapsible-section:nth-of-type(2) {
+        order: 5; /* Change Policy */
+    }
+
+    .game-layout > .collapsible-section:nth-of-type(3) {
+        order: 6; /* Settings */
+    }
+
+    .game-layout > .collapsible-section:nth-of-type(4) {
+        order: 4; /* Armies */
+    }
+
+    /* Collapse panels by default on mobile — only Game Status & Armies stay open */
+    .collapsible-section > summary {
+        padding: 8px 12px;
+        font-size: 1em;
+        min-height: 44px;
+    }
+
+    .collapsible-section {
+        margin-bottom: 6px;
+    }
+
     /* Stack the HUD grid into a single column */
     .game-info {
         grid-template-columns: 1fr;
@@ -687,10 +788,12 @@ input[type="text"]:focus {
         font-size: var(--font-size-base, 14px);
     }
 
-    /* Canvas scales dynamically via resizeCanvas(); prevent CSS override */
+    /* Canvas: center and fill width */
     #gameCanvas {
         overflow: hidden;
-        margin: 8px 0;
+        margin: 8px auto;
+        display: flex;
+        justify-content: center;
     }
 
     #mapCanvas {
@@ -701,7 +804,7 @@ input[type="text"]:focus {
     /* Compact policy controls */
     .policy-controls {
         padding: 10px;
-        margin-bottom: 10px;
+        margin-bottom: 0;
     }
 
     .policy-section {
@@ -806,7 +909,7 @@ input[type="text"]:focus {
     /* Army list: smaller padding */
     .armies-list {
         padding: 10px;
-        margin-top: 10px;
+        margin-top: 0;
     }
 
     #armiesList {
