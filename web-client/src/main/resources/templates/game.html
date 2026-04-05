@@ -1040,9 +1040,16 @@
                 }
             });
 
-            // Redraw on viewport resize so canvas fits available space
+            // Redraw on viewport resize so canvas fits available space.
+            // Only trigger when width changes — on mobile, scrolling
+            // shows/hides the address bar which changes innerHeight but
+            // not width, and resizing the canvas during scroll is distracting.
             let resizeTimer = null;
+            let lastViewportWidth = window.innerWidth;
             window.addEventListener('resize', function() {
+                const currentWidth = window.innerWidth;
+                if (currentWidth === lastViewportWidth) return;
+                lastViewportWidth = currentWidth;
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(function() {
                     if (lastGameState) drawMap(lastGameState);
