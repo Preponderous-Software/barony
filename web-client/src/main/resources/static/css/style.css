@@ -17,7 +17,7 @@ body {
 }
 
 .login-container {
-    background: #2b2520;
+    background: var(--bg-secondary, #2b2520);
     padding: 40px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -301,7 +301,7 @@ h3 {
 .form-group label {
     display: block;
     margin-bottom: 8px;
-    color: #d4cfc8;
+    color: var(--text-primary, #d4cfc8);
     font-weight: bold;
 }
 
@@ -313,13 +313,13 @@ input[type="text"] {
     font-size: 16px;
     box-sizing: border-box;
     transition: border-color 0.3s ease;
-    background: #352f28;
-    color: #d4cfc8;
+    background: var(--bg-primary, #352f28);
+    color: var(--text-primary, #d4cfc8);
 }
 
 input[type="text"]:focus {
     outline: none;
-    border-color: #c9a96e;
+    border-color: var(--accent, #c9a96e);
 }
 
 .login-container button {
@@ -937,5 +937,34 @@ input[type="text"]:focus {
     .canvas-tooltip {
         max-width: 240px;
         font-size: 12px;
+    }
+
+    /* Login page: mobile-friendly sizing */
+    .login-container {
+        padding: 24px 16px;
+        width: 95%;
+        max-width: none;
+        border-radius: 10px;
+    }
+
+    .login-container h1 {
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+
+    .login-container button {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .form-group input[type="text"] {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 10px;
+    }
+
+    .info {
+        font-size: var(--font-size-base, 13px);
     }
 }
