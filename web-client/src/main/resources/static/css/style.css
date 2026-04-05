@@ -706,6 +706,10 @@ input[type="text"]:focus {
     font-size: var(--font-size-base, 14px);
 }
 
+.collapsible-section .settings-panel {
+    margin-bottom: 0;
+}
+
 /* ========================
    Mobile / Responsive Layout
    ======================== */
@@ -745,20 +749,20 @@ input[type="text"]:focus {
         order: 2;
     }
 
-    .game-layout > .collapsible-section:nth-of-type(1) {
-        order: 3; /* Game Status & Stats */
+    .game-layout > .section-status {
+        order: 3;
     }
 
-    .game-layout > .collapsible-section:nth-of-type(2) {
-        order: 5; /* Change Policy */
+    .game-layout > .section-armies {
+        order: 4;
     }
 
-    .game-layout > .collapsible-section:nth-of-type(3) {
-        order: 6; /* Settings */
+    .game-layout > .section-policy {
+        order: 5;
     }
 
-    .game-layout > .collapsible-section:nth-of-type(4) {
-        order: 4; /* Armies */
+    .game-layout > .section-settings {
+        order: 6;
     }
 
     /* Collapse panels by default on mobile — only Game Status & Armies stay open */
