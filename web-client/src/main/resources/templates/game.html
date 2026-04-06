@@ -237,7 +237,7 @@
                 if (e.key === ' ') e.preventDefault(); // prevent scroll on Space regardless
                 if (e.key === 'Enter' || e.key === ' ') dismissToast(toast);
             });
-            container.appendChild(toast);
+            container.prepend(toast);
             
             // Critical events persist until dismissed
             const msgLower = String(message || '').toLowerCase();
@@ -265,9 +265,12 @@
                 const saved = localStorage.getItem('barony_settings');
                 if (saved) {
                     const settings = JSON.parse(saved);
-                    if (settings.colorblind) document.getElementById('colorblindSelect').value = settings.colorblind;
-                    if (settings.theme) document.getElementById('themeSelect').value = settings.theme;
-                    if (settings.fontSize) document.getElementById('fontSizeSelect').value = settings.fontSize;
+                    const validColorblind = ['none', 'deuteranopia', 'protanopia', 'tritanopia'];
+                    const validTheme = ['dark', 'classic', 'high-contrast'];
+                    const validFontSize = ['small', 'medium', 'large'];
+                    if (validColorblind.includes(settings.colorblind)) document.getElementById('colorblindSelect').value = settings.colorblind;
+                    if (validTheme.includes(settings.theme)) document.getElementById('themeSelect').value = settings.theme;
+                    if (validFontSize.includes(settings.fontSize)) document.getElementById('fontSizeSelect').value = settings.fontSize;
                     applySettings();
                 }
             } catch (e) {
