@@ -558,6 +558,10 @@ public class FrontendApplication {
                 armiesByLocation.computeIfAbsent(locationKey, k -> new java.util.ArrayList<>()).add(army);
             }
             
+            // Fetch theme-aware army colors once per frame (avoid repeated singleton lookups)
+            float[] p1Color = ThemeManager.getInstance().getPlayer1Color();
+            float[] p2Color = ThemeManager.getInstance().getPlayer2Color();
+            
             for (java.util.Map.Entry<String, java.util.List<Army>> entry : armiesByLocation.entrySet()) {
                 java.util.List<Army> armies = entry.getValue();
                 
@@ -605,8 +609,6 @@ public class FrontendApplication {
                     float radius = cellWidth / 4;
                     
                     // Color based on player (uses ThemeManager for colorblind support)
-                    float[] p1Color = ThemeManager.getInstance().getPlayer1Color();
-                    float[] p2Color = ThemeManager.getInstance().getPlayer2Color();
                     if (army.getPlayerId() == 1) {
                         glColor3f(p1Color[0], p1Color[1], p1Color[2]);
                     } else {

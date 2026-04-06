@@ -231,7 +231,7 @@
             toast.className = 'toast toast--' + severity;
             toast.textContent = message;
             toast.setAttribute('tabindex', '0');
-            toast.setAttribute('aria-label', message + ' — press Enter to dismiss');
+            toast.setAttribute('aria-label', message + ' — press Enter or Space to dismiss');
             toast.addEventListener('click', function() { dismissToast(toast); });
             toast.addEventListener('keydown', function(e) {
                 if (e.key === ' ') e.preventDefault(); // prevent scroll on Space regardless

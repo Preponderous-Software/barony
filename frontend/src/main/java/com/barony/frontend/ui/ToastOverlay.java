@@ -82,7 +82,6 @@ public class ToastOverlay {
     }
 
     private float[] getBackgroundColor(Severity severity) {
-        ThemeManager theme = ThemeManager.getInstance();
         switch (severity) {
             case SUCCESS: return new float[]{0.16f, 0.23f, 0.16f};
             case WARNING: return new float[]{0.23f, 0.21f, 0.12f};
