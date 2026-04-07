@@ -4,39 +4,25 @@
 
 ## What is Barony?
 
-Barony is a single-player strategy game where you command armies to capture territory and defeat an AI opponent. Expand your realm by capturing villages, build up your forces, and ultimately capture your enemy's castle to win.
+Barony is a single-player online strategy game where you command armies to capture territory and defeat an AI opponent. Expand your realm by capturing villages, build up your forces, and ultimately capture your enemy's castle to win.
 
 ## Quick Start
 
 ### Starting the Game
 
-**On Linux/macOS:**
-```bash
-./start-backend.sh    # Terminal 1
-./start-frontend.sh   # Terminal 2
-```
-
-**On Windows:**
-```batch
-start-backend.bat     # Terminal 1
-start-frontend.bat    # Terminal 2
-```
-
-**Custom Server:** To connect the desktop client to a backend on a different machine:
-
-*Linux/macOS:*
-```bash
-cd frontend && ./mvnw compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
-```
-
-*Windows:*
-```batch
-cd frontend && mvnw.cmd compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
-```
-
-**Using Docker:**
+**Using Docker (Recommended):**
 ```bash
 docker-compose up --build
+```
+Then open http://localhost:3000 in your browser.
+
+**Manual Start:**
+```bash
+# Backend (Terminal 1)
+cd backend && ./mvnw spring-boot:run
+
+# Web Client (Terminal 2)
+cd web-client && ./mvnw spring-boot:run
 ```
 Then open http://localhost:3000 in your browser.
 
@@ -84,9 +70,6 @@ The game board is a 10x10 grid with different tile types:
 - **SPACE** - Advance one turn
 - **S** - Enter split mode for first army (press 1-9 to choose split amount, S/ESC to cancel)
 - **R** - Play again (when game ends)
-- **F9** - Open Settings panel (colorblind mode, theme, font size)
-- **F10** - Open Notification Log
-- **ESC** - Quit game / Close panel
 
 **Tip:** Hover over any tile or army to see detailed information. In-game tooltips now cover most of what previously required consulting this guide mid-session.
 
@@ -287,27 +270,18 @@ Shows your realm statistics:
 
 ## Accessibility & Visual Settings
 
-### Desktop Client (F9)
-Press **F9** to open the Settings panel. Use arrow keys to navigate and change options:
+### Settings Panel
+The Settings panel appears in the game info area. Changes apply immediately:
 
 - **Colorblind Mode:** None (default), Deuteranopia, Protanopia, Tritanopia
   - Applies to faction colors and map ownership indicators
 - **Theme:** Dark (default), Classic, High Contrast
 - **Font Size:** Small, Medium (default), Large
 
-Settings are automatically saved to `~/.barony/settings.json`.
-
-### Web Client (Settings Panel)
-The Settings panel appears in the game info area. Changes apply immediately:
-
-- **Colorblind Mode:** Same options as desktop
-- **Theme:** Dark (default), Classic, High Contrast
-- **Font Size:** Small, Medium (default), Large
-
 Settings are saved to your browser's `localStorage`.
 
 ### Notifications
-Both clients use non-blocking toast notifications instead of modal pop-ups:
+Non-blocking toast notifications keep you informed without interrupting gameplay:
 - **Info** (gray): Turn advances, army selection
 - **Success** (green): Village captured, policy applied
 - **Warning** (amber): Policy cooldown, game reset errors
@@ -315,14 +289,14 @@ Both clients use non-blocking toast notifications instead of modal pop-ups:
 
 Toasts auto-dismiss after 4 seconds. Critical events persist until dismissed.
 
-### Canvas Tooltips (Web Client)
+### Canvas Tooltips
 Hover over any tile on the canvas to see:
 - Tile type and ownership
 - Army stats (soldiers, morale, loyalty, destination)
 - Castle capture progress
 - Village generation info
 
-### Selection Feedback (Web Client)
+### Selection Feedback
 - Click an army to select it — a gold highlight ring appears
 - Right-click the canvas to deselect
 - Clicking another army switches selection
@@ -365,24 +339,15 @@ A: You can only change policies every 15 turns to prevent rapid switching exploi
 
 ## Troubleshooting
 
-**Game window won't open:**
+**Game won't load in browser:**
 - Make sure the backend is running first
-- Check that port 8080 isn't already in use
-- On Linux, verify your DISPLAY variable is set
-
-**Mouse clicks don't work:**
-- Click the window to give it focus
-- Make sure you're clicking on armies/tiles, not the UI panels
+- Check that port 8080 and 3000 aren't already in use
+- Try clearing your browser cache
 
 **Armies won't move:**
 - Make sure you selected the army first (left-click)
 - Verify the destination is within the 10x10 grid
 - Check the backend is running (armies move when you press SPACE)
-
-**Low frame rate:**
-- Close other applications
-- Try reducing window size
-- Update graphics drivers
 
 **Can't split armies:**
 - You need at least 2 soldiers to split

@@ -1,9 +1,9 @@
 # Barony
 
 **Version:** 1.0.0  
-**A single-player strategy game with army movement, territory control, and AI opponent**
+**A single-player online strategy game with army movement, territory control, and AI opponent**
 
-Barony is a turn-based strategy game where you command armies to capture villages and castles against an AI opponent. Build your forces, control territory, and use strategic policies to defeat your enemy.
+Barony is a browser-based turn-based strategy game where you command armies to capture villages and castles against an AI opponent. Build your forces, control territory, and use strategic policies to defeat your enemy.
 
 ## Documentation
 
@@ -19,44 +19,26 @@ Barony is a turn-based strategy game where you command armies to capture village
 
 ## Quick Start
 
-### Desktop Client (Recommended)
+### Using Docker (Recommended)
 
-**Linux/macOS:**
-```bash
-./start-backend.sh    # Terminal 1
-./start-frontend.sh   # Terminal 2
-```
-
-**Windows:**
-```batch
-start-backend.bat     # Terminal 1
-start-frontend.bat    # Terminal 2
-```
-
-### Web Client
-
-**Using Docker:**
 ```bash
 docker-compose up --build
 ```
-Then open http://localhost:3000
+Then open http://localhost:3000 in your browser.
 
 ### Manual Start
 ```bash
 # Backend
 cd backend && ./mvnw spring-boot:run
 
-# Frontend (separate terminal)
-cd frontend && ./mvnw compile exec:java
-
-# Web Client (separate terminal, optional)
+# Web Client (separate terminal)
 cd web-client && ./mvnw spring-boot:run
 ```
+Then open http://localhost:3000 in your browser.
 
 ## Project Structure
 
 - `backend/` - Spring Boot REST API (game logic)
-- `frontend/` - LWJGL desktop client (OpenGL rendering)
 - `web-client/` - Browser-based client (HTML5 Canvas)
 
 ## Backend API
@@ -108,53 +90,6 @@ curl -X POST http://localhost:8080/api/decision \
 For detailed API documentation, see technical sections below.
 
 
-## Desktop Client (Frontend)
-
-### Command Line Options
-
-**Linux/macOS:**
-```bash
-cd frontend && ./mvnw compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
-```
-
-**Windows:**
-```batch
-cd frontend && mvnw.cmd compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
-```
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--server <url>` | Backend server URL | `http://localhost:8080` |
-
-### Controls
-
-**Mouse:**
-- Left-click army → Select
-- Left-click tile → Move selected army
-- Right-click → Deselect
-- Hover → Show tooltip
-
-**Keyboard:**
-- `SPACE` - Advance one turn
-- `S` - Split army
-- `P` - Open policy menu
-- `R` - Reset game (when over)
-- `F9` - Open Settings (colorblind mode, theme, font size)
-- `F10` - Open Notification Log
-- `ESC` - Quit / Close panel
-
-### Features
-- OpenGL rendering (LWJGL)
-- Cross-platform (Linux, macOS, Windows)
-- Real-time HUD with game statistics
-- Visual ownership indicators
-- Mouse and keyboard controls
-- Toast notifications (non-blocking, auto-dismiss)
-- Colorblind modes: Deuteranopia, Protanopia, Tritanopia
-- Themes: Dark (default), Classic, High Contrast
-- Adjustable font size: Small, Medium, Large
-- Settings persisted to `~/.barony/settings.json`
-
 ## Web Client
 
 Browser-based interface with HTML5 Canvas rendering.
@@ -165,7 +100,7 @@ docker-compose up
 ```
 Then open http://localhost:3000
 
-### Web Client Features
+### Features
 - Toast notifications replace all in-game blocking alerts
 - Canvas hover tooltips (tile info, army stats, castle capture progress)
 - Army selection highlight ring on canvas
@@ -202,13 +137,13 @@ See [PLAYER_GUIDE.md](PLAYER_GUIDE.md) for complete gameplay instructions.
 # Backend
 cd backend && ./mvnw clean package test
 
-# Frontend  
-cd frontend && ./mvnw clean package test
+# Web Client
+cd web-client && ./mvnw clean package test
 ```
 
 ### CI/CD
 GitHub Actions runs on all PRs:
-- Builds backend and frontend
+- Builds backend and web client
 - Runs all unit and integration tests
 - Uses JDK 17 with Maven caching
 
@@ -219,12 +154,6 @@ GitHub Actions runs on all PRs:
 - In-memory game state (thread-safe)
 - Unique army IDs (not list indices)
 - CORS: localhost only
-
-### Frontend
-- LWJGL OpenGL rendering
-- HTTP polling for game state
-- Cross-platform (Linux, macOS, Windows)
-- 60 FPS target
 
 ### Web Client
 - Spring Boot + Thymeleaf
@@ -239,18 +168,10 @@ GitHub Actions runs on all PRs:
 - Check Java 17: `java -version`
 - Port 8080 in use: `lsof -i :8080` (Unix) or `netstat -ano | findstr :8080` (Windows)
 
-**Frontend won't open:**
+**Web client won't load:**
 - Ensure backend is running first
-- On WSL: Install X server (VcXsrv, Xming)
-- On Linux: Check `DISPLAY` variable
-
-**Mouse clicks not working:**
-- Click window to give focus
-- Verify clicking on armies/tiles, not UI panels
-
-**Low frame rate:**
-- Close other GPU-intensive apps
-- Try software rendering: `export LIBGL_ALWAYS_SOFTWARE=1`
+- Check that port 3000 isn't already in use
+- Try clearing browser cache
 
 **Policy changes not working:**
 - Wait for 15-turn cooldown

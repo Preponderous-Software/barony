@@ -27,7 +27,7 @@ Transform army movement from instant teleportation to realistic tile-by-tile mov
 - Add movement validation (bounds checking, pathfinding)
 - Add 10+ unit tests for movement mechanics
 
-**Frontend:**
+**Web Client:**
 - Add visual indicator for army destination (selection box or highlight)
 - Update rendering to show armies at current positions during movement
 - Test movement commands through UI
@@ -49,7 +49,7 @@ Transform army movement from instant teleportation to realistic tile-by-tile mov
 - `backend/src/main/java/com/barony/backend/model/Army.java`
 - `backend/src/main/java/com/barony/backend/service/GameService.java`
 - `backend/src/test/java/com/barony/backend/service/GameServiceTest.java`
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `README.md`
 
 ---
@@ -74,7 +74,7 @@ Add ownership mechanics for villages and enable territory capture. Villages shou
 - Add `getPlayerIncome(playerId)` method to calculate total soldier generation
 - Add 8+ unit tests for ownership and capture mechanics
 
-**Frontend:**
+**Web Client:**
 - Update tile rendering to show ownership colors:
   - Castles: gray base with blue (P1) or red (P2) outline
   - Villages: brown base with blue/red tint for owned villages
@@ -99,7 +99,7 @@ Add ownership mechanics for villages and enable territory capture. Villages shou
 - `backend/src/main/java/com/barony/backend/service/GameService.java`
 - `backend/src/test/java/com/barony/backend/model/TileTest.java`
 - `backend/src/test/java/com/barony/backend/service/GameServiceTest.java`
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `README.md`
 
 ---
@@ -124,7 +124,7 @@ Enable players to split armies into multiple units and automatically merge co-lo
 - Implement automatic merging of co-located friendly armies in `tick()`
 - Add 8+ unit tests for split/merge mechanics
 
-**Frontend:**
+**Web Client:**
 - Display soldier count as text overlay on army circles
 - Add keyboard shortcut for split command (S key)
 - Add console prompt or simple UI for entering split amount
@@ -141,14 +141,14 @@ Enable players to split armies into multiple units and automatically merge co-lo
 - Split creates a new army at the same location with the specified soldier count
 - Merging happens automatically each tick for armies with same playerId at same location
 - Merged armies combine soldier counts and use the lowest army ID
-- Frontend can show overlapping circles offset by a few pixels for multiple armies
+- Web client can show overlapping circles offset by a few pixels for multiple armies
 
 ### Files to Modify
 
 - `backend/src/main/java/com/barony/backend/model/Command.java`
 - `backend/src/main/java/com/barony/backend/service/GameService.java`
 - `backend/src/test/java/com/barony/backend/service/GameServiceTest.java`
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `README.md`
 
 ---
@@ -176,7 +176,7 @@ Add castle capture mechanics with occupation timer and implement win/loss condit
 - Add `POST /api/reset` endpoint to restart the game
 - Add 10+ unit tests for castle capture and win conditions
 
-**Frontend:**
+**Web Client:**
 - Show castle ownership with colored outlines (blue/red)
 - Display capture progress bar above contested castles (0-3 ticks)
 - Show win/loss overlay when game ends ("Player 1 Wins!" or "You Lose!")
@@ -203,7 +203,7 @@ Add castle capture mechanics with occupation timer and implement win/loss condit
 - `backend/src/main/java/com/barony/backend/service/GameService.java`
 - `backend/src/main/java/com/barony/backend/controller/GameController.java`
 - `backend/src/test/java/com/barony/backend/service/GameServiceTest.java`
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `README.md`
 
 ---
@@ -234,7 +234,7 @@ Create a rule-based AI to control Player 2 armies. AI should make intelligent de
 - Add configuration for AI difficulty (simple boolean: enabled/disabled for MVP)
 - Add 10+ unit tests for AI decision-making logic
 
-**Frontend:**
+**Web Client:**
 - Visual indicator for AI actions (optional, can be deferred)
 - No UI changes required for MVP (AI runs automatically)
 
@@ -270,7 +270,7 @@ Add mouse-based controls for army selection and movement, plus informative HUD e
 
 ### Acceptance Criteria
 
-**Frontend:**
+**Web Client:**
 - Implement mouse input handling (GLFW mouse callbacks)
 - Click army circle to select it (store selected army ID)
 - Click destination tile to move selected army
@@ -285,11 +285,11 @@ Add mouse-based controls for army selection and movement, plus informative HUD e
   - Side panel: Selected army details (soldier count, destination)
   - Bottom bar: Status messages ("Village captured!", "Army moved", etc.)
 - Implement scrolling game log (last 10 events)
-- Add text rendering for labels (use simple OpenGL text or bitmap font)
+- Add text rendering for labels
 - Test all mouse interactions and UI displays
 
 **Backend:**
-- No backend changes required (all frontend)
+- No backend changes required (all web client)
 
 **Documentation:**
 - Update README.md with mouse control instructions
@@ -306,7 +306,7 @@ Add mouse-based controls for army selection and movement, plus informative HUD e
 
 ### Files to Modify
 
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `README.md`
 
 ---
@@ -351,7 +351,7 @@ Add a lightweight policy-based ruler decision system that allows players to make
 - Add policy decision cooldown (15 ticks between policy changes)
 - Add 12+ unit tests for policy effects and stat calculations
 
-**Frontend:**
+**Web Client:**
 - Create policy selection UI:
   - Radio buttons or dropdown for each policy category
   - Display current policy in each category
@@ -416,7 +416,7 @@ Add a lightweight policy-based ruler decision system that allows players to make
 - `backend/src/main/java/com/barony/backend/controller/GameController.java`
 - `backend/src/test/java/com/barony/backend/service/GameServiceTest.java`
 - `backend/src/test/java/com/barony/backend/model/RulerDecisionTest.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `README.md`
 
 ---
@@ -443,7 +443,7 @@ Final polish pass including balance adjustments, comprehensive integration testi
 - Performance testing: verify 60 FPS with 20+ armies
 - Code review and cleanup (remove debug code, add comments)
 
-**Frontend:**
+**Web Client:**
 - Optimize rendering performance (target 60 FPS)
 - Add visual polish (smooth color transitions, better army rendering)
 - Improve responsiveness of mouse controls
@@ -525,7 +525,7 @@ Example labels to create:
 - `enhancement`
 - `mvp`
 - `backend`
-- `frontend`
+- `web-client`
 - `documentation`
 - `testing`
 
@@ -553,7 +553,7 @@ Improve the game's accessibility and allow players to customize the visual exper
 
 ### Acceptance Criteria
 
-**Frontend:**
+**Web Client:**
 - Add settings menu accessible from the main screen (configurable keybinding; suggest `F9` or `Esc → Settings`; avoid `F11` as it is the system fullscreen shortcut on most platforms)
 - Implement colorblind mode with three presets:
   - Deuteranopia (red-green, replaces red/green with orange/blue)
@@ -582,10 +582,10 @@ Improve the game's accessibility and allow players to customize the visual exper
 
 ### Files to Create/Modify
 
-- `frontend/src/main/java/com/barony/frontend/ui/SettingsPanel.java` (create)
-- `frontend/src/main/java/com/barony/frontend/rendering/ThemeManager.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
-- `frontend/src/main/resources/settings/` (new directory for default theme JSON files)
+- `web-client/src/main/java/com/barony/webclient/ui/SettingsPanel.java` (create)
+- `web-client/src/main/java/com/barony/webclient/rendering/ThemeManager.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
+- `web-client/src/main/resources/settings/` (new directory for default theme JSON files)
 - `README.md`
 
 ---
@@ -602,7 +602,7 @@ Add a guided interactive tutorial that walks a new player through their first ga
 
 ### Acceptance Criteria
 
-**Frontend:**
+**Web Client:**
 - Add "Tutorial" option on the main menu
 - Implement a `TutorialManager` that tracks tutorial step progress
 - Display contextual tutorial tooltips (highlighted panel with arrow pointer):
@@ -628,15 +628,15 @@ Add a guided interactive tutorial that walks a new player through their first ga
 
 - Tutorial steps are defined in a JSON config file (`tutorial-steps.json`) for easy editing
 - Tutorial overlay renders on top of the game canvas without blocking the underlying render
-- Tutorial state is frontend-only (no backend session impact)
+- Tutorial state is web-client-only (no backend session impact)
 - "Skip Tutorial" button must always be reachable via keyboard (suggest `Ctrl+T`)
 
 ### Files to Create/Modify
 
-- `frontend/src/main/java/com/barony/frontend/tutorial/TutorialManager.java` (create)
-- `frontend/src/main/java/com/barony/frontend/tutorial/TutorialStep.java` (create)
-- `frontend/src/main/resources/tutorial/tutorial-steps.json` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/tutorial/TutorialManager.java` (create)
+- `web-client/src/main/java/com/barony/webclient/tutorial/TutorialStep.java` (create)
+- `web-client/src/main/resources/tutorial/tutorial-steps.json` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `PLAYER_GUIDE.md`
 - `README.md`
 
@@ -654,7 +654,7 @@ Add a minimap to the HUD showing the full game map at reduced scale, and impleme
 
 ### Acceptance Criteria
 
-**Frontend:**
+**Web Client:**
 - Render a minimap in the lower-right corner of the screen (configurable size, default 180×180 px)
 - Minimap must show:
   - Tile ownership colors (player blue, enemy red, neutral gray)
@@ -689,9 +689,9 @@ Add a minimap to the HUD showing the full game map at reduced scale, and impleme
 
 ### Files to Create/Modify
 
-- `frontend/src/main/java/com/barony/frontend/rendering/MinimapRenderer.java` (create)
-- `frontend/src/main/java/com/barony/frontend/rendering/CameraState.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/rendering/MinimapRenderer.java` (create)
+- `web-client/src/main/java/com/barony/webclient/rendering/CameraState.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `README.md`
 - `PLAYER_GUIDE.md`
 
@@ -729,7 +729,7 @@ Add a structured single-player campaign consisting of a series of scenarios with
 - Implement at least 5 campaign scenarios stored as JSON in `backend/src/main/resources/scenarios/`
 - Add 8+ unit tests for scenario loading and victory condition checking
 
-**Frontend:**
+**Web Client:**
 - Add "Campaign" button on the main menu
 - Add mission selection screen listing available missions, locked/unlocked status, and completion stars
 - Show mission briefing screen before each scenario (map preview + objectives text)
@@ -756,8 +756,8 @@ Add a structured single-player campaign consisting of a series of scenarios with
 - `backend/src/main/java/com/barony/backend/controller/CampaignController.java` (create)
 - `backend/src/main/resources/scenarios/` (new directory with 5 mission JSON files)
 - `backend/src/test/java/com/barony/backend/service/CampaignServiceTest.java` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/CampaignMenu.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/ui/CampaignMenu.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `PLAYER_GUIDE.md`
 - `DOCS.md`
 
@@ -790,7 +790,7 @@ Add an achievement system that tracks player accomplishments across play session
 - Persist unlocked achievements to a JSON file in the user's home directory (`.barony/achievements.json`)
 - Add 6+ unit tests for achievement condition checking
 
-**Frontend:**
+**Web Client:**
 - Add achievement panel accessible via `F2` key
 - Display achievements grouped by category with lock/unlock icons
 - Show achievement notification toast (bottom of screen, 3-second display) when an achievement unlocks
@@ -813,8 +813,8 @@ Add an achievement system that tracks player accomplishments across play session
 - `backend/src/main/java/com/barony/backend/service/AchievementService.java` (create)
 - `backend/src/main/java/com/barony/backend/controller/AchievementController.java` (create)
 - `backend/src/test/java/com/barony/backend/service/AchievementServiceTest.java` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/AchievementPanel.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/ui/AchievementPanel.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `PLAYER_GUIDE.md`
 - `DOCS.md`
 
@@ -847,7 +847,7 @@ Add configurable difficulty settings and new-game options so players can tailor 
 - Update map generation to support configurable sizes
 - Add 6+ unit tests for difficulty-based AI behavior differences and map size generation
 
-**Frontend:**
+**Web Client:**
 - Add "New Game" setup screen before starting a game (accessible from main menu and after game over)
 - Provide UI controls for all `GameConfig` fields with descriptions of each option
 - Show estimated game length based on settings (e.g., "~10 min on Normal/Medium")
@@ -872,8 +872,8 @@ Add configurable difficulty settings and new-game options so players can tailor 
 - `backend/src/main/java/com/barony/backend/ai/NormalAIStrategy.java` (create)
 - `backend/src/main/java/com/barony/backend/ai/HardAIStrategy.java` (create)
 - `backend/src/test/java/com/barony/backend/ai/AIStrategyTest.java` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/NewGameMenu.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/ui/NewGameMenu.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `PLAYER_GUIDE.md`
 - `DOCS.md`
 
@@ -906,7 +906,7 @@ Add lore and world-building text that gives the game world a sense of history an
 - Assign village/castle names at map initialization and include them in `Tile` model (`name` field)
 - Add `GET /api/lore` endpoint returning realm and ruler names for the current session
 
-**Frontend:**
+**Web Client:**
 - Display village and castle names as small text labels below/above their tile on the map
 - Show realm name and ruler name in the HUD header (e.g., "Aldenmoor – Turn 12")
 - Display a random flavor text string in the status bar for major events:
@@ -936,8 +936,8 @@ Add lore and world-building text that gives the game world a sense of history an
 - `backend/src/main/java/com/barony/backend/controller/LoreController.java` (create)
 - `backend/src/main/java/com/barony/backend/model/Tile.java` (add `name` field)
 - `backend/src/main/resources/lore/lore-data.json` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/LoreCodex.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/ui/LoreCodex.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `PLAYER_GUIDE.md`
 
 ---
@@ -978,7 +978,7 @@ Add a narrative event system that periodically presents the player with story-dr
   - Rival ruler taunts and diplomatic gestures (flavor-only; no multiplayer mechanic)
 - Add 8+ unit tests for event trigger evaluation and modifier application
 
-**Frontend:**
+**Web Client:**
 - Display a narrative event modal dialog when a pending event is available:
   - Title and flavor text (with realm/village/ruler names filled in from `LoreService`)
   - Choice buttons (2-3) each showing the choice label and a brief effect preview
@@ -1009,9 +1009,9 @@ Add a narrative event system that periodically presents the player with story-dr
 - `backend/src/main/java/com/barony/backend/controller/NarrativeEventController.java` (create)
 - `backend/src/main/resources/narrative/events.json` (create)
 - `backend/src/test/java/com/barony/backend/service/NarrativeEventServiceTest.java` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/NarrativeEventModal.java` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/EventHistoryLog.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/ui/NarrativeEventModal.java` (create)
+- `web-client/src/main/java/com/barony/webclient/ui/EventHistoryLog.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `PLAYER_GUIDE.md`
 - `DOCS.md`
 
@@ -1046,7 +1046,7 @@ Expand the campaign mode (Ticket 12) with story-driven mission briefings, mid-mi
   - Mission 5: "The Final Stand" – AI starts with 2× advantage; player must overcome
 - Write cohesive lore connecting all 5 missions in `backend/src/main/resources/scenarios/campaign-lore.md`
 
-**Frontend:**
+**Web Client:**
 - Display mission briefing screen before each mission:
   - Full-screen or large modal with story text and map preview
   - "Begin Mission" and "Back to Campaign" buttons
@@ -1080,9 +1080,9 @@ Expand the campaign mode (Ticket 12) with story-driven mission briefings, mid-mi
 - `backend/src/main/resources/scenarios/mission-04-winter-advance.json` (create)
 - `backend/src/main/resources/scenarios/mission-05-final-stand.json` (create)
 - `backend/src/main/resources/scenarios/campaign-lore.md` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/MissionBriefingScreen.java` (create)
-- `frontend/src/main/java/com/barony/frontend/ui/MissionEpilogueScreen.java` (create)
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/ui/MissionBriefingScreen.java` (create)
+- `web-client/src/main/java/com/barony/webclient/ui/MissionEpilogueScreen.java` (create)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 - `PLAYER_GUIDE.md`
 - `DOCS.md`
 

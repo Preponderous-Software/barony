@@ -29,7 +29,7 @@ All 7 major features have been successfully implemented and tested. See [CHANGEL
 
 ### Test Coverage
 - **Backend:** Comprehensive unit and integration tests (all passing)
-- **Frontend:** Model tests (all passing)
+- **Web Client:** Model tests (all passing)
 - **CI Pipeline:** All tests passing with 100% success rate
 
 ---
@@ -46,7 +46,7 @@ The prototype initially supported:
 - ✅ Instant army teleportation via REST command
 - ✅ Villages generate 1 soldier per tick when occupied
 - ✅ Combat via mutual soldier reduction when armies share location
-- ✅ Basic LWJGL rendering (colored tiles + circles for armies)
+- ✅ Basic rendering (colored tiles + circles for armies)
 - ✅ REST API (GET /state, POST /tick, POST /command)
 
 ## MVP Feature Set
@@ -69,7 +69,7 @@ The prototype initially supported:
 - Update `Command` to accept destination coordinates
 - Add movement validation (can't move through enemy castles, optional)
 
-#### Frontend Changes
+#### Web Client Changes
 - Smooth interpolation between grid positions (optional for v1, can defer to v2)
 - Visual indicator showing army destination (selection box or path preview)
 
@@ -79,8 +79,8 @@ The prototype initially supported:
 - [ ] Backend: Add movement processing in tick() method
 - [ ] Backend: Update command validation for movement
 - [ ] Backend: Add unit tests for movement mechanics (8-10 tests)
-- [ ] Frontend: Add visual feedback for army destination
-- [ ] Frontend: Test movement commands and rendering
+- [ ] Web Client: Add visual feedback for army destination
+- [ ] Web Client: Test movement commands and rendering
 - [ ] Documentation: Update README with movement mechanics
 
 ---
@@ -103,7 +103,7 @@ The prototype initially supported:
 - Implement automatic merging in `tick()` for co-located friendly armies
 - Update combat to handle multiple armies per player per location
 
-#### Frontend Changes
+#### Web Client Changes
 - Display soldier count as text label over army circles
 - Add keyboard shortcut for split command (e.g., `S` key)
 - Add UI prompt for split amount (console input for MVP, can be UI later)
@@ -114,10 +114,10 @@ The prototype initially supported:
 - [ ] Backend: Implement splitArmy() in GameService
 - [ ] Backend: Implement automatic army merging
 - [ ] Backend: Add unit tests for splitting/merging (6-8 tests)
-- [ ] Frontend: Display soldier count on armies
-- [ ] Frontend: Add split command input handling
-- [ ] Frontend: Render multiple armies at same location
-- [ ] Frontend: Add unit tests for army display
+- [ ] Web Client: Display soldier count on armies
+- [ ] Web Client: Add split command input handling
+- [ ] Web Client: Render multiple armies at same location
+- [ ] Web Client: Add unit tests for army display
 - [ ] Documentation: Update README with army management
 
 ---
@@ -139,7 +139,7 @@ The prototype initially supported:
 - Add village capture logic when enemy army occupies village
 - Add `GameState.getPlayerIncome(playerId)` method
 
-#### Frontend Changes
+#### Web Client Changes
 - Color villages based on ownership (blue/red tint on brown base)
 - Display territory statistics (castles owned, villages owned, income/tick)
 - Add visual feedback when capturing a village
@@ -150,9 +150,9 @@ The prototype initially supported:
 - [ ] Backend: Update soldier generation to respect ownership
 - [ ] Backend: Add getPlayerIncome() calculation
 - [ ] Backend: Add unit tests for ownership and capture (6-8 tests)
-- [ ] Frontend: Update tile rendering for ownership colors
-- [ ] Frontend: Display territory statistics panel
-- [ ] Frontend: Add unit tests for rendering
+- [ ] Web Client: Update tile rendering for ownership colors
+- [ ] Web Client: Display territory statistics panel
+- [ ] Web Client: Add unit tests for rendering
 - [ ] Documentation: Update README with territory mechanics
 
 ---
@@ -176,7 +176,7 @@ The prototype initially supported:
 - Add `GameState.gameOver` and `GameState.winnerId` fields
 - Prevent commands when game is over
 
-#### Frontend Changes
+#### Web Client Changes
 - Color castles based on ownership (gray with blue/red outline)
 - Show capture progress bar over contested castles
 - Display win/loss overlay with "Play Again" option (restart via new /reset endpoint)
@@ -189,11 +189,11 @@ The prototype initially supported:
 - [ ] Backend: Add checkWinCondition() and game over state
 - [ ] Backend: Add POST /reset endpoint to restart game
 - [ ] Backend: Add unit tests for castle capture and win conditions (8-10 tests)
-- [ ] Frontend: Render castle ownership colors
-- [ ] Frontend: Display capture progress
-- [ ] Frontend: Show win/loss overlay
-- [ ] Frontend: Add reset functionality
-- [ ] Frontend: Add unit tests
+- [ ] Web Client: Render castle ownership colors
+- [ ] Web Client: Display capture progress
+- [ ] Web Client: Show win/loss overlay
+- [ ] Web Client: Add reset functionality
+- [ ] Web Client: Add unit tests
 - [ ] Documentation: Update README with victory conditions
 
 ---
@@ -222,7 +222,7 @@ The prototype initially supported:
   - Implement army splitting for multi-front strategy
 - Add AI army spawning at player 2's castle
 
-#### Frontend Changes
+#### Web Client Changes
 - Visual indicator that AI is "thinking" (optional)
 - Distinguish AI actions in game log (optional, can defer)
 
@@ -239,7 +239,7 @@ The prototype initially supported:
 
 ### 6. Enhanced UI & User Experience
 
-**Current:** Minimal LWJGL rendering with keyboard-only controls  
+**Current:** Minimal rendering with keyboard-only controls  
 **MVP:** Improved visualization and mouse-based interaction
 
 #### Features
@@ -257,7 +257,7 @@ The prototype initially supported:
   - Bottom bar: Game status messages
 - **Game Log:** Recent events (army moved, village captured, combat occurred)
 
-#### Frontend Changes
+#### Web Client Changes
 - Implement mouse input handling (GLFW mouse callbacks)
 - Add army selection state and rendering
 - Implement tooltip system with position tracking
@@ -268,12 +268,12 @@ The prototype initially supported:
 - No changes required (all UI-side)
 
 #### Tasks
-- [ ] Frontend: Add mouse input handling
-- [ ] Frontend: Implement army selection
-- [ ] Frontend: Add tooltip system
-- [ ] Frontend: Create HUD panel rendering
-- [ ] Frontend: Implement game log
-- [ ] Frontend: Add unit tests for UI interactions
+- [ ] Web Client: Add mouse input handling
+- [ ] Web Client: Implement army selection
+- [ ] Web Client: Add tooltip system
+- [ ] Web Client: Create HUD panel rendering
+- [ ] Web Client: Implement game log
+- [ ] Web Client: Add unit tests for UI interactions
 - [ ] Documentation: Update README with controls and UI
 
 ---
@@ -363,7 +363,7 @@ The prototype initially supported:
 - Add `GET /api/ruler-stats` endpoint for realm statistics
 - Implement gradual stat recovery/decay logic
 
-#### Frontend Changes
+#### Web Client Changes
 - Add policy selection UI (radio buttons or dropdown for each category)
 - Display current policies in HUD (top-right corner)
 - Show realm statistics panel (stability, morale, loyalty, population)
@@ -381,10 +381,10 @@ The prototype initially supported:
 - [ ] Backend: Add decision and stats endpoints
 - [ ] Backend: Add unit tests for policy effects (10-12 tests)
 - [ ] Backend: Balance policy effects through playtesting
-- [ ] Frontend: Create policy selection UI
-- [ ] Frontend: Display realm statistics panel
-- [ ] Frontend: Add visual indicators for affected entities
-- [ ] Frontend: Test policy changes and effect visualization
+- [ ] Web Client: Create policy selection UI
+- [ ] Web Client: Display realm statistics panel
+- [ ] Web Client: Add visual indicators for affected entities
+- [ ] Web Client: Test policy changes and effect visualization
 - [ ] Documentation: Update README with ruler decision mechanics
 - [ ] Documentation: Document policy types and effects
 
@@ -485,7 +485,7 @@ class RulerStats {
 }
 ```
 
-### Frontend Enhancements
+### Web Client Enhancements
 
 #### Input System
 ```java
@@ -508,7 +508,7 @@ class RulerStats {
 
 ### Unit Tests
 - Backend: Target 80% code coverage for new features
-- Frontend: Test all user input handling and state management
+- Web Client: Test all user input handling and state management
 
 ### Integration Tests
 - End-to-end game scenarios (capture village, win game)
@@ -574,7 +574,7 @@ These features are explicitly **NOT** in MVP:
 ## Estimated Effort
 
 - **Backend Development:** ~70-90 hours (includes ruler decision system)
-- **Frontend Development:** ~50-70 hours (includes policy UI and stat displays)
+- **Web Client Development:** ~50-70 hours (includes policy UI and stat displays)
 - **Testing & Polish:** ~25-35 hours
 - **Documentation:** ~10-15 hours
 

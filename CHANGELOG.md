@@ -110,13 +110,11 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Technical Features
 
-#### Frontend
-- ✅ LWJGL-based OpenGL rendering at 60 FPS target
-- ✅ Cross-platform support (Linux, macOS, Windows)
-- ✅ Maven profiles auto-detect OS and load appropriate LWJGL natives
-- ✅ HTTP client with proper timeouts and error handling
+#### Web Client
+- ✅ Spring Boot + Thymeleaf web application
+- ✅ HTML5 Canvas rendering
+- ✅ RESTful backend communication
 - ✅ UTF-8 encoding for all network communication
-- ✅ Custom text rendering system (SimpleTextRenderer)
 
 #### Backend
 - ✅ Spring Boot REST API (Java 17)
@@ -129,7 +127,7 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 #### Test Coverage
 - ✅ Backend: Model tests, game service tests, and integration scenarios
-- ✅ Frontend: Model tests for all game entities
+- ✅ Web Client: Tests for all game entities
 - ✅ All tests passing
 
 #### Test Coverage
@@ -224,8 +222,8 @@ This MVP explicitly excludes:
 # Backend
 cd backend && ./mvnw spring-boot:run
 
-# Frontend (separate terminal)
-cd frontend && ./mvnw compile exec:java
+# Web Client (separate terminal)
+cd web-client && ./mvnw spring-boot:run
 ```
 
 ### Contributing
