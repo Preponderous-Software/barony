@@ -1,22 +1,23 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #1a1510 0%, #2a2218 100%);
+    background: linear-gradient(135deg, var(--bg-primary, #1a1510) 0%, var(--bg-secondary, #2a2218) 100%);
     margin: 0;
     padding: 20px;
-    color: #d4cfc8;
+    color: var(--text-primary, #d4cfc8);
+    font-size: var(--font-size-base, 14px);
 }
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    background: #2b2520;
+    background: var(--bg-secondary, #2b2520);
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .login-container {
-    background: #2b2520;
+    background: var(--bg-secondary, #2b2520);
     padding: 40px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -26,14 +27,14 @@ body {
 
 h1 {
     text-align: center;
-    color: #c9a96e;
+    color: var(--accent, #c9a96e);
     margin-bottom: 30px;
     font-size: 2.5em;
 }
 
 h3 {
-    color: #c9a96e;
-    border-bottom: 2px solid #8b7355;
+    color: var(--accent, #c9a96e);
+    border-bottom: 2px solid var(--accent, #8b7355);
     padding-bottom: 5px;
     margin-bottom: 15px;
 }
@@ -83,15 +84,15 @@ h3 {
 }
 
 .info-section {
-    background: #352f28;
+    background: var(--bg-secondary, #352f28);
     padding: 15px;
     border-radius: 8px;
-    border-left: 4px solid #8b7355;
+    border-left: 4px solid var(--accent, #8b7355);
 }
 
 .info-section p {
     margin: 8px 0;
-    font-size: 14px;
+    font-size: var(--font-size-base, 14px);
 }
 
 .policy-controls {
@@ -136,6 +137,66 @@ h3 {
 
 .policy-section button:hover {
     background: #4a6a2e;
+}
+
+/* Game layout flex container — enables reorder on mobile */
+.game-layout {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Collapsible sections */
+.collapsible-section {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.collapsible-section > summary {
+    cursor: pointer;
+    padding: 10px 16px;
+    background: var(--bg-secondary, #352f28);
+    color: var(--accent, #c9a96e);
+    font-weight: bold;
+    font-size: 1.1em;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent, #8b7355);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.collapsible-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.collapsible-section > summary::before {
+    content: '▸';
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.collapsible-section[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.collapsible-section[open] > summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Remove extra margins from nested elements inside collapsible sections */
+.collapsible-section .game-info {
+    margin-bottom: 0;
+}
+
+.collapsible-section .policy-controls {
+    margin-bottom: 0;
+}
+
+.collapsible-section .armies-list {
+    margin-top: 0;
 }
 
 #gameCanvas {
@@ -240,7 +301,7 @@ h3 {
 .form-group label {
     display: block;
     margin-bottom: 8px;
-    color: #d4cfc8;
+    color: var(--text-primary, #d4cfc8);
     font-weight: bold;
 }
 
@@ -252,13 +313,13 @@ input[type="text"] {
     font-size: 16px;
     box-sizing: border-box;
     transition: border-color 0.3s ease;
-    background: #352f28;
-    color: #d4cfc8;
+    background: var(--bg-primary, #352f28);
+    color: var(--text-primary, #d4cfc8);
 }
 
 input[type="text"]:focus {
     outline: none;
-    border-color: #c9a96e;
+    border-color: var(--accent, #c9a96e);
 }
 
 .login-container button {
@@ -312,4 +373,598 @@ input[type="text"]:focus {
 
 #armiesList::-webkit-scrollbar-thumb:hover {
     background: #a08868;
+}
+
+/* ========================
+   Toast Notification System
+   ======================== */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    max-width: 360px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: 6px;
+    color: #f0e8d8;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    animation: toast-slide-in 0.3s ease forwards;
+    cursor: pointer;
+    position: relative;
+    border-left: 4px solid transparent;
+}
+
+.toast--info {
+    background: #3a3832;
+    border-left-color: #8a8278;
+}
+
+.toast--success {
+    background: #2a3a2a;
+    border-left-color: #5a9a5a;
+}
+
+.toast--warning {
+    background: #3a3520;
+    border-left-color: #c9a96e;
+}
+
+.toast--danger {
+    background: #3d1a1a;
+    border-left-color: #e05050;
+    animation: toast-slide-in 0.3s ease forwards, toast-pulse 2s ease-in-out infinite;
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes toast-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes toast-fade-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.toast.toast--dismissing {
+    animation: toast-fade-out 0.3s ease forwards;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .toast {
+        animation: none !important;
+    }
+    .toast.toast--dismissing {
+        animation: none !important;
+        opacity: 0;
+    }
+}
+
+/* ========================
+   Canvas Tooltip
+   ======================== */
+.canvas-tooltip {
+    position: absolute;
+    background: rgba(30, 25, 20, 0.95);
+    color: #d4cfc8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 100;
+    border: 1px solid #5a4e3c;
+    max-width: 280px;
+    line-height: 1.4;
+    display: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ========================
+   Stat Color Coding
+   ======================== */
+.stat--good {
+    color: #5a9a5a;
+}
+
+.stat--warn {
+    color: #c9a96e;
+}
+
+.stat--danger {
+    color: #e05050;
+}
+
+/* ========================
+   Policy Cooldown Progress Bar
+   ======================== */
+.policy-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.policy-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #2b2520;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #5a4e3c;
+}
+
+.policy-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5a9a5a, #c9a96e);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.policy-progress-label {
+    font-size: 12px;
+    color: #8a8278;
+    white-space: nowrap;
+}
+
+/* ========================
+   Game Over Banner
+   ======================== */
+.game-over-banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 50;
+    pointer-events: none;
+}
+
+.game-over-banner-content {
+    background: linear-gradient(135deg, #2b2520, #3a3228);
+    border: 3px solid #c9a96e;
+    border-radius: 12px;
+    padding: 30px 50px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.game-over-banner-content h2 {
+    color: #c9a96e;
+    font-size: 2em;
+    margin: 0 0 10px 0;
+}
+
+.game-over-banner-content p {
+    color: #d4cfc8;
+    font-size: 1.2em;
+    margin: 0;
+}
+
+/* ========================
+   Auto Play Toggle
+   ======================== */
+#autoPlayToggle.auto-playing {
+    background: #8a6d2f;
+    box-shadow: 0 0 8px rgba(201, 169, 110, 0.4);
+}
+
+#autoPlayToggle.auto-playing:hover {
+    background: #9a7d3f;
+}
+
+/* ========================
+   Army Selection Ring (canvas helper)
+   ======================== */
+#gameCanvas {
+    position: relative;
+}
+
+/* ========================
+   Inline Split Validation
+   ======================== */
+.split-input:invalid {
+    border-color: #e05050;
+}
+
+.split-validation-msg {
+    color: #e05050;
+    font-size: 12px;
+    margin-top: 2px;
+    display: none;
+}
+
+.split-input:invalid + .split-button + .split-validation-msg,
+.split-input.invalid + .split-button + .split-validation-msg {
+    display: block;
+}
+
+/* ========================
+   Theme & Colorblind CSS Custom Properties
+   ======================== */
+:root {
+    --player1-color: rgba(100, 150, 255, 0.3);
+    --player2-color: rgba(255, 100, 100, 0.3);
+    --player1-army: #0066FF;
+    --player2-army: #FF0000;
+    --font-size-base: 14px;
+    --bg-primary: #1a1510;
+    --bg-secondary: #2b2520;
+    --text-primary: #d4cfc8;
+    --text-secondary: #8a8278;
+    --accent: #c9a96e;
+}
+
+:root[data-colorblind="deuteranopia"] {
+    --player1-color: rgba(0, 114, 178, 0.3);
+    --player2-color: rgba(230, 159, 0, 0.3);
+    --player1-army: #0072B2;
+    --player2-army: #E69F00;
+}
+
+:root[data-colorblind="protanopia"] {
+    --player1-color: rgba(240, 228, 66, 0.3);
+    --player2-color: rgba(213, 94, 0, 0.3);
+    --player1-army: #F0E442;
+    --player2-army: #D55E00;
+}
+
+:root[data-colorblind="tritanopia"] {
+    --player1-color: rgba(204, 121, 167, 0.3);
+    --player2-color: rgba(0, 158, 115, 0.3);
+    --player1-army: #CC79A7;
+    --player2-army: #009E73;
+}
+
+:root[data-theme="classic"] {
+    --bg-primary: #f5f0e8;
+    --bg-secondary: #e8e0d4;
+    --text-primary: #2a2218;
+    --text-secondary: #5a4e3c;
+    --accent: #8b7355;
+}
+
+:root[data-theme="high-contrast"] {
+    --bg-primary: #000000;
+    --bg-secondary: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --accent: #ffff00;
+}
+
+:root[data-font-size="small"] {
+    --font-size-base: 12px;
+}
+
+:root[data-font-size="large"] {
+    --font-size-base: 16px;
+}
+
+/* ========================
+   Settings Panel
+   ======================== */
+.settings-panel {
+    background: var(--bg-secondary, #352f28);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--accent, #c9a96e);
+    color: var(--text-primary, #d4cfc8);
+}
+
+.settings-panel h3 {
+    margin-top: 0;
+    color: var(--accent, #c9a96e);
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.settings-row label {
+    min-width: 120px;
+    font-weight: bold;
+    color: var(--text-primary, #d4cfc8);
+}
+
+.settings-row select {
+    padding: 6px 10px;
+    border: 1px solid var(--text-secondary, #5a4e3c);
+    border-radius: 4px;
+    background: var(--bg-primary, #2b2520);
+    color: var(--text-primary, #d4cfc8);
+    font-size: var(--font-size-base, 14px);
+}
+
+.collapsible-section .settings-panel {
+    margin-bottom: 0;
+}
+
+/* ========================
+   Mobile / Responsive Layout
+   ======================== */
+@media (max-width: 768px) {
+    /* Reduce body padding and container chrome */
+    body {
+        padding: 4px;
+    }
+
+    .container {
+        padding: 8px;
+        border-radius: 6px;
+    }
+
+    h1 {
+        font-size: 1.4em;
+        margin-bottom: 10px;
+    }
+
+    h3 {
+        font-size: 1em;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+    }
+
+    /* Reorder game layout so canvas + controls are first on mobile */
+    .game-layout {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .game-layout > .controls {
+        order: 1;
+    }
+
+    .game-layout > #gameCanvas {
+        order: 2;
+    }
+
+    .game-layout > .section-status {
+        order: 3;
+    }
+
+    .game-layout > .section-armies {
+        order: 4;
+    }
+
+    .game-layout > .section-policy {
+        order: 5;
+    }
+
+    .game-layout > .section-settings {
+        order: 6;
+    }
+
+    /* Collapse panels by default on mobile — only Game Status & Armies stay open */
+    .collapsible-section > summary {
+        padding: 8px 12px;
+        font-size: 1em;
+        min-height: 44px;
+    }
+
+    .collapsible-section {
+        margin-bottom: 6px;
+    }
+
+    /* Stack the HUD grid into a single column */
+    .game-info {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .info-section {
+        padding: 8px 10px;
+    }
+
+    .info-section p {
+        margin: 4px 0;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    /* Canvas: center and fill width */
+    #gameCanvas {
+        overflow: hidden;
+        margin: 8px auto;
+        display: flex;
+        justify-content: center;
+    }
+
+    #mapCanvas {
+        display: block;
+        max-width: 100%;
+    }
+
+    /* Compact policy controls */
+    .policy-controls {
+        padding: 10px;
+        margin-bottom: 0;
+    }
+
+    .policy-section {
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+        gap: 6px;
+    }
+
+    .policy-section label {
+        min-width: unset;
+        width: 100%;
+        margin-bottom: 0;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    .policy-section select {
+        width: 100%;
+        flex: unset;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    .policy-section button {
+        width: 100%;
+    }
+
+    /* Compact user info */
+    .user-info {
+        padding: 6px 8px;
+        margin-bottom: 10px;
+    }
+
+    /* Minimum 44×44px tap targets for buttons and selects */
+    .controls button,
+    .policy-section button,
+    .split-button,
+    .user-info .logout-button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 10px 16px;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    .controls {
+        margin-bottom: 10px;
+    }
+
+    .controls button {
+        padding: 10px 14px;
+        font-size: var(--font-size-base, 14px);
+    }
+
+    .policy-section select,
+    .settings-row select {
+        min-height: 44px;
+    }
+
+    /* Settings panel: scrollable and wrappable */
+    .settings-panel {
+        max-height: 50vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .settings-row {
+        flex-wrap: wrap;
+    }
+
+    .settings-row label {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .settings-row select {
+        width: 100%;
+    }
+
+    /* Toast notifications: full-width at bottom, no clipping */
+    #toast-container {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        max-width: none;
+    }
+
+    .toast {
+        font-size: var(--font-size-base, 14px);
+    }
+
+    /* Game over banner: smaller padding for narrow screens */
+    .game-over-banner-content {
+        padding: 16px 20px;
+    }
+
+    .game-over-banner-content h2 {
+        font-size: 1.3em;
+    }
+
+    .game-over-banner-content p {
+        font-size: 0.95em;
+    }
+
+    /* Army list: smaller padding */
+    .armies-list {
+        padding: 10px;
+        margin-top: 0;
+    }
+
+    #armiesList {
+        max-height: 250px;
+    }
+
+    .army-item {
+        padding: 8px;
+        margin: 4px 0;
+    }
+
+    .army-actions {
+        flex-wrap: wrap;
+    }
+
+    .split-input {
+        width: 100%;
+    }
+
+    /* Reposition tooltip for small screens — show below touch point */
+    .canvas-tooltip {
+        max-width: 240px;
+        font-size: 12px;
+    }
+
+    /* Login page: mobile-friendly sizing */
+    .login-container {
+        padding: 24px 16px;
+        width: 95%;
+        max-width: none;
+        border-radius: 10px;
+    }
+
+    .login-container h1 {
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+
+    .login-container button {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .form-group input[type="text"] {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 10px;
+    }
+
+    .info {
+        font-size: var(--font-size-base, 13px);
+    }
 }

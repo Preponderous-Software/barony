@@ -110,6 +110,22 @@ For detailed API documentation, see technical sections below.
 
 ## Desktop Client (Frontend)
 
+### Command Line Options
+
+**Linux/macOS:**
+```bash
+cd frontend && ./mvnw compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
+```
+
+**Windows:**
+```batch
+cd frontend && mvnw.cmd compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--server <url>` | Backend server URL | `http://localhost:8080` |
+
 ### Controls
 
 **Mouse:**
@@ -123,7 +139,9 @@ For detailed API documentation, see technical sections below.
 - `S` - Split army
 - `P` - Open policy menu
 - `R` - Reset game (when over)
-- `ESC` - Quit
+- `F9` - Open Settings (colorblind mode, theme, font size)
+- `F10` - Open Notification Log
+- `ESC` - Quit / Close panel
 
 ### Features
 - OpenGL rendering (LWJGL)
@@ -131,6 +149,11 @@ For detailed API documentation, see technical sections below.
 - Real-time HUD with game statistics
 - Visual ownership indicators
 - Mouse and keyboard controls
+- Toast notifications (non-blocking, auto-dismiss)
+- Colorblind modes: Deuteranopia, Protanopia, Tritanopia
+- Themes: Dark (default), Classic, High Contrast
+- Adjustable font size: Small, Medium, Large
+- Settings persisted to `~/.barony/settings.json`
 
 ## Web Client
 
@@ -141,6 +164,22 @@ Browser-based interface with HTML5 Canvas rendering.
 docker-compose up
 ```
 Then open http://localhost:3000
+
+### Web Client Features
+- Toast notifications replace all in-game blocking alerts
+- Canvas hover tooltips (tile info, army stats, castle capture progress)
+- Army selection highlight ring on canvas
+- Right-click to deselect armies
+- Auto Play toggle button (single button, active-state indication)
+- Color-coded stats (green ≥ 90, amber 70–89, red < 70)
+- Policy cooldown progress bar
+- Game-over banner overlay on canvas
+- Inline split validation (no alerts)
+- Colorblind modes: Deuteranopia, Protanopia, Tritanopia
+- Themes: Dark (default), Classic, High Contrast
+- Adjustable font size: Small, Medium, Large
+- Settings panel with live preview
+- Settings persisted to `localStorage` under `barony_settings`
 
 ## Game Overview
 
