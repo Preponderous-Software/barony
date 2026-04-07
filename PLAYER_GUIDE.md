@@ -22,6 +22,11 @@ start-backend.bat     # Terminal 1
 start-frontend.bat    # Terminal 2
 ```
 
+**Custom Server:** To connect the desktop client to a backend on a different machine, use:
+```bash
+cd frontend && ./mvnw compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
+```
+
 **Using Docker:**
 ```bash
 docker-compose up --build

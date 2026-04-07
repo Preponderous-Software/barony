@@ -13,12 +13,12 @@ import static org.lwjgl.opengl.GL11.*;
  */
 public class ToastOverlay {
 
-    private static final float TOAST_WIDTH = 0.45f;
-    private static final float TOAST_HEIGHT = 0.06f;
-    private static final float TOAST_MARGIN = 0.01f;
+    private static final float TOAST_WIDTH = 0.55f;
+    private static final float TOAST_HEIGHT = 0.09f;
+    private static final float TOAST_MARGIN = 0.015f;
     private static final float TOAST_RIGHT_MARGIN = 0.02f;
     private static final float TOAST_BOTTOM_MARGIN = 0.02f;
-    private static final float BORDER_WIDTH = 0.005f;
+    private static final float BORDER_WIDTH = 0.007f;
 
     /**
      * Render active toast notifications. Call this last in the render loop.
@@ -66,14 +66,14 @@ public class ToastOverlay {
 
             // Draw text
             float[] textColor = ThemeManager.getInstance().getTextColor();
-            float textScale = ThemeManager.getInstance().getFontScale() * 0.0012f;
-            float textX = x + BORDER_WIDTH + 0.01f;
-            float textY = y + TOAST_HEIGHT / 2 - 0.015f;
+            float textScale = ThemeManager.getInstance().getFontScale() * 0.003f;
+            float textX = x + BORDER_WIDTH + 0.015f;
+            float textY = y + TOAST_HEIGHT / 2 + 0.005f;
 
             // Truncate message if too long
             String msg = n.getMessage();
-            if (msg.length() > 50) {
-                msg = msg.substring(0, 47) + "...";
+            if (msg.length() > 60) {
+                msg = msg.substring(0, 57) + "...";
             }
             SimpleTextRenderer.drawText(msg, textX, textY, textScale, textColor[0], textColor[1], textColor[2]);
         }

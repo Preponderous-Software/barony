@@ -110,6 +110,20 @@ For detailed API documentation, see technical sections below.
 
 ## Desktop Client (Frontend)
 
+### Command Line Options
+
+```bash
+# Connect to a custom backend server
+cd frontend && ./mvnw compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
+
+# Or via the start script with arguments
+java -jar frontend.jar --server http://myserver:8080
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--server <url>` | Backend server URL | `http://localhost:8080` |
+
 ### Controls
 
 **Mouse:**

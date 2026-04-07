@@ -77,6 +77,9 @@ public class FrontendApplication {
     private int splitModeArmyId = -1;
     private int splitModeTotalSoldiers = 0;
     
+    // Server configuration
+    private String serverUrl = "http://localhost:8080";
+    
     // Overlay UI components
     private ToastOverlay toastOverlay = new ToastOverlay();
     private NotificationLogPanel notificationLogPanel = new NotificationLogPanel();
@@ -357,7 +360,7 @@ public class FrontendApplication {
         glfwSetWindowTitle(window, "Barony - Connecting to server...");
         
         // Initialize game client
-        client = new GameClient("http://localhost:8080");
+        client = new GameClient(serverUrl);
         gameState = client.getState();
         
         // Update title with game state once connected
@@ -1004,8 +1007,6 @@ public class FrontendApplication {
         if (gameLog.size() > MAX_LOG_ENTRIES) {
             gameLog.removeLast();
         }
-        // Also show as toast notification
-        NotificationManager.getInstance().info(message);
     }
     
     private boolean shouldShowTooltip() {
@@ -1808,6 +1809,13 @@ public class FrontendApplication {
     }
     
     public static void main(String[] args) {
-        new FrontendApplication().run();
+        FrontendApplication app = new FrontendApplication();
+        for (int i = 0; i < args.length; i++) {
+            if ("--server".equals(args[i]) && i + 1 < args.length) {
+                app.serverUrl = args[i + 1];
+                i++;
+            }
+        }
+        app.run();
     }
 }
