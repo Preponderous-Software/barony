@@ -112,12 +112,14 @@ For detailed API documentation, see technical sections below.
 
 ### Command Line Options
 
+**Linux/macOS:**
 ```bash
-# Connect to a custom backend server
 cd frontend && ./mvnw compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
+```
 
-# Or via the start script with arguments
-java -jar frontend.jar --server http://myserver:8080
+**Windows:**
+```batch
+cd frontend && mvnw.cmd compile exec:java -Dexec.args="--server http://192.168.1.100:8080"
 ```
 
 | Flag | Description | Default |
