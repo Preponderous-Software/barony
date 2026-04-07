@@ -58,7 +58,7 @@ Implement basic sound effects and background music to enhance game atmosphere.
   - Victory/defeat
   - Policy changes
 - Volume controls in settings
-- Mute toggle (configurable keybinding; default `F10` on desktop builds)
+- Mute toggle (configurable keybinding; default `F10`)
 - Audio asset loading system
 
 **Technical Notes:**
@@ -68,9 +68,9 @@ Implement basic sound effects and background music to enhance game atmosphere.
 - Keep file sizes small (< 5MB total)
 
 **Files to Create/Modify:**
-- `frontend/src/main/java/com/barony/frontend/audio/AudioManager.java`
-- `frontend/src/main/resources/audio/` (new directory)
-- Add audio library dependency to frontend `pom.xml`
+- `web-client/src/main/java/com/barony/webclient/audio/AudioManager.java`
+- `web-client/src/main/resources/audio/` (new directory)
+- Add audio library dependency to web-client `pom.xml`
 
 ---
 
@@ -96,7 +96,7 @@ Allow players to save game progress and resume later.
 - Serialize complete GameState to JSON
 - Include all game state: armies, tiles, policies, tick count
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Add save/load menu (configurable keybinding; suggest `F5` key or dedicated menu button)
 - Display save slots with metadata
 - Confirm overwrite existing save
@@ -111,7 +111,7 @@ Allow players to save game progress and resume later.
 **Files to Create/Modify:**
 - `backend/src/main/java/com/barony/backend/service/SaveGameService.java`
 - `backend/src/main/java/com/barony/backend/controller/SaveGameController.java`
-- `frontend/src/main/java/com/barony/frontend/ui/SaveLoadMenu.java`
+- `web-client/src/main/java/com/barony/webclient/ui/SaveLoadMenu.java`
 
 ---
 
@@ -140,12 +140,12 @@ Add visual polish and feedback to make gameplay more engaging.
 **Technical Notes:**
 - Keep animations subtle (< 0.5s duration)
 - Optimize particle systems (max 100 particles)
-- Use OpenGL alpha blending for effects
+- Use CSS/Canvas effects
 - Add settings toggle to disable animations
 
 **Files to Modify:**
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
-- `frontend/src/main/java/com/barony/frontend/rendering/` (new package)
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
+- `web-client/src/main/java/com/barony/webclient/rendering/` (new package)
 
 ---
 
@@ -172,7 +172,7 @@ Track and display game statistics and historical events.
 - Update statistics during tick processing
 - Add `GET /api/statistics` endpoint
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Add statistics panel in UI (toggleable with Tab key)
 - Display detailed statistics on victory/defeat screen
 - Show notable events in history log
@@ -180,7 +180,7 @@ Track and display game statistics and historical events.
 **Files to Create/Modify:**
 - `backend/src/main/java/com/barony/backend/model/GameStatistics.java`
 - `backend/src/main/java/com/barony/backend/service/StatisticsService.java`
-- `frontend/src/main/java/com/barony/frontend/ui/StatisticsPanel.java`
+- `web-client/src/main/java/com/barony/webclient/ui/StatisticsPanel.java`
 
 ---
 
@@ -245,7 +245,7 @@ Introduce different unit types with unique characteristics and tactical roles.
 - Add unit type costs and conversion mechanics
 - Update pathfinding for different movement speeds
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Different visual representations for each unit type
 - Unit composition display (e.g., "10 infantry, 5 cavalry")
 - Unit training UI at villages/castles
@@ -305,7 +305,7 @@ Add terrain variety that affects movement and combat.
 - Add terrain generation algorithm (procedural or hand-crafted)
 - Update AI to consider terrain in decision-making
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Unique textures/colors for each terrain type
 - Terrain overlay toggle to show movement costs
 - Visual indicators for terrain effects (icons, borders)
@@ -368,7 +368,7 @@ Improve AI sophistication and add multiple difficulty levels.
 - Implement advanced decision-making algorithms
 - Add AI planning horizon (2-5 moves ahead)
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Difficulty selection in game setup menu
 - AI difficulty indicator in HUD
 
@@ -398,7 +398,7 @@ Add limited visibility to increase strategic uncertainty.
 - Add `GET /api/state` visibility parameter (returns only visible info)
 - Update AI to work with limited information
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Render fog of war overlay (darkened unexplored tiles)
 - Gray out non-visible areas
 - Show last-known information for explored but non-visible tiles
@@ -412,7 +412,7 @@ Add limited visibility to increase strategic uncertainty.
 **Files to Create/Modify:**
 - `backend/src/main/java/com/barony/backend/service/VisionService.java`
 - `backend/src/main/java/com/barony/backend/service/GameService.java`
-- `frontend/src/main/java/com/barony/frontend/FrontendApplication.java`
+- `web-client/src/main/java/com/barony/webclient/WebClientApplication.java`
 
 ---
 
@@ -474,7 +474,7 @@ Implement a research system for long-term strategic progression.
 - Add research effects to game mechanics
 - Add `POST /api/research` endpoint
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Research tree UI panel (F1 key to open)
 - Visual tree showing dependencies
 - Research progress bars
@@ -520,7 +520,7 @@ Add additional resources beyond soldier generation.
 - Add resource storage and caps
 - Update AI to manage resources
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Resource indicators in HUD
 - Resource management panel (F2 key)
 - Visual indicators for resource-generating tiles
@@ -560,7 +560,7 @@ Support larger map sizes and predefined scenarios.
 - Add scenario loading system
 - Add `POST /api/game/start` endpoint with map/scenario options
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Game setup menu with options
 - Map preview rendering
 - Zoom controls for larger maps
@@ -604,7 +604,7 @@ Allow players to construct buildings in villages and castles.
 - Add building destruction in combat
 - Add `POST /api/building/construct` endpoint
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Building construction UI at villages/castles
 - Building icons on tiles
 - Construction progress indicators
@@ -654,7 +654,7 @@ Add random events that affect gameplay.
 - Add temporary effect system
 - Add `GET /api/events` endpoint
 
-**Frontend Changes:**
+**Web Client Changes:**
 - Event notification popup
 - Event choice dialog
 - Event effects display in HUD
