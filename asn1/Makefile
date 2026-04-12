@@ -71,4 +71,5 @@ $(TEST_DIR):
 	@mkdir -p $(TEST_DIR)
 
 clean:
-	rm -rf $(GEN_DIR) $(LIB_DIR) $(TEST_DIR)/*.result.xml
+	rm -rf $(GEN_DIR) $(LIB_DIR)
+	rm -f $(TEST_DIR)/*.result.xml $(TEST_DIR)/*.result.der

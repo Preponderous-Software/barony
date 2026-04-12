@@ -2,7 +2,7 @@
 # ============================================================================
 # Round-trip smoke test for all Barony ASN.1 types
 # ============================================================================
-# For each type: encode XER → BER → XER, then compare with original.
+# For each type: encode XER → DER → XER, then compare with original.
 # This validates that the ASN.1 schema correctly round-trips all message types.
 # ============================================================================
 
