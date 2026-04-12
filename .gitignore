@@ -27,3 +27,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# ASN.1 generated files
+asn1/generated/
+asn1/lib/
+asn1/test-data/*.result.*
