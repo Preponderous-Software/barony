@@ -20,7 +20,7 @@ public class GameState {
     private String militaryPolicy;
     private String populationPolicy;
     private int lastPolicyChangeTick;
-    
+
     public GameState(int width, int height) {
         this.grid = new Tile[width][height];
         this.armies = new ArrayList<>();
@@ -32,7 +32,6 @@ public class GameState {
         this.militaryPolicy = "STANDARD_SERVICE";
         this.populationPolicy = "STABLE_POPULATION";
         this.lastPolicyChangeTick = -15;
-        // Initialize grid with empty tiles
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 grid[x][y] = new Tile(TileType.EMPTY);
@@ -40,25 +39,53 @@ public class GameState {
         }
     }
 
+    public GameState createSnapshot() {
+        GameState snapshot = new GameState(getWidth(), getHeight());
+        for (int i = 0; i < tickCount; i++) {
+            snapshot.incrementTick();
+        }
+        snapshot.setGameOver(gameOver);
+        snapshot.setWinnerId(winnerId);
+        snapshot.setAiEnabled(aiEnabled);
+        snapshot.setEconomicPolicy(economicPolicy);
+        snapshot.setMilitaryPolicy(militaryPolicy);
+        snapshot.setPopulationPolicy(populationPolicy);
+        snapshot.setLastPolicyChangeTick(lastPolicyChangeTick);
+        for (int x = 0; x < getWidth(); x++) {
+            for (int y = 0; y < getHeight(); y++) {
+                Tile source = grid[x][y];
+                Tile target = snapshot.grid[x][y];
+                target.setType(source.getType());
+                target.setOwnerId(source.getOwnerId());
+                target.setOccupationTicks(source.getOccupationTicks());
+                target.setStability(source.getStability());
+                target.setPopulation(source.getPopulation());
+            }
+        }
+        for (Army army : armies) {
+            snapshot.armies.add(new Army(army));
+        }
+        return snapshot;
+    }
+
     public List<Army> getArmies() {
         return new ArrayList<>(armies);
     }
-    
+
     @JsonIgnore
     public List<Army> getArmiesInternal() {
         return armies;
     }
-    
+
     public void incrementTick() {
         this.tickCount++;
     }
-    
+
     public int getWidth() {
         return grid.length;
     }
-    
+
     public int getHeight() {
         return grid.length > 0 ? grid[0].length : 0;
     }
-
 }

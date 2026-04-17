@@ -38,7 +38,7 @@ public class GameService {
     }
 
     public synchronized GameState getState() {
-        return createSnapshot();
+        return gameState.createSnapshot();
     }
 
     public synchronized void tick() {
@@ -191,24 +191,12 @@ public class GameService {
     }
 
     private void updateVillageOwnership(Tile village, int x, int y) {
-        Integer occupyingPlayer = null;
-        boolean contested = false;
+        TileOccupancy occupancy = determineTileOccupancy(x, y);
 
-        for (Army army : gameState.getArmiesInternal()) {
-            if (army.getX() == x && army.getY() == y) {
-                if (occupyingPlayer == null) {
-                    occupyingPlayer = army.getPlayerId();
-                } else if (occupyingPlayer != army.getPlayerId()) {
-                    contested = true;
-                    break;
-                }
-            }
-        }
-
-        if (contested) {
+        if (occupancy.contested) {
             village.setOwnerId(0);
-        } else if (occupyingPlayer != null && village.getOwnerId() != occupyingPlayer) {
-            village.setOwnerId(occupyingPlayer);
+        } else if (occupancy.playerId != null && village.getOwnerId() != occupancy.playerId) {
+            village.setOwnerId(occupancy.playerId);
         }
     }
 
@@ -224,30 +212,46 @@ public class GameService {
     }
 
     private void updateCastleOccupation(Tile castle, int x, int y) {
+        TileOccupancy occupancy = determineTileOccupancy(x, y);
+
+        if (occupancy.contested || occupancy.playerId == null) {
+            castle.setOccupationTicks(0);
+        } else if (occupancy.playerId == castle.getOwnerId()) {
+            castle.setOccupationTicks(0);
+        } else {
+            castle.setOccupationTicks(castle.getOccupationTicks() + 1);
+            if (castle.getOccupationTicks() >= 3) {
+                castle.setOwnerId(occupancy.playerId);
+                castle.setOccupationTicks(0);
+            }
+        }
+    }
+
+    private TileOccupancy determineTileOccupancy(int x, int y) {
         Integer occupyingPlayer = null;
-        boolean multiplePlayersPresent = false;
+        boolean contested = false;
 
         for (Army army : gameState.getArmiesInternal()) {
             if (army.getX() == x && army.getY() == y) {
                 if (occupyingPlayer == null) {
                     occupyingPlayer = army.getPlayerId();
                 } else if (occupyingPlayer != army.getPlayerId()) {
-                    multiplePlayersPresent = true;
+                    contested = true;
                     break;
                 }
             }
         }
 
-        if (multiplePlayersPresent || occupyingPlayer == null) {
-            castle.setOccupationTicks(0);
-        } else if (occupyingPlayer == castle.getOwnerId()) {
-            castle.setOccupationTicks(0);
-        } else {
-            castle.setOccupationTicks(castle.getOccupationTicks() + 1);
-            if (castle.getOccupationTicks() >= 3) {
-                castle.setOwnerId(occupyingPlayer);
-                castle.setOccupationTicks(0);
-            }
+        return new TileOccupancy(occupyingPlayer, contested);
+    }
+
+    private static class TileOccupancy {
+        final Integer playerId;
+        final boolean contested;
+
+        TileOccupancy(Integer playerId, boolean contested) {
+            this.playerId = playerId;
+            this.contested = contested;
         }
     }
 
@@ -320,54 +324,5 @@ public class GameService {
 
     private boolean isWithinBounds(int x, int y) {
         return x >= 0 && x < gameState.getWidth() && y >= 0 && y < gameState.getHeight();
-    }
-
-    private GameState createSnapshot() {
-        GameState snapshot = new GameState(gameState.getWidth(), gameState.getHeight());
-        copyTickCount(snapshot);
-        copyGameStatus(snapshot);
-        copyPolicies(snapshot);
-        copyGrid(snapshot);
-        copyArmies(snapshot);
-        return snapshot;
-    }
-
-    private void copyTickCount(GameState snapshot) {
-        for (int i = 0; i < gameState.getTickCount(); i++) {
-            snapshot.incrementTick();
-        }
-    }
-
-    private void copyGameStatus(GameState snapshot) {
-        snapshot.setGameOver(gameState.isGameOver());
-        snapshot.setWinnerId(gameState.getWinnerId());
-        snapshot.setAiEnabled(gameState.isAiEnabled());
-    }
-
-    private void copyPolicies(GameState snapshot) {
-        snapshot.setEconomicPolicy(gameState.getEconomicPolicy());
-        snapshot.setMilitaryPolicy(gameState.getMilitaryPolicy());
-        snapshot.setPopulationPolicy(gameState.getPopulationPolicy());
-        snapshot.setLastPolicyChangeTick(gameState.getLastPolicyChangeTick());
-    }
-
-    private void copyGrid(GameState snapshot) {
-        for (int x = 0; x < gameState.getWidth(); x++) {
-            for (int y = 0; y < gameState.getHeight(); y++) {
-                Tile source = gameState.getGrid()[x][y];
-                Tile target = snapshot.getGrid()[x][y];
-                target.setType(source.getType());
-                target.setOwnerId(source.getOwnerId());
-                target.setOccupationTicks(source.getOccupationTicks());
-                target.setStability(source.getStability());
-                target.setPopulation(source.getPopulation());
-            }
-        }
-    }
-
-    private void copyArmies(GameState snapshot) {
-        for (Army army : gameState.getArmiesInternal()) {
-            snapshot.getArmiesInternal().add(new Army(army));
-        }
     }
 }
