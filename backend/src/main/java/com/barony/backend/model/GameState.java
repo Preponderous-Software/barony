@@ -14,12 +14,12 @@ public class GameState {
     private List<Army> armies;
     private int tickCount;
     private boolean gameOver;
-    private Integer winnerId; // null if game not over, player ID if game over
-    private boolean aiEnabled; // AI opponent enabled/disabled
-    private String economicPolicy; // Current economic policy (Player 1 only)
-    private String militaryPolicy; // Current military policy (Player 1 only)
-    private String populationPolicy; // Current population policy (Player 1 only)
-    private int lastPolicyChangeTick; // Tick when last policy was changed
+    private Integer winnerId;
+    private boolean aiEnabled;
+    private String economicPolicy;
+    private String militaryPolicy;
+    private String populationPolicy;
+    private int lastPolicyChangeTick;
     
     public GameState(int width, int height) {
         this.grid = new Tile[width][height];
@@ -27,12 +27,11 @@ public class GameState {
         this.tickCount = 0;
         this.gameOver = false;
         this.winnerId = null;
-        this.aiEnabled = true; // AI enabled by default
-        this.economicPolicy = "BALANCED_BUDGET"; // Default policies
+        this.aiEnabled = true;
+        this.economicPolicy = "BALANCED_BUDGET";
         this.militaryPolicy = "STANDARD_SERVICE";
         this.populationPolicy = "STABLE_POPULATION";
-        this.lastPolicyChangeTick = -15; // Allow immediate first policy change
-        
+        this.lastPolicyChangeTick = -15;
         // Initialize grid with empty tiles
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
@@ -45,13 +44,10 @@ public class GameState {
         return new ArrayList<>(armies);
     }
     
-    // Internal method for direct access to armies list for modifications
-    // JsonIgnore prevents this from being serialized in API responses
     @JsonIgnore
     public List<Army> getArmiesInternal() {
         return armies;
     }
-
     
     public void incrementTick() {
         this.tickCount++;
