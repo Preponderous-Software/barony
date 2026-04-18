@@ -1,6 +1,9 @@
 package com.barony.webclient.controller;
 
-import com.barony.webclient.model.*;
+import com.barony.webclient.model.Command;
+import com.barony.webclient.model.GameState;
+import com.barony.webclient.model.RulerDecision;
+import com.barony.webclient.model.RulerStats;
 import com.barony.webclient.service.BackendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,108 +17,83 @@ import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Controller
 public class WebController {
-    
+
     @Autowired
     private BackendService backendService;
-    
+
     @GetMapping("/")
     public String index() {
         return "redirect:/login";
     }
-    
+
     @GetMapping("/login")
     public String login() {
         return "login";
     }
-    
+
     @GetMapping("/game")
     public String game(Model model) {
-        // Game page will be loaded and JavaScript will handle session validation
         return "game";
     }
-    
-    // Proxy endpoints for session-based backend API calls
+
     @PostMapping("/api/auth/login")
     @ResponseBody
     public Map<String, String> proxyLogin(@RequestBody Map<String, String> request) {
-        // Forward login request to backend
         return backendService.login(request);
     }
-    
+
     @PostMapping("/api/tick")
     @ResponseBody
     public GameState tick() {
         return backendService.tick();
     }
-    
+
     @PostMapping("/api/command")
     @ResponseBody
     public GameState command(@RequestBody Command command) {
         return backendService.sendCommand(command);
     }
-    
+
     @PostMapping("/api/reset")
     @ResponseBody
     public GameState reset() {
         return backendService.reset();
     }
-    
+
     @PostMapping("/api/decision")
     @ResponseBody
     public ResponseEntity<?> decision(@RequestBody RulerDecision decision) {
-        try {
-            GameState state = backendService.changePolicy(decision);
-            return ResponseEntity.ok(state);
-        } catch (HttpClientErrorException e) {
-            // Backend returned 4xx error - pass through the status code and message
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", e.getStatusText());
-            error.put("message", e.getResponseBodyAsString());
-            error.put("status", e.getStatusCode().value());
-            return ResponseEntity.status(e.getStatusCode()).body(error);
-        } catch (HttpServerErrorException e) {
-            // Backend returned 5xx error
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Backend error: " + e.getStatusText());
-            error.put("status", e.getStatusCode().value());
-            return ResponseEntity.status(e.getStatusCode()).body(error);
-        } catch (RestClientException e) {
-            // Other network/connection errors
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Could not connect to backend");
-            error.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
-        }
+        return executeWithBackendErrorHandling(() -> backendService.changePolicy(decision));
     }
-    
+
     @GetMapping("/api/state")
     @ResponseBody
     public GameState getState() {
         return backendService.getState();
     }
-    
+
     @GetMapping("/api/ruler-stats")
     @ResponseBody
     public RulerStats getRulerStats() {
         return backendService.getRulerStats();
     }
-    
-    // Session-aware proxy endpoints
+
     @GetMapping("/api/session/state")
     @ResponseBody
     public GameState getSessionState(@RequestHeader("X-Session-Id") String sessionId) {
         return backendService.getSessionState(sessionId);
     }
-    
+
     @PostMapping("/api/session/tick")
     @ResponseBody
     public GameState sessionTick(@RequestHeader("X-Session-Id") String sessionId) {
         return backendService.sessionTick(sessionId);
     }
-    
+
     @PostMapping("/api/session/command")
     @ResponseBody
     public GameState sessionCommand(
@@ -123,20 +101,31 @@ public class WebController {
             @RequestBody Command command) {
         return backendService.sessionCommand(sessionId, command);
     }
-    
+
     @PostMapping("/api/session/reset")
     @ResponseBody
     public GameState sessionReset(@RequestHeader("X-Session-Id") String sessionId) {
         return backendService.sessionReset(sessionId);
     }
-    
+
     @PostMapping("/api/session/decision")
     @ResponseBody
     public ResponseEntity<?> sessionDecision(
             @RequestHeader("X-Session-Id") String sessionId,
             @RequestBody RulerDecision decision) {
+        return executeWithBackendErrorHandling(
+                () -> backendService.sessionChangePolicy(sessionId, decision));
+    }
+
+    @GetMapping("/api/session/ruler-stats")
+    @ResponseBody
+    public RulerStats getSessionRulerStats(@RequestHeader("X-Session-Id") String sessionId) {
+        return backendService.sessionRulerStats(sessionId);
+    }
+
+    private ResponseEntity<?> executeWithBackendErrorHandling(Supplier<GameState> action) {
         try {
-            GameState state = backendService.sessionChangePolicy(sessionId, decision);
+            GameState state = action.get();
             return ResponseEntity.ok(state);
         } catch (HttpClientErrorException e) {
             Map<String, Object> error = new HashMap<>();
@@ -155,11 +144,5 @@ public class WebController {
             error.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
         }
-    }
-    
-    @GetMapping("/api/session/ruler-stats")
-    @ResponseBody
-    public RulerStats getSessionRulerStats(@RequestHeader("X-Session-Id") String sessionId) {
-        return backendService.sessionRulerStats(sessionId);
     }
 }

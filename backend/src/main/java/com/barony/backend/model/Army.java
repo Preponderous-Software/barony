@@ -15,8 +15,8 @@ public class Army {
     private int playerId;
     private Integer destinationX;
     private Integer destinationY;
-    private int morale; // 0-200, affects combat effectiveness (default 100)
-    private int loyalty; // 0-110, affects desertion rate (default 100, 100-110 is bonus)
+    private int morale;
+    private int loyalty;
 
     private static final AtomicInteger nextId = new AtomicInteger(1);
 
@@ -26,11 +26,10 @@ public class Army {
         this.y = y;
         this.soldiers = soldiers;
         this.playerId = playerId;
-        this.morale = 100; // Default morale
-        this.loyalty = 100; // Default loyalty
+        this.morale = 100;
+        this.loyalty = 100;
     }
 
-    // Copy constructor for creating snapshots
     public Army(Army other) {
         this.id = other.id;
         this.x = other.x;
@@ -49,10 +48,10 @@ public class Army {
     }
 
     public void setMorale(int morale) {
-        this.morale = Math.max(0, Math.min(200, morale)); // Clamp between 0 and 200
+        this.morale = Math.max(0, Math.min(200, morale));
     }
 
     public void setLoyalty(int loyalty) {
-        this.loyalty = Math.max(0, Math.min(110, loyalty)); // Clamp between 0 and 110 (allow bonus)
+        this.loyalty = Math.max(0, Math.min(110, loyalty));
     }
 }
