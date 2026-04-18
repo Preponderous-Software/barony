@@ -166,7 +166,7 @@ class AiService {
     }
 
     private int[] findCastleAssaultTarget(Army army, GameState gameState) {
-        int enemyPlayerId = (AI_PLAYER_ID == 1) ? 2 : 1;
+        int enemyPlayerId = (army.getPlayerId() == 1) ? 2 : 1;
         int[] enemyCastle = findPlayerCastle(enemyPlayerId, gameState);
         if (enemyCastle != null && hasOverwhelmingForce(army, enemyCastle[0], enemyCastle[1], gameState)) {
             return enemyCastle;

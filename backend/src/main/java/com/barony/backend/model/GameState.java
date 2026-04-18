@@ -41,9 +41,7 @@ public class GameState {
 
     public GameState createSnapshot() {
         GameState snapshot = new GameState(getWidth(), getHeight());
-        for (int i = 0; i < tickCount; i++) {
-            snapshot.incrementTick();
-        }
+        snapshot.setTickCount(tickCount);
         snapshot.setGameOver(gameOver);
         snapshot.setWinnerId(winnerId);
         snapshot.setAiEnabled(aiEnabled);

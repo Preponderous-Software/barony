@@ -16,7 +16,6 @@ import java.util.Map;
 class CombatService {
 
     private static final int PLAYER_1_ID = 1;
-    private static final int MORALE_BASELINE = 100;
     private static final long ROUNDING_OFFSET = 50L;
     private static final long MORALE_DIVISOR = 100L;
 

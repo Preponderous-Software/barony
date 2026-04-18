@@ -59,20 +59,17 @@ public class GameController {
     @GetMapping("/api/session/state")
     public GameState getSessionState(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        synchronized (session.getGameState()) {
-            gameService.setGameState(session.getGameState());
-            return gameService.getState();
-        }
+        return gameService.executeWithSessionState(session.getGameState(),
+                GameService::getState);
     }
 
     @PostMapping("/api/session/tick")
     public GameState sessionTick(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        synchronized (session.getGameState()) {
-            gameService.setGameState(session.getGameState());
-            gameService.tick();
-            return gameService.getState();
-        }
+        return gameService.executeWithSessionState(session.getGameState(), gs -> {
+            gs.tick();
+            return gs.getState();
+        });
     }
 
     @PostMapping("/api/session/command")
@@ -80,21 +77,20 @@ public class GameController {
             @RequestHeader("X-Session-Id") String sessionId,
             @RequestBody Command command) {
         Session session = validateAndGetSession(sessionId);
-        synchronized (session.getGameState()) {
-            gameService.setGameState(session.getGameState());
-            gameService.executeCommand(command);
-            return gameService.getState();
-        }
+        return gameService.executeWithSessionState(session.getGameState(), gs -> {
+            gs.executeCommand(command);
+            return gs.getState();
+        });
     }
 
     @PostMapping("/api/session/reset")
     public GameState sessionReset(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        synchronized (session.getGameState()) {
-            gameService.resetGame();
-            session.setGameState(gameService.getGameStateInternal());
-            return gameService.getState();
-        }
+        return gameService.executeWithSessionState(session.getGameState(), gs -> {
+            gs.resetGame();
+            session.setGameState(gs.getGameStateInternal());
+            return gs.getState();
+        });
     }
 
     @PostMapping("/api/session/decision")
@@ -103,19 +99,15 @@ public class GameController {
             @RequestBody RulerDecision decision) {
         validateDecision(decision);
         Session session = validateAndGetSession(sessionId);
-        synchronized (session.getGameState()) {
-            gameService.setGameState(session.getGameState());
-            return executePolicyChange(decision);
-        }
+        return gameService.executeWithSessionState(session.getGameState(),
+                gs -> executePolicyChange(decision));
     }
 
     @GetMapping("/api/session/ruler-stats")
     public RulerStats sessionRulerStats(@RequestHeader("X-Session-Id") String sessionId) {
         Session session = validateAndGetSession(sessionId);
-        synchronized (session.getGameState()) {
-            gameService.setGameState(session.getGameState());
-            return gameService.getRulerStats();
-        }
+        return gameService.executeWithSessionState(session.getGameState(),
+                GameService::getRulerStats);
     }
 
     private Session validateAndGetSession(String sessionId) {

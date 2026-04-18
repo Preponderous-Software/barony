@@ -33,6 +33,15 @@ public class GameService {
         this.gameState = state;
     }
 
+    /**
+     * Atomically sets the game state and executes an action under the same lock,
+     * preventing interleaved requests from operating on the wrong session's state.
+     */
+    public synchronized <T> T executeWithSessionState(GameState state, java.util.function.Function<GameService, T> action) {
+        this.gameState = state;
+        return action.apply(this);
+    }
+
     public synchronized GameState getGameStateInternal() {
         return this.gameState;
     }
