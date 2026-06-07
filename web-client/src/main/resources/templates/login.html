@@ -76,6 +76,9 @@
                 return false;
             }
 
+            const submitBtn = document.querySelector('#loginForm button[type="submit"]');
+            const restoreBtn = setButtonBusy(submitBtn, 'Logging in…');
+
             fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -98,9 +101,22 @@
             .catch(error => {
                 console.error('Login error:', error);
                 showFormError(error.message || 'Login failed. Please try again.');
+                restoreBtn();
             });
 
             return false;
+        }
+
+        // Disable a submit button and show a pending label so the player gets
+        // immediate feedback and can't double-submit; returns a restore fn.
+        function setButtonBusy(button, busyLabel) {
+            const originalLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = busyLabel;
+            return function () {
+                button.disabled = false;
+                button.textContent = originalLabel;
+            };
         }
     </script>
 </body>
