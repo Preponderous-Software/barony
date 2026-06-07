@@ -18,6 +18,10 @@
     <div class="login-container">
         <h1>🏰 Barony</h1>
 
+        <div id="formError" class="error" role="alert" style="display: none;">
+            <p id="formErrorText"></p>
+        </div>
+
         <form id="registerForm" onsubmit="return register(event)">
             <div class="form-group">
                 <label for="username">Choose a Username</label>
@@ -45,14 +49,25 @@
     </div>
 
     <script>
+        function showFormError(message) {
+            const box = document.getElementById('formError');
+            document.getElementById('formErrorText').textContent = message;
+            box.style.display = 'block';
+        }
+
+        function clearFormError() {
+            document.getElementById('formError').style.display = 'none';
+        }
+
         function register(event) {
             event.preventDefault();
+            clearFormError();
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
 
             if (!username || !password) {
-                alert('Please choose a username and password');
+                showFormError('Please choose a username and password.');
                 return false;
             }
 
@@ -73,7 +88,7 @@
             })
             .catch(error => {
                 console.error('Registration error:', error);
-                alert('Registration failed: ' + error.message);
+                showFormError(error.message || 'Registration failed. Please try again.');
             });
 
             return false;
