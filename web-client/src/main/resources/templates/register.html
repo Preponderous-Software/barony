@@ -71,6 +71,9 @@
                 return false;
             }
 
+            const submitBtn = document.querySelector('#registerForm button[type="submit"]');
+            const restoreBtn = setButtonBusy(submitBtn, 'Creating account…');
+
             fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -82,16 +85,32 @@
                     const msg = (result.data && (result.data.message || result.data.error)) || 'Registration failed';
                     throw new Error(msg);
                 }
-                // Registration succeeded; send the player to the login screen.
-                alert('Account created. Please log in.');
+                // Registration succeeded; hand off to the login screen with a
+                // success notice and the username pre-filled so the player can
+                // log in without retyping it.
+                sessionStorage.setItem('authNotice', 'Account created — please log in.');
+                sessionStorage.setItem('prefillUsername', username);
                 window.location.href = '/login';
             })
             .catch(error => {
                 console.error('Registration error:', error);
                 showFormError(error.message || 'Registration failed. Please try again.');
+                restoreBtn();
             });
 
             return false;
+        }
+
+        // Disable a submit button and show a pending label so the player gets
+        // immediate feedback and can't double-submit; returns a restore fn.
+        function setButtonBusy(button, busyLabel) {
+            const originalLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = busyLabel;
+            return function () {
+                button.disabled = false;
+                button.textContent = originalLabel;
+            };
         }
     </script>
 </body>
