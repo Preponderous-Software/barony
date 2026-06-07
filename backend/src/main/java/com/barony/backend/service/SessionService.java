@@ -27,10 +27,15 @@ public class SessionService {
         // Clean up old sessions periodically
         cleanupExpiredSessions();
         
-        // Use computeIfAbsent for thread-safe session creation/retrieval
+        // Reuse the existing session for this user, refreshing its access time so an active
+        // player's game state is not reclaimed by cleanupExpiredSessions mid-play.
         return sessions.values().stream()
             .filter(s -> s.getUsername().equals(username))
             .findFirst()
+            .map(existing -> {
+                existing.updateLastAccessed();
+                return existing;
+            })
             .orElseGet(() -> {
                 // Create new session with fresh game state
                 GameState newGameState = mapGenerator.generate();
@@ -39,22 +44,7 @@ public class SessionService {
                 return newSession;
             });
     }
-    
-    /**
-     * Get session by session ID
-     */
-    public Session getSession(String sessionId) {
-        if (sessionId == null) {
-            return null;
-        }
-        
-        Session session = sessions.get(sessionId);
-        if (session != null) {
-            session.updateLastAccessed();
-        }
-        return session;
-    }
-    
+
     /**
      * Remove expired sessions
      */

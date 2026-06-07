@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barony Game - Login</title>
+    <title>Barony Game - Register</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <style>
         body {
@@ -18,50 +18,45 @@
     <div class="login-container">
         <h1>🏰 Barony</h1>
 
-        <div th:if="${error}" class="error">
-            <p th:text="${error}"></p>
-        </div>
-
-        <form id="loginForm" onsubmit="return login(event)">
+        <form id="registerForm" onsubmit="return register(event)">
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username">Choose a Username</label>
                 <input type="text" id="username" name="username" required
-                       placeholder="Your username"
+                       placeholder="3–50 characters"
                        minlength="3"
                        maxlength="50"
                        autocomplete="username">
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">Choose a Password</label>
                 <input type="password" id="password" name="password" required
-                       placeholder="Your password"
+                       placeholder="At least 8 characters"
                        minlength="8"
-                       autocomplete="current-password">
+                       autocomplete="new-password">
             </div>
 
-            <button type="submit">Log In</button>
+            <button type="submit">Create Account</button>
         </form>
 
         <div class="info">
-            <p>Don't have an account? <a th:href="@{/register}">Create one</a>.</p>
-            <p>Your game progress is saved to your account.</p>
+            <p>Already have an account? <a th:href="@{/login}">Log in</a>.</p>
         </div>
     </div>
 
     <script>
-        function login(event) {
+        function register(event) {
             event.preventDefault();
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
 
             if (!username || !password) {
-                alert('Please enter your username and password');
+                alert('Please choose a username and password');
                 return false;
             }
 
-            fetch('/api/auth/login', {
+            fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: username, password: password })
@@ -69,20 +64,16 @@
             .then(response => response.json().then(data => ({ ok: response.ok, data: data })))
             .then(result => {
                 if (!result.ok) {
-                    const msg = (result.data && (result.data.message || result.data.error)) || 'Login failed';
+                    const msg = (result.data && (result.data.message || result.data.error)) || 'Registration failed';
                     throw new Error(msg);
                 }
-                // Store the UserAuth-issued JWT and username
-                localStorage.setItem('token', result.data.token);
-                localStorage.setItem('username', username);
-                if (result.data.expiresAt) {
-                    localStorage.setItem('tokenExpiresAt', result.data.expiresAt);
-                }
-                window.location.href = '/game';
+                // Registration succeeded; send the player to the login screen.
+                alert('Account created. Please log in.');
+                window.location.href = '/login';
             })
             .catch(error => {
-                console.error('Login error:', error);
-                alert('Login failed: ' + error.message);
+                console.error('Registration error:', error);
+                alert('Registration failed: ' + error.message);
             });
 
             return false;

@@ -2,6 +2,18 @@
 
 All notable changes to the Barony Prototype MVP are documented in this file.
 
+## [Unreleased]
+
+### Authentication (UserAuth integration)
+
+- ✅ Player accounts via the standalone [UserAuth](https://github.com/Preponderous-Software/UserAuth) service (registration, login, logout)
+- ✅ Register and login screens in the web client; logout revokes the token server-side
+- ✅ Login issues a signed JWT (stored client-side) sent as `Authorization: Bearer <token>` on game requests
+- ✅ Backend proxies `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` to UserAuth and validates the token on every authenticated request
+- ✅ Per-player game endpoints (`/api/session/*`) reject missing, invalid, expired, or revoked tokens with `401`
+- ✅ Game state is keyed by the authenticated username instead of an anonymous session id
+- ✅ `docker-compose` now starts UserAuth and its Postgres alongside Barony (configurable via `JWT_SECRET`, `USERAUTH_PATH`, `ALLOWED_ORIGINS`)
+
 ## [MVP v1.0.0] - 2026-02-11
 
 ### Core Game Features
