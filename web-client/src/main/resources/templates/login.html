@@ -22,6 +22,10 @@
             <p th:text="${error}"></p>
         </div>
 
+        <div id="formError" class="error" role="alert" style="display: none;">
+            <p id="formErrorText"></p>
+        </div>
+
         <form id="loginForm" onsubmit="return login(event)">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -50,14 +54,25 @@
     </div>
 
     <script>
+        function showFormError(message) {
+            const box = document.getElementById('formError');
+            document.getElementById('formErrorText').textContent = message;
+            box.style.display = 'block';
+        }
+
+        function clearFormError() {
+            document.getElementById('formError').style.display = 'none';
+        }
+
         function login(event) {
             event.preventDefault();
+            clearFormError();
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
 
             if (!username || !password) {
-                alert('Please enter your username and password');
+                showFormError('Please enter your username and password.');
                 return false;
             }
 
@@ -82,7 +97,7 @@
             })
             .catch(error => {
                 console.error('Login error:', error);
-                alert('Login failed: ' + error.message);
+                showFormError(error.message || 'Login failed. Please try again.');
             });
 
             return false;
