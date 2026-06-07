@@ -32,6 +32,33 @@ h1 {
     font-size: 2.5em;
 }
 
+/* Caps Lock warning shown while typing in a password field. */
+.caps-warning {
+    display: block;
+    margin-top: 6px;
+    color: #d9a441;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* Persistent requirement hint under a form field (survives typing, unlike a
+   placeholder), so the rules are visible before the player triggers an error. */
+.field-hint {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-secondary, #8a8278);
+    font-size: 13px;
+}
+
+/* Names the current auth screen (login vs register) under the Barony title. */
+.auth-subtitle {
+    text-align: center;
+    color: var(--text-secondary, #b8b0a4);
+    margin-top: -18px;
+    margin-bottom: 28px;
+    font-size: 1.1em;
+}
+
 h3 {
     color: var(--accent, #c9a96e);
     border-bottom: 2px solid var(--accent, #8b7355);
@@ -293,9 +320,9 @@ h3 {
 }
 
 .user-info .logout-button {
-    background: #8b3a3a;
+    background: #4f463a;
     color: #f0e8d8;
-    border: none;
+    border: 1px solid #6b5a3e;
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
@@ -303,7 +330,7 @@ h3 {
 }
 
 .user-info .logout-button:hover {
-    background: #a04040;
+    background: #615647;
 }
 
 .form-group {
@@ -317,7 +344,8 @@ h3 {
     font-weight: bold;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
     width: 100%;
     padding: 12px;
     border: 2px solid #5a4e3c;
@@ -329,9 +357,44 @@ input[type="text"] {
     color: var(--text-primary, #d4cfc8);
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="password"]:focus {
     outline: none;
     border-color: var(--accent, #c9a96e);
+}
+
+/* Password field with an inline Show/Hide reveal toggle. */
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 72px;
+}
+
+.password-field .password-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: auto;
+    margin: 0;
+    padding: 0 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    transform: none;
+    color: var(--accent, #c9a96e);
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.password-field .password-toggle:hover {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    text-decoration: underline;
 }
 
 .login-container button {
@@ -362,6 +425,18 @@ input[type="text"]:focus {
     color: #8a8278;
     margin-top: 20px;
     font-size: 14px;
+}
+
+/* The login/register cross-links ("Create one", "Log in") — make them read as
+   obviously clickable and on-theme instead of inheriting muted body text. */
+.info a {
+    color: var(--accent, #c9a96e);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.info a:hover {
+    text-decoration: underline;
 }
 
 #armiesList {
@@ -970,7 +1045,8 @@ input[type="text"]:focus {
         padding: 12px;
     }
 
-    .form-group input[type="text"] {
+    .form-group input[type="text"],
+    .form-group input[type="password"] {
         min-height: 44px;
         font-size: 16px;
         padding: 10px;

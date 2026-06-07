@@ -17,6 +17,7 @@
 <body>
     <div class="login-container">
         <h1>🏰 Barony</h1>
+        <p class="auth-subtitle">Log in to your account</p>
 
         <div th:if="${error}" class="error">
             <p th:text="${error}"></p>
@@ -35,15 +36,22 @@
                        placeholder="Your username"
                        minlength="3"
                        maxlength="50"
-                       autocomplete="username">
+                       autocomplete="username"
+                       autofocus>
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required
-                       placeholder="Your password"
-                       minlength="8"
-                       autocomplete="current-password">
+                <div class="password-field">
+                    <input type="password" id="password" name="password" required
+                           placeholder="Your password"
+                           minlength="8"
+                           autocomplete="current-password">
+                    <button type="button" class="password-toggle"
+                            onclick="togglePassword('password', this)"
+                            aria-label="Show password">Show</button>
+                </div>
+                <small class="caps-warning" id="capsWarning" role="alert" style="display: none;">⚠ Caps Lock is on.</small>
             </div>
 
             <button type="submit">Log In</button>
@@ -56,6 +64,29 @@
     </div>
 
     <script>
+        // Warn when Caps Lock is on while typing a password — a top cause of
+        // "wrong password" failures the player can't see (the field is masked).
+        function wireCapsLock(inputId, warningId) {
+            const input = document.getElementById(inputId);
+            const warn = document.getElementById(warningId);
+            if (!input || !warn) return;
+            const update = function (e) {
+                const on = e.getModifierState && e.getModifierState('CapsLock');
+                warn.style.display = on ? 'block' : 'none';
+            };
+            input.addEventListener('keyup', update);
+            input.addEventListener('keydown', update);
+            input.addEventListener('blur', function () { warn.style.display = 'none'; });
+        }
+
+        function togglePassword(id, btn) {
+            const input = document.getElementById(id);
+            const reveal = input.type === 'password';
+            input.type = reveal ? 'text' : 'password';
+            btn.textContent = reveal ? 'Hide' : 'Show';
+            btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+        }
+
         function showFormError(message) {
             const box = document.getElementById('formError');
             document.getElementById('formErrorText').textContent = message;
@@ -124,6 +155,7 @@
         // Pick up a one-time handoff from register/logout: show why we're here
         // and pre-fill the username so the player doesn't retype it.
         document.addEventListener('DOMContentLoaded', function () {
+            wireCapsLock('password', 'capsWarning');
             const notice = sessionStorage.getItem('authNotice');
             if (notice) {
                 const box = document.getElementById('formNotice');

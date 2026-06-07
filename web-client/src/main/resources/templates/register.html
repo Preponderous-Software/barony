@@ -17,6 +17,7 @@
 <body>
     <div class="login-container">
         <h1>🏰 Barony</h1>
+        <p class="auth-subtitle">Create your account</p>
 
         <div id="formError" class="error" role="alert" style="display: none;">
             <p id="formErrorText"></p>
@@ -29,15 +30,32 @@
                        placeholder="3–50 characters"
                        minlength="3"
                        maxlength="50"
-                       autocomplete="username">
+                       autocomplete="username"
+                       autofocus>
+                <small class="field-hint">3–50 characters.</small>
             </div>
 
             <div class="form-group">
                 <label for="password">Choose a Password</label>
-                <input type="password" id="password" name="password" required
-                       placeholder="At least 8 characters"
+                <div class="password-field">
+                    <input type="password" id="password" name="password" required
+                           placeholder="At least 8 characters"
+                           minlength="8"
+                           autocomplete="new-password">
+                    <button type="button" class="password-toggle"
+                            onclick="togglePassword('password', this)"
+                            aria-label="Show password">Show</button>
+                </div>
+                <small class="field-hint">At least 8 characters.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required
+                       placeholder="Re-enter your password"
                        minlength="8"
                        autocomplete="new-password">
+                <small class="caps-warning" id="capsWarning" role="alert" style="display: none;">⚠ Caps Lock is on.</small>
             </div>
 
             <button type="submit">Create Account</button>
@@ -49,6 +67,34 @@
     </div>
 
     <script>
+        // Warn when Caps Lock is on while typing a password — a top cause of
+        // "wrong password" failures the player can't see (the field is masked).
+        function wireCapsLock(inputId, warningId) {
+            const input = document.getElementById(inputId);
+            const warn = document.getElementById(warningId);
+            if (!input || !warn) return;
+            const update = function (e) {
+                const on = e.getModifierState && e.getModifierState('CapsLock');
+                warn.style.display = on ? 'block' : 'none';
+            };
+            input.addEventListener('keyup', update);
+            input.addEventListener('keydown', update);
+            input.addEventListener('blur', function () { warn.style.display = 'none'; });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            wireCapsLock('password', 'capsWarning');
+            wireCapsLock('confirmPassword', 'capsWarning');
+        });
+
+        function togglePassword(id, btn) {
+            const input = document.getElementById(id);
+            const reveal = input.type === 'password';
+            input.type = reveal ? 'text' : 'password';
+            btn.textContent = reveal ? 'Hide' : 'Show';
+            btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+        }
+
         function showFormError(message) {
             const box = document.getElementById('formError');
             document.getElementById('formErrorText').textContent = message;
@@ -65,9 +111,15 @@
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
 
             if (!username || !password) {
                 showFormError('Please choose a username and password.');
+                return false;
+            }
+
+            if (password !== confirmPassword) {
+                showFormError('Passwords do not match.');
                 return false;
             }
 
