@@ -418,6 +418,18 @@ input[type="password"]:focus {
     font-size: 14px;
 }
 
+/* The login/register cross-links ("Create one", "Log in") — make them read as
+   obviously clickable and on-theme instead of inheriting muted body text. */
+.info a {
+    color: var(--accent, #c9a96e);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.info a:hover {
+    text-decoration: underline;
+}
+
 #armiesList {
     max-height: 400px;
     overflow-y: auto;
