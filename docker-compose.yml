@@ -1,6 +1,47 @@
 version: '3.8'
 
 services:
+  # Standalone authentication service (https://github.com/Preponderous-Software/UserAuth).
+  # Built from a sibling checkout of the UserAuth repo cloned next to this one
+  # (../UserAuth), matching how UserAuth's own compose.yaml builds it.
+  userauth-db:
+    image: postgres:16-alpine
+    container_name: barony-userauth-db
+    environment:
+      POSTGRES_DB: ${USERAUTH_DB_NAME:-userauth}
+      POSTGRES_USER: ${USERAUTH_DB_USERNAME:-userauth}
+      POSTGRES_PASSWORD: ${USERAUTH_DB_PASSWORD:-userauth}
+    volumes:
+      - userauth-db-data:/var/lib/postgresql/data
+    networks:
+      - barony-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USERAUTH_DB_USERNAME:-userauth} -d ${USERAUTH_DB_NAME:-userauth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  userauth:
+    build:
+      context: ${USERAUTH_PATH:-../UserAuth}
+    container_name: barony-userauth
+    depends_on:
+      userauth-db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://userauth-db:5432/${USERAUTH_DB_NAME:-userauth}
+      DB_USERNAME: ${USERAUTH_DB_USERNAME:-userauth}
+      DB_PASSWORD: ${USERAUTH_DB_PASSWORD:-userauth}
+      # Override JWT_SECRET in production; this default is for local development only.
+      JWT_SECRET: ${JWT_SECRET:-barony-local-dev-jwt-secret-change-me-please}
+      TOKEN_EXPIRATION_MIN: ${TOKEN_EXPIRATION_MIN:-60}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      SERVER_PORT: 9998
+    ports:
+      - "9998:9998"
+    networks:
+      - barony-network
+
   backend:
     build:
       context: ./backend
@@ -8,6 +49,11 @@ services:
     container_name: barony-backend
     ports:
       - "8080:8080"
+    environment:
+      - USERAUTH_URL=http://userauth:9998
+    depends_on:
+      userauth:
+        condition: service_started
     networks:
       - barony-network
     healthcheck:
@@ -35,3 +81,6 @@ services:
 networks:
   barony-network:
     driver: bridge
+
+volumes:
+  userauth-db-data:

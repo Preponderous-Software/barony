@@ -151,7 +151,7 @@
         let autoPlayInterval = null;
         let isAutoPlaying = false;
         let selectedArmy = null;
-        let sessionId = null;
+        let token = null;
         let username = null;
         let lastGameState = null;
         
@@ -347,22 +347,40 @@
         // Session Management
         // ========================
         function checkSession() {
-            sessionId = localStorage.getItem('sessionId');
+            token = localStorage.getItem('token');
             username = localStorage.getItem('username');
-            
-            if (!sessionId || !username) {
+
+            if (!token || !username) {
+                clearAuth();
                 window.location.href = '/login';
                 return false;
             }
-            
+
             document.getElementById('currentUsername').textContent = username;
             return true;
         }
-        
-        function logout() {
-            localStorage.removeItem('sessionId');
+
+        function clearAuth() {
+            localStorage.removeItem('token');
             localStorage.removeItem('username');
-            window.location.href = '/login';
+            localStorage.removeItem('tokenExpiresAt');
+        }
+
+        function logout() {
+            const currentToken = localStorage.getItem('token');
+            // Revoke the token on the server (best effort), then clear locally and redirect.
+            const done = function() {
+                clearAuth();
+                window.location.href = '/login';
+            };
+            if (!currentToken) {
+                done();
+                return;
+            }
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + currentToken }
+            }).then(done).catch(done);
         }
         
         function showError(message) {
@@ -377,7 +395,7 @@
         
         function getSessionHeaders() {
             return {
-                'X-Session-Id': sessionId,
+                'Authorization': 'Bearer ' + token,
                 'Content-Type': 'application/json'
             };
         }

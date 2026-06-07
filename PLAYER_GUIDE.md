@@ -11,12 +11,20 @@ Barony is a single-player online strategy game where you command armies to captu
 ### Starting the Game
 
 **Using Docker (Recommended):**
+
+Barony uses the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service for
+player accounts, which `docker-compose` builds from a sibling checkout. Clone it next to this
+repo, set a `JWT_SECRET`, then start everything together:
+
 ```bash
+git clone https://github.com/Preponderous-Software/UserAuth.git   # next to barony/
+cd barony
+export JWT_SECRET="please-change-this-to-a-32-byte-minimum-secret"
 docker-compose up --build
 ```
 Then open http://localhost:3000 in your browser.
 
-**Manual Start:**
+**Manual Start:** (also requires UserAuth running on port 9998 — see its README)
 ```bash
 # Backend (Terminal 1)
 cd backend && ./mvnw spring-boot:run
@@ -25,6 +33,14 @@ cd backend && ./mvnw spring-boot:run
 cd web-client && ./mvnw spring-boot:run
 ```
 Then open http://localhost:3000 in your browser.
+
+### Creating an Account & Logging In
+
+The first screen asks you to log in. New players click **Create one** to register a username
+(3–50 characters) and password (at least 8 characters), then log in.
+
+- Your game progress is saved to your account, so you can return to it later.
+- Click **Logout** in the game to sign out — this revokes your session immediately.
 
 ### Game Overview
 
