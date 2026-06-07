@@ -32,6 +32,15 @@ h1 {
     font-size: 2.5em;
 }
 
+/* Names the current auth screen (login vs register) under the Barony title. */
+.auth-subtitle {
+    text-align: center;
+    color: var(--text-secondary, #b8b0a4);
+    margin-top: -18px;
+    margin-bottom: 28px;
+    font-size: 1.1em;
+}
+
 h3 {
     color: var(--accent, #c9a96e);
     border-bottom: 2px solid var(--accent, #8b7355);
