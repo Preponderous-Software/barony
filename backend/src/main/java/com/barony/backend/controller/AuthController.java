@@ -42,7 +42,13 @@ public class AuthController {
 
     @PostMapping("/logout")
     public Map<String, String> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        userAuthClient.logout(bearerToken(authorization));
+        String token = bearerToken(authorization);
+        if (token == null) {
+            // Nothing to revoke: report the missing token rather than a misleading success.
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "A bearer token is required to log out");
+        }
+        userAuthClient.logout(token);
         return Map.of("message", "logged out");
     }
 

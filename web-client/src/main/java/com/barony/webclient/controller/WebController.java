@@ -58,25 +58,13 @@ public class WebController {
     @PostMapping("/api/auth/login")
     @ResponseBody
     public ResponseEntity<?> proxyLogin(@RequestBody Map<String, String> request) {
-        try {
-            return ResponseEntity.ok(backendService.login(request));
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            return passthrough(e);
-        } catch (RestClientException e) {
-            return unavailable(e);
-        }
+        return proxy(() -> backendService.login(request));
     }
 
     @PostMapping("/api/auth/logout")
     @ResponseBody
     public ResponseEntity<?> proxyLogout(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        try {
-            return ResponseEntity.ok(backendService.logout(token(authorization)));
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            return passthrough(e);
-        } catch (RestClientException e) {
-            return unavailable(e);
-        }
+        return proxy(() -> backendService.logout(token(authorization)));
     }
 
     @PostMapping("/api/tick")
@@ -100,13 +88,7 @@ public class WebController {
     @PostMapping("/api/decision")
     @ResponseBody
     public ResponseEntity<?> decision(@RequestBody RulerDecision decision) {
-        try {
-            return ResponseEntity.ok(backendService.changePolicy(decision));
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            return passthrough(e);
-        } catch (RestClientException e) {
-            return unavailable(e);
-        }
+        return proxy(() -> backendService.changePolicy(decision));
     }
 
     @GetMapping("/api/state")
@@ -124,28 +106,28 @@ public class WebController {
     // Authenticated, per-user proxy endpoints (forward the bearer token to the backend)
     @GetMapping("/api/session/state")
     @ResponseBody
-    public GameState getSessionState(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        return backendService.getSessionState(token(authorization));
+    public ResponseEntity<?> getSessionState(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return proxy(() -> backendService.getSessionState(token(authorization)));
     }
 
     @PostMapping("/api/session/tick")
     @ResponseBody
-    public GameState sessionTick(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        return backendService.sessionTick(token(authorization));
+    public ResponseEntity<?> sessionTick(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return proxy(() -> backendService.sessionTick(token(authorization)));
     }
 
     @PostMapping("/api/session/command")
     @ResponseBody
-    public GameState sessionCommand(
+    public ResponseEntity<?> sessionCommand(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody Command command) {
-        return backendService.sessionCommand(token(authorization), command);
+        return proxy(() -> backendService.sessionCommand(token(authorization), command));
     }
 
     @PostMapping("/api/session/reset")
     @ResponseBody
-    public GameState sessionReset(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        return backendService.sessionReset(token(authorization));
+    public ResponseEntity<?> sessionReset(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return proxy(() -> backendService.sessionReset(token(authorization)));
     }
 
     @PostMapping("/api/session/decision")
@@ -153,19 +135,28 @@ public class WebController {
     public ResponseEntity<?> sessionDecision(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody RulerDecision decision) {
+        return proxy(() -> backendService.sessionChangePolicy(token(authorization), decision));
+    }
+
+    @GetMapping("/api/session/ruler-stats")
+    @ResponseBody
+    public ResponseEntity<?> getSessionRulerStats(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return proxy(() -> backendService.sessionRulerStats(token(authorization)));
+    }
+
+    /**
+     * Run a backend call and translate failures so the browser sees the backend's status.
+     * Without this, a backend 401 (missing/invalid/expired/revoked token) would surface from the
+     * proxy as a 500 and the client's `status === 401` re-login handling would never fire.
+     */
+    private ResponseEntity<?> proxy(java.util.function.Supplier<?> call) {
         try {
-            return ResponseEntity.ok(backendService.sessionChangePolicy(token(authorization), decision));
+            return ResponseEntity.ok(call.get());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             return passthrough(e);
         } catch (RestClientException e) {
             return unavailable(e);
         }
-    }
-
-    @GetMapping("/api/session/ruler-stats")
-    @ResponseBody
-    public RulerStats getSessionRulerStats(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        return backendService.sessionRulerStats(token(authorization));
     }
 
     private String token(String authorization) {

@@ -19,16 +19,18 @@ public class SessionService {
     /**
      * Create or retrieve a session for the given username
      */
-    public Session getOrCreateSession(String username) {
+    public synchronized Session getOrCreateSession(String username) {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("Username cannot be empty");
         }
-        
+
         // Clean up old sessions periodically
         cleanupExpiredSessions();
-        
-        // Reuse the existing session for this user, refreshing its access time so an active
-        // player's game state is not reclaimed by cleanupExpiredSessions mid-play.
+
+        // synchronized: the scan-then-create below is a check-then-act that must be atomic, or two
+        // concurrent first requests for the same username could each create a distinct session and
+        // split that player's game state. Reuse the existing session for this user, refreshing its
+        // access time so an active player's game state is not reclaimed by cleanup mid-play.
         return sessions.values().stream()
             .filter(s -> s.getUsername().equals(username))
             .findFirst()

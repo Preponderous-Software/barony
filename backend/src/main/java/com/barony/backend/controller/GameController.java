@@ -70,6 +70,12 @@ public class GameController {
     // Each requires a valid UserAuth-issued JWT in the `Authorization: Bearer <token>` header.
     // The token is validated against UserAuth on every request (so logged-out / revoked / expired
     // tokens are refused), and the game state is keyed by the authenticated username.
+    //
+    // GameService is a shared singleton holding a single mutable GameState. Each request swaps in
+    // its own user's state via setGameState(...) and then operates on it, so the load-operate-read
+    // sequence must hold the GameService monitor for its full duration; otherwise a concurrent
+    // request for a different user could swap the shared state mid-sequence. We therefore
+    // synchronize on `gameService` (not on the per-session state object) across each block.
 
     private Session authenticate(String authorization) {
         String token = bearerToken(authorization);
@@ -94,7 +100,7 @@ public class GameController {
     @GetMapping("/api/session/state")
     public GameState getSessionState(@RequestHeader(value = "Authorization", required = false) String authorization) {
         Session session = authenticate(authorization);
-        synchronized (session.getGameState()) {
+        synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             return gameService.getState();
         }
@@ -103,7 +109,7 @@ public class GameController {
     @PostMapping("/api/session/tick")
     public GameState sessionTick(@RequestHeader(value = "Authorization", required = false) String authorization) {
         Session session = authenticate(authorization);
-        synchronized (session.getGameState()) {
+        synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.tick();
             return gameService.getState();
@@ -115,7 +121,7 @@ public class GameController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody Command command) {
         Session session = authenticate(authorization);
-        synchronized (session.getGameState()) {
+        synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.executeCommand(command);
             return gameService.getState();
@@ -125,7 +131,7 @@ public class GameController {
     @PostMapping("/api/session/reset")
     public GameState sessionReset(@RequestHeader(value = "Authorization", required = false) String authorization) {
         Session session = authenticate(authorization);
-        synchronized (session.getGameState()) {
+        synchronized (gameService) {
             gameService.resetGame();
             session.setGameState(gameService.getGameStateInternal());
             return gameService.getState();
@@ -138,7 +144,7 @@ public class GameController {
             @RequestBody RulerDecision decision) {
         Session session = authenticate(authorization);
         validateDecision(decision);
-        synchronized (session.getGameState()) {
+        synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             try {
                 gameService.changePolicy(decision.getCategory(), decision.getChoice());
@@ -156,7 +162,7 @@ public class GameController {
     @GetMapping("/api/session/ruler-stats")
     public RulerStats sessionRulerStats(@RequestHeader(value = "Authorization", required = false) String authorization) {
         Session session = authenticate(authorization);
-        synchronized (session.getGameState()) {
+        synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             return gameService.getRulerStats();
         }

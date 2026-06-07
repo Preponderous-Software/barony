@@ -79,4 +79,12 @@ class AuthControllerTest {
 
         verify(userAuthClient).logout("jwt-abc");
     }
+
+    @Test
+    void logoutWithoutTokenIsRejectedAndRevokesNothing() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(userAuthClient);
+    }
 }

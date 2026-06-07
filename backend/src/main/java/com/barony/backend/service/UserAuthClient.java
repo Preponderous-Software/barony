@@ -43,7 +43,8 @@ public class UserAuthClient {
 
     /**
      * Proxy UserAuth {@code POST /register}. Returns the created user's public fields.
-     * Propagates UserAuth's status (e.g. 400 validation, 409 username taken).
+     * Propagates UserAuth's 4xx status verbatim (e.g. 400 validation, 409 username taken);
+     * a UserAuth 5xx or a connection failure surfaces as 503 (see {@link #unavailable}).
      */
     public Map<String, Object> register(String username, String password) {
         HttpEntity<Map<String, String>> entity = jsonEntity(Map.of(
