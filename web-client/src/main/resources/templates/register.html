@@ -55,6 +55,7 @@
                        placeholder="Re-enter your password"
                        minlength="8"
                        autocomplete="new-password">
+                <small class="caps-warning" id="capsWarning" role="alert" style="display: none;">⚠ Caps Lock is on.</small>
             </div>
 
             <button type="submit">Create Account</button>
@@ -66,6 +67,26 @@
     </div>
 
     <script>
+        // Warn when Caps Lock is on while typing a password — a top cause of
+        // "wrong password" failures the player can't see (the field is masked).
+        function wireCapsLock(inputId, warningId) {
+            const input = document.getElementById(inputId);
+            const warn = document.getElementById(warningId);
+            if (!input || !warn) return;
+            const update = function (e) {
+                const on = e.getModifierState && e.getModifierState('CapsLock');
+                warn.style.display = on ? 'block' : 'none';
+            };
+            input.addEventListener('keyup', update);
+            input.addEventListener('keydown', update);
+            input.addEventListener('blur', function () { warn.style.display = 'none'; });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            wireCapsLock('password', 'capsWarning');
+            wireCapsLock('confirmPassword', 'capsWarning');
+        });
+
         function togglePassword(id, btn) {
             const input = document.getElementById(id);
             const reveal = input.type === 'password';

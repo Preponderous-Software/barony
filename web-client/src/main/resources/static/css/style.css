@@ -32,6 +32,15 @@ h1 {
     font-size: 2.5em;
 }
 
+/* Caps Lock warning shown while typing in a password field. */
+.caps-warning {
+    display: block;
+    margin-top: 6px;
+    color: #d9a441;
+    font-size: 13px;
+    font-weight: bold;
+}
+
 /* Persistent requirement hint under a form field (survives typing, unlike a
    placeholder), so the rules are visible before the player triggers an error. */
 .field-hint {
