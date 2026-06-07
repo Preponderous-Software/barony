@@ -368,9 +368,11 @@
 
         function logout() {
             const currentToken = localStorage.getItem('token');
-            // Revoke the token on the server (best effort), then clear locally and redirect.
+            // Revoke the token on the server (best effort), then clear locally and
+            // redirect with a confirmation so the player knows the logout worked.
             const done = function() {
                 clearAuth();
+                sessionStorage.setItem('authNotice', 'You have been logged out.');
                 window.location.href = '/login';
             };
             if (!currentToken) {
@@ -381,6 +383,15 @@
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + currentToken }
             }).then(done).catch(done);
+        }
+
+        // Involuntary sign-out (token rejected by the server: expired/revoked).
+        // Unlike logout(), there's no valid token to revoke — just clear local
+        // state and tell the player why they're back at the login screen.
+        function sessionExpired() {
+            clearAuth();
+            sessionStorage.setItem('authNotice', 'Your session expired — please log in again.');
+            window.location.href = '/login';
         }
         
         function showError(message) {
@@ -451,7 +462,7 @@
             })
                 .then(response => {
                     if (response.status === 401) {
-                        logout();
+                        sessionExpired();
                         return;
                     }
                     if (!response.ok) {
@@ -570,7 +581,7 @@
             })
                 .then(response => {
                     if (response.status === 401) {
-                        logout();
+                        sessionExpired();
                         return;
                     }
                     return response.json();
@@ -892,7 +903,7 @@
             })
                 .then(response => {
                     if (response.status === 401) {
-                        logout();
+                        sessionExpired();
                         return;
                     }
                     if (!response.ok) {
