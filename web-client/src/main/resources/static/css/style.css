@@ -48,6 +48,18 @@ h3 {
     color: #ff6b6b;
 }
 
+/* Neutral/positive notice (e.g. "account created", "session expired") —
+   visually distinct from the red .error so it doesn't read as a failure. */
+.notice {
+    background: #1f2e1f;
+    border: 2px solid #5a8b5a;
+    padding: 15px 20px;
+    border-radius: 8px;
+    text-align: center;
+    color: #a8d8a8;
+    margin-bottom: 20px;
+}
+
 .controls {
     text-align: center;
     margin-bottom: 20px;

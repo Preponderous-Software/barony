@@ -22,6 +22,12 @@
             <p th:text="${error}"></p>
         </div>
 
+        <div id="formNotice" class="notice" role="status" style="display: none;"></div>
+
+        <div id="formError" class="error" role="alert" style="display: none;">
+            <p id="formErrorText"></p>
+        </div>
+
         <form id="loginForm" onsubmit="return login(event)">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -50,16 +56,30 @@
     </div>
 
     <script>
+        function showFormError(message) {
+            const box = document.getElementById('formError');
+            document.getElementById('formErrorText').textContent = message;
+            box.style.display = 'block';
+        }
+
+        function clearFormError() {
+            document.getElementById('formError').style.display = 'none';
+        }
+
         function login(event) {
             event.preventDefault();
+            clearFormError();
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
 
             if (!username || !password) {
-                alert('Please enter your username and password');
+                showFormError('Please enter your username and password.');
                 return false;
             }
+
+            const submitBtn = document.querySelector('#loginForm button[type="submit"]');
+            const restoreBtn = setButtonBusy(submitBtn, 'Logging in…');
 
             fetch('/api/auth/login', {
                 method: 'POST',
@@ -82,11 +102,42 @@
             })
             .catch(error => {
                 console.error('Login error:', error);
-                alert('Login failed: ' + error.message);
+                showFormError(error.message || 'Login failed. Please try again.');
+                restoreBtn();
             });
 
             return false;
         }
+
+        // Disable a submit button and show a pending label so the player gets
+        // immediate feedback and can't double-submit; returns a restore fn.
+        function setButtonBusy(button, busyLabel) {
+            const originalLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = busyLabel;
+            return function () {
+                button.disabled = false;
+                button.textContent = originalLabel;
+            };
+        }
+
+        // Pick up a one-time handoff from register/logout: show why we're here
+        // and pre-fill the username so the player doesn't retype it.
+        document.addEventListener('DOMContentLoaded', function () {
+            const notice = sessionStorage.getItem('authNotice');
+            if (notice) {
+                const box = document.getElementById('formNotice');
+                box.textContent = notice;
+                box.style.display = 'block';
+                sessionStorage.removeItem('authNotice');
+            }
+            const prefill = sessionStorage.getItem('prefillUsername');
+            if (prefill) {
+                document.getElementById('username').value = prefill;
+                document.getElementById('password').focus();
+                sessionStorage.removeItem('prefillUsername');
+            }
+        });
     </script>
 </body>
 </html>
