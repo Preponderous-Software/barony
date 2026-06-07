@@ -311,9 +311,9 @@ h3 {
 }
 
 .user-info .logout-button {
-    background: #8b3a3a;
+    background: #4f463a;
     color: #f0e8d8;
-    border: none;
+    border: 1px solid #6b5a3e;
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
@@ -321,7 +321,7 @@ h3 {
 }
 
 .user-info .logout-button:hover {
-    background: #a04040;
+    background: #615647;
 }
 
 .form-group {
