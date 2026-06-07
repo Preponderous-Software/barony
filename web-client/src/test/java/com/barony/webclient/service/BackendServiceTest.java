@@ -50,6 +50,30 @@ class BackendServiceTest {
     }
 
     @Test
+    void registerProxiesToBackendAuthEndpoint() {
+        server.expect(requestTo(BACKEND + "/api/auth/register"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.username").value("alice"))
+                .andRespond(withSuccess("{\"id\":1,\"username\":\"alice\"}", MediaType.APPLICATION_JSON));
+
+        Map<String, Object> result = service.register(Map.of("username", "alice", "password", "password123"));
+
+        assertEquals("alice", result.get("username"));
+        server.verify();
+    }
+
+    @Test
+    void sessionCommandForwardsBearerToken() {
+        server.expect(requestTo(BACKEND + "/api/session/command"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("Authorization", "Bearer jwt-abc"))
+                .andRespond(withSuccess("{\"width\":5,\"height\":5}", MediaType.APPLICATION_JSON));
+
+        assertNotNull(service.sessionCommand("jwt-abc", new com.barony.webclient.model.Command()));
+        server.verify();
+    }
+
+    @Test
     void logoutForwardsBearerTokenToBackend() {
         server.expect(requestTo(BACKEND + "/api/auth/logout"))
                 .andExpect(method(HttpMethod.POST))
