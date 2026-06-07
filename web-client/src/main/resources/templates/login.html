@@ -41,10 +41,15 @@
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required
-                       placeholder="Your password"
-                       minlength="8"
-                       autocomplete="current-password">
+                <div class="password-field">
+                    <input type="password" id="password" name="password" required
+                           placeholder="Your password"
+                           minlength="8"
+                           autocomplete="current-password">
+                    <button type="button" class="password-toggle"
+                            onclick="togglePassword('password', this)"
+                            aria-label="Show password">Show</button>
+                </div>
             </div>
 
             <button type="submit">Log In</button>
@@ -57,6 +62,14 @@
     </div>
 
     <script>
+        function togglePassword(id, btn) {
+            const input = document.getElementById(id);
+            const reveal = input.type === 'password';
+            input.type = reveal ? 'text' : 'password';
+            btn.textContent = reveal ? 'Hide' : 'Show';
+            btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+        }
+
         function showFormError(message) {
             const box = document.getElementById('formError');
             document.getElementById('formErrorText').textContent = message;

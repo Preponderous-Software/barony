@@ -336,6 +336,40 @@ input[type="password"]:focus {
     border-color: var(--accent, #c9a96e);
 }
 
+/* Password field with an inline Show/Hide reveal toggle. */
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 72px;
+}
+
+.password-field .password-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: auto;
+    margin: 0;
+    padding: 0 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    transform: none;
+    color: var(--accent, #c9a96e);
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.password-field .password-toggle:hover {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    text-decoration: underline;
+}
+
 .login-container button {
     width: 100%;
     background: #6b5a3e;
