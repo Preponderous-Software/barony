@@ -9,3 +9,13 @@ spring:
     name: barony-web-client
   thymeleaf:
     cache: false
+  web:
+    resources:
+      chain:
+        # Content-hash versioning for static assets: Thymeleaf @{/css/style.css}
+        # links resolve to /css/style-<md5>.css, so a changed stylesheet gets a new
+        # URL and browsers never serve a stale cached copy after a deploy.
+        strategy:
+          content:
+            enabled: true
+            paths: /**
