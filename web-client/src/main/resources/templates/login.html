@@ -22,6 +22,8 @@
             <p th:text="${error}"></p>
         </div>
 
+        <div id="formNotice" class="notice" role="status" style="display: none;"></div>
+
         <div id="formError" class="error" role="alert" style="display: none;">
             <p id="formErrorText"></p>
         </div>
@@ -118,6 +120,24 @@
                 button.textContent = originalLabel;
             };
         }
+
+        // Pick up a one-time handoff from register/logout: show why we're here
+        // and pre-fill the username so the player doesn't retype it.
+        document.addEventListener('DOMContentLoaded', function () {
+            const notice = sessionStorage.getItem('authNotice');
+            if (notice) {
+                const box = document.getElementById('formNotice');
+                box.textContent = notice;
+                box.style.display = 'block';
+                sessionStorage.removeItem('authNotice');
+            }
+            const prefill = sessionStorage.getItem('prefillUsername');
+            if (prefill) {
+                document.getElementById('username').value = prefill;
+                document.getElementById('password').focus();
+                sessionStorage.removeItem('prefillUsername');
+            }
+        });
     </script>
 </body>
 </html>
