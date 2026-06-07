@@ -32,6 +32,15 @@ h1 {
     font-size: 2.5em;
 }
 
+/* Persistent requirement hint under a form field (survives typing, unlike a
+   placeholder), so the rules are visible before the player triggers an error. */
+.field-hint {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-secondary, #8a8278);
+    font-size: 13px;
+}
+
 /* Names the current auth screen (login vs register) under the Barony title. */
 .auth-subtitle {
     text-align: center;
