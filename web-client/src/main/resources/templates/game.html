@@ -34,7 +34,25 @@
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Acts on the army selected on the map, right below it — no scrolling to the list. -->
+            <div id="selectedArmyPanel" class="selected-army-panel">
+                <div id="selectedArmyEmpty" class="selected-army-empty">
+                    Click one of your armies on the map to select it.
+                </div>
+                <div id="selectedArmyActions" style="display: none;">
+                    <span id="selectedArmyTitle" class="selected-army-title"></span>
+                    <div class="selected-army-split">
+                        <label for="panelSplitAmount">Split off</label>
+                        <input type="number" id="panelSplitAmount" class="split-input"
+                               min="1" value="1" placeholder="Amount">
+                        <span id="panelSplitHint" class="field-hint"></span>
+                        <button id="panelSplitBtn" class="split-button" onclick="panelSplit()">Split Army</button>
+                    </div>
+                    <span id="panelSplitMsg" class="split-validation-msg"></span>
+                </div>
+            </div>
+
             <details class="collapsible-section section-status" open>
                 <summary>Game Status &amp; Stats</summary>
                 <div class="game-info">
@@ -441,6 +459,7 @@
             
             drawMap(data);
             updateArmiesList(data.armies);
+            updateSelectedArmyPanel();
             updateRulerStats();
         }
         
@@ -787,6 +806,41 @@
             });
         }
         
+        // Reflect the currently selected army (resolved fresh from game state) into the panel
+        // under the map: show its stats and a split control, or a hint when nothing is selected.
+        function updateSelectedArmyPanel() {
+            const actions = document.getElementById('selectedArmyActions');
+            const empty = document.getElementById('selectedArmyEmpty');
+            let army = null;
+            if (selectedArmy && lastGameState && lastGameState.armies) {
+                army = lastGameState.armies.find(a => a.id === selectedArmy.id && a.playerId === 1);
+            }
+            if (!army) {
+                selectedArmy = null;
+                actions.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            actions.style.display = 'block';
+            document.getElementById('selectedArmyTitle').textContent =
+                'Army #' + army.id + ' — ' + army.soldiers + ' soldiers at (' + army.x + ', ' + army.y + ')';
+
+            const input = document.getElementById('panelSplitAmount');
+            const maxSplit = Math.max(1, army.soldiers - 1);
+            const canSplit = army.soldiers > 1;
+            input.max = String(maxSplit);
+            const current = parseInt(input.value);
+            if (isNaN(current) || current < 1 || current > maxSplit) {
+                input.value = '1';
+            }
+            input.disabled = !canSplit;
+            document.getElementById('panelSplitBtn').disabled = !canSplit;
+            document.getElementById('panelSplitHint').textContent =
+                canSplit ? ('1–' + maxSplit) : 'Needs 2+ soldiers to split';
+            document.getElementById('panelSplitMsg').style.display = 'none';
+        }
+
         function splitArmy(armyId) {
             const splitAmountInput = document.getElementById('splitAmount-' + armyId);
             const validationMsg = document.getElementById('splitMsg-' + armyId);
@@ -811,20 +865,21 @@
                 return;
             }
             
+            sendSplitCommand(armyId, splitAmount, validationMsg);
+        }
+
+        // Shared SPLIT command, used by both the bottom Armies list and the under-map panel.
+        function sendSplitCommand(armyId, splitAmount, msgEl) {
             fetch('/api/session/command', {
                 method: 'POST',
                 headers: getSessionHeaders(),
-                body: JSON.stringify({
-                    type: 'SPLIT',
-                    armyId: armyId,
-                    splitAmount: splitAmount
-                })
+                body: JSON.stringify({ type: 'SPLIT', armyId: armyId, splitAmount: splitAmount })
             })
             .then(response => {
+                if (response.status === 401) { sessionExpired(); return null; }
                 if (!response.ok) {
                     return response.json().then(err => {
-                        const message = (err && err.message) ? err.message : 'Failed to split army';
-                        throw new Error(message);
+                        throw new Error((err && err.message) ? err.message : 'Failed to split army');
                     }).catch(() => {
                         throw new Error('Failed to split army');
                     });
@@ -832,14 +887,40 @@
                 return response.json();
             })
             .then(data => {
+                if (!data) return;
                 updateUI(data);
                 showToast('Army split successfully', 'success');
             })
             .catch(error => {
                 const errorMsg = error.message || 'Network error occurred';
+                if (msgEl) {
+                    msgEl.textContent = errorMsg;
+                    msgEl.style.display = 'block';
+                }
                 showToast('Error splitting army: ' + errorMsg, 'danger');
                 console.error('Error:', error);
             });
+        }
+
+        // Split the army currently selected on the map, from the under-map panel.
+        function panelSplit() {
+            if (!selectedArmy) return;
+            const input = document.getElementById('panelSplitAmount');
+            const msgEl = document.getElementById('panelSplitMsg');
+            const amount = parseInt(input.value);
+            const maxSplit = parseInt(input.max);
+            if (isNaN(amount) || amount < 1) {
+                msgEl.textContent = 'Enter a valid amount (at least 1)';
+                msgEl.style.display = 'block';
+                return;
+            }
+            if (amount > maxSplit) {
+                msgEl.textContent = 'Cannot exceed ' + maxSplit + ' soldiers';
+                msgEl.style.display = 'block';
+                return;
+            }
+            msgEl.style.display = 'none';
+            sendSplitCommand(selectedArmy.id, amount, msgEl);
         }
         
         // ========================
@@ -944,6 +1025,7 @@
                         selectedArmy = army;
                         showToast('Army #' + army.id + ' selected. Click a tile to move.', 'info');
                         drawMap(lastGameState);
+                        updateSelectedArmyPanel();
                     }
                 } else {
                     // Check if clicking on an empty area (no player 1 army) to deselect
@@ -953,6 +1035,7 @@
                         selectedArmy = clickedArmy;
                         showToast('Army #' + clickedArmy.id + ' selected. Click a tile to move.', 'info');
                         drawMap(lastGameState);
+                        updateSelectedArmyPanel();
                         return;
                     }
                     
@@ -976,6 +1059,7 @@
                     .then(data => {
                         updateUI(data);
                         selectedArmy = null;
+                        updateSelectedArmyPanel();
                     })
                     .catch(error => {
                         console.error('Error:', error);
@@ -990,6 +1074,7 @@
                 if (selectedArmy) {
                     selectedArmy = null;
                     if (lastGameState) drawMap(lastGameState);
+                    updateSelectedArmyPanel();
                     showToast('Army deselected', 'info');
                 }
             });
