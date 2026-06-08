@@ -326,7 +326,7 @@ h3 {
 }
 
 .split-button {
-    background: #8b3a3a;
+    background: #6b5a3e;
     color: #f0e8d8;
     border: none;
     padding: 6px 16px;
@@ -338,7 +338,13 @@ h3 {
 }
 
 .split-button:hover {
-    background: #a04040;
+    background: #7d6a4c;
+}
+
+.split-button:disabled {
+    background: #44403a;
+    color: #8a8278;
+    cursor: not-allowed;
 }
 
 .user-info {
