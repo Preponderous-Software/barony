@@ -1,10 +1,12 @@
 package com.barony.backend.model;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class Tile {
     private TileType type;
     private int ownerId; // 0=neutral, 1=player1, 2=player2

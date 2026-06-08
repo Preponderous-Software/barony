@@ -200,7 +200,8 @@ GitHub Actions runs on all PRs:
 
 ### Backend
 - Spring Boot REST API
-- In-memory game state (thread-safe)
+- Per-player game state, kept in memory and **persisted per account** so games survive restarts
+- Storage: embedded **H2** saved to `./data` by default (mount it as a volume in production); set `DB_URL` (+ `DB_USERNAME`/`DB_PASSWORD`) to use Postgres instead
 - Unique army IDs (not list indices)
 - CORS: localhost only
 

@@ -1,12 +1,14 @@
 package com.barony.backend.model;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class Army {
     private int id;
     private int x;
@@ -19,6 +21,15 @@ public class Army {
     private int loyalty; // 0-110, affects desertion rate (default 100, 100-110 is bonus)
 
     private static final AtomicInteger nextId = new AtomicInteger(1);
+
+    /**
+     * Ensure freshly-generated army ids stay above {@code id}. Called after loading a saved game so
+     * a new army (e.g. from a split) can't reuse an id already present in the restored state — the
+     * id counter is a static that otherwise resets to 1 on backend restart.
+     */
+    public static void ensureIdsAbove(int id) {
+        nextId.updateAndGet(current -> Math.max(current, id + 1));
+    }
 
     public Army(int x, int y, int soldiers, int playerId) {
         this.id = nextId.getAndIncrement();

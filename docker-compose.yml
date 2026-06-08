@@ -56,6 +56,9 @@ services:
         condition: service_started
     networks:
       - barony-network
+    # Persist saved games (embedded H2 file) across container restarts.
+    volumes:
+      - barony-backend-data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/state"]
       interval: 30s
@@ -84,3 +87,4 @@ networks:
 
 volumes:
   userauth-db-data:
+  barony-backend-data:
