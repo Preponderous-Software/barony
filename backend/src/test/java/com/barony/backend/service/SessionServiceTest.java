@@ -1,10 +1,12 @@
 package com.barony.backend.service;
 
 import com.barony.backend.model.Session;
+import com.barony.backend.repository.SavedGameRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class SessionServiceTest {
 
@@ -12,7 +14,9 @@ class SessionServiceTest {
 
     @BeforeEach
     void setUp() {
-        sessionService = new SessionService();
+        // Mocked repo: findById returns Optional.empty() by default, so every username yields a
+        // fresh game; this unit test exercises the in-memory cache behavior only.
+        sessionService = new SessionService(mock(SavedGameRepository.class));
     }
 
     @Test

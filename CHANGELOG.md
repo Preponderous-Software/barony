@@ -4,6 +4,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ## [Unreleased]
 
+### Persistence
+
+- ✅ Each player's game is now **saved per account and restored after backend restarts/redeploys** instead of being held only in memory (and lost on every restart)
+- ✅ Storage is an embedded **H2** database persisted to `./data` (mount as a volume in production); `DB_URL` switches it to Postgres
+- ✅ Game state is serialized as JSON; a fresh game is persisted on creation and re-saved after every turn, command, reset, and policy change
+- ✅ Army id counter advances past restored armies on load, so a split after reload can't reuse an existing id
+
 ### Security
 
 - ✅ Auth token moved from `localStorage` into an **HttpOnly, Secure, SameSite=Lax cookie** (`barony_token`), so browser JavaScript can no longer read it and an XSS can't exfiltrate the session (#46)

@@ -119,6 +119,7 @@ public class GameController {
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.tick();
+            sessionService.save(session);
             return gameService.getState();
         }
     }
@@ -131,6 +132,7 @@ public class GameController {
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.executeCommand(command);
+            sessionService.save(session);
             return gameService.getState();
         }
     }
@@ -141,6 +143,7 @@ public class GameController {
         synchronized (gameService) {
             gameService.resetGame();
             session.setGameState(gameService.getGameStateInternal());
+            sessionService.save(session);
             return gameService.getState();
         }
     }
@@ -155,6 +158,7 @@ public class GameController {
             gameService.setGameState(session.getGameState());
             try {
                 gameService.changePolicy(decision.getCategory(), decision.getChoice());
+                sessionService.save(session);
                 return gameService.getState();
             } catch (IllegalStateException e) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,

@@ -345,7 +345,9 @@ A: No, all commands are final. Plan carefully!
 A: Currently there's only one AI difficulty level. Try different policy strategies to make it easier or harder on yourself.
 
 **Q: What happens if I close the game?**
-A: Game state is lost (no save feature yet). You'll start a new game next time.
+A: Your game is saved to your account automatically. Log back in and you'll pick up
+where you left off — it survives closing the browser and server restarts. Use **Reset
+Game** if you'd rather start over.
 
 **Q: Can I play with friends?**
 A: Not yet - it's single-player only right now. Multiplayer is planned for future versions.
