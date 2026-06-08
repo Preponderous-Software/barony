@@ -865,20 +865,21 @@
                 return;
             }
             
+            sendSplitCommand(armyId, splitAmount, validationMsg);
+        }
+
+        // Shared SPLIT command, used by both the bottom Armies list and the under-map panel.
+        function sendSplitCommand(armyId, splitAmount, msgEl) {
             fetch('/api/session/command', {
                 method: 'POST',
                 headers: getSessionHeaders(),
-                body: JSON.stringify({
-                    type: 'SPLIT',
-                    armyId: armyId,
-                    splitAmount: splitAmount
-                })
+                body: JSON.stringify({ type: 'SPLIT', armyId: armyId, splitAmount: splitAmount })
             })
             .then(response => {
+                if (response.status === 401) { sessionExpired(); return null; }
                 if (!response.ok) {
                     return response.json().then(err => {
-                        const message = (err && err.message) ? err.message : 'Failed to split army';
-                        throw new Error(message);
+                        throw new Error((err && err.message) ? err.message : 'Failed to split army');
                     }).catch(() => {
                         throw new Error('Failed to split army');
                     });
@@ -886,14 +887,40 @@
                 return response.json();
             })
             .then(data => {
+                if (!data) return;
                 updateUI(data);
                 showToast('Army split successfully', 'success');
             })
             .catch(error => {
                 const errorMsg = error.message || 'Network error occurred';
+                if (msgEl) {
+                    msgEl.textContent = errorMsg;
+                    msgEl.style.display = 'block';
+                }
                 showToast('Error splitting army: ' + errorMsg, 'danger');
                 console.error('Error:', error);
             });
+        }
+
+        // Split the army currently selected on the map, from the under-map panel.
+        function panelSplit() {
+            if (!selectedArmy) return;
+            const input = document.getElementById('panelSplitAmount');
+            const msgEl = document.getElementById('panelSplitMsg');
+            const amount = parseInt(input.value);
+            const maxSplit = parseInt(input.max);
+            if (isNaN(amount) || amount < 1) {
+                msgEl.textContent = 'Enter a valid amount (at least 1)';
+                msgEl.style.display = 'block';
+                return;
+            }
+            if (amount > maxSplit) {
+                msgEl.textContent = 'Cannot exceed ' + maxSplit + ' soldiers';
+                msgEl.style.display = 'block';
+                return;
+            }
+            msgEl.style.display = 'none';
+            sendSplitCommand(selectedArmy.id, amount, msgEl);
         }
         
         // ========================
