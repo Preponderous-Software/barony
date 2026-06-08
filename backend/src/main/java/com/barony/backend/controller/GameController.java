@@ -5,10 +5,13 @@ import com.barony.backend.model.GameState;
 import com.barony.backend.model.RulerDecision;
 import com.barony.backend.model.RulerStats;
 import com.barony.backend.model.Session;
+import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GameService;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,6 +24,7 @@ public class GameController {
     private final GameService gameService;
     private final SessionService sessionService;
     private final UserAuthClient userAuthClient;
+    private final AuthCookies authCookies;
 
     @GetMapping("/state")
     public GameState getState() {
@@ -67,9 +71,11 @@ public class GameController {
 
     // Authenticated, per-user endpoints
     //
-    // Each requires a valid UserAuth-issued JWT in the `Authorization: Bearer <token>` header.
-    // The token is validated against UserAuth on every request (so logged-out / revoked / expired
-    // tokens are refused), and the game state is keyed by the authenticated username.
+    // Each requires a valid UserAuth-issued JWT, read from the HttpOnly `barony_token` cookie
+    // (the browser sends it automatically; JavaScript can't), or from an `Authorization: Bearer`
+    // header as a fallback for CLI / direct API clients. The token is validated against UserAuth
+    // on every request (so logged-out / revoked / expired tokens are refused), and the game state
+    // is keyed by the authenticated username.
     //
     // GameService is a shared singleton holding a single mutable GameState. Each request swaps in
     // its own user's state via setGameState(...) and then operates on it, so the load-operate-read
@@ -77,8 +83,9 @@ public class GameController {
     // request for a different user could swap the shared state mid-sequence. We therefore
     // synchronize on `gameService` (not on the per-session state object) across each block.
 
-    private Session authenticate(String authorization) {
-        String token = bearerToken(authorization);
+    private Session authenticate(HttpServletRequest request) {
+        String token = authCookies.read(request)
+                .orElseGet(() -> bearerToken(request.getHeader(HttpHeaders.AUTHORIZATION)));
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "Authentication required. Please log in.");
@@ -98,8 +105,8 @@ public class GameController {
     }
 
     @GetMapping("/api/session/state")
-    public GameState getSessionState(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        Session session = authenticate(authorization);
+    public GameState getSessionState(HttpServletRequest request) {
+        Session session = authenticate(request);
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             return gameService.getState();
@@ -107,8 +114,8 @@ public class GameController {
     }
 
     @PostMapping("/api/session/tick")
-    public GameState sessionTick(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        Session session = authenticate(authorization);
+    public GameState sessionTick(HttpServletRequest request) {
+        Session session = authenticate(request);
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.tick();
@@ -118,9 +125,9 @@ public class GameController {
 
     @PostMapping("/api/session/command")
     public GameState sessionCommand(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            HttpServletRequest request,
             @RequestBody Command command) {
-        Session session = authenticate(authorization);
+        Session session = authenticate(request);
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.executeCommand(command);
@@ -129,8 +136,8 @@ public class GameController {
     }
 
     @PostMapping("/api/session/reset")
-    public GameState sessionReset(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        Session session = authenticate(authorization);
+    public GameState sessionReset(HttpServletRequest request) {
+        Session session = authenticate(request);
         synchronized (gameService) {
             gameService.resetGame();
             session.setGameState(gameService.getGameStateInternal());
@@ -140,9 +147,9 @@ public class GameController {
 
     @PostMapping("/api/session/decision")
     public GameState sessionDecision(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            HttpServletRequest request,
             @RequestBody RulerDecision decision) {
-        Session session = authenticate(authorization);
+        Session session = authenticate(request);
         validateDecision(decision);
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
@@ -160,8 +167,8 @@ public class GameController {
     }
 
     @GetMapping("/api/session/ruler-stats")
-    public RulerStats sessionRulerStats(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        Session session = authenticate(authorization);
+    public RulerStats sessionRulerStats(HttpServletRequest request) {
+        Session session = authenticate(request);
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             return gameService.getRulerStats();

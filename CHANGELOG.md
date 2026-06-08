@@ -4,6 +4,12 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ## [Unreleased]
 
+### Security
+
+- ✅ Auth token moved from `localStorage` into an **HttpOnly, Secure, SameSite=Lax cookie** (`barony_token`), so browser JavaScript can no longer read it and an XSS can't exfiltrate the session (#46)
+- ✅ Login sets the cookie and no longer returns the JWT in the response body; logout revokes the token and clears the cookie
+- ✅ Backend reads the token from the cookie (with a `Bearer` header fallback for CLI/API clients); the web client transparently forwards the cookie and relays `Set-Cookie`
+
 ### Authentication (UserAuth integration)
 
 - ✅ Player accounts via the standalone [UserAuth](https://github.com/Preponderous-Software/UserAuth) service (registration, login, logout)

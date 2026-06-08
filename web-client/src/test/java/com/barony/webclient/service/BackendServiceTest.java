@@ -3,8 +3,10 @@ package com.barony.webclient.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
@@ -16,8 +18,9 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
- * First test source for the web-client module. Verifies that BackendService proxies auth requests
- * and forwards the bearer token on per-user game requests to the backend.
+ * Verifies BackendService proxies auth requests and forwards the auth cookie (not a bearer token)
+ * on per-user game requests, and surfaces the backend's Set-Cookie on login/logout so the web
+ * controller can relay it to the browser.
  */
 class BackendServiceTest {
 
@@ -29,23 +32,37 @@ class BackendServiceTest {
     @BeforeEach
     void setUp() throws Exception {
         this.service = new BackendService(new RestTemplateBuilder());
-        // Bind the mock server to the RestTemplate the service built, and set the backend URL
-        // (the @Value field is not injected outside a Spring context).
         RestTemplate restTemplate = (RestTemplate) readField(service, "restTemplate");
         this.server = MockRestServiceServer.createServer(restTemplate);
         setField(service, "backendUrl", BACKEND);
     }
 
     @Test
-    void loginProxiesToBackendAuthEndpoint() {
+    void loginReturnsResponseEntityCarryingSetCookie() {
         server.expect(requestTo(BACKEND + "/api/auth/login"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.username").value("alice"))
-                .andRespond(withSuccess("{\"token\":\"jwt-abc\",\"tokenType\":\"Bearer\"}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("{\"username\":\"alice\"}", MediaType.APPLICATION_JSON)
+                        .headers(setCookie("barony_token=jwt-abc; HttpOnly; Path=/")));
 
-        Map<String, Object> result = service.login(Map.of("username", "alice", "password", "password123"));
+        ResponseEntity<Map> result = service.login(Map.of("username", "alice", "password", "password123"));
 
-        assertEquals("jwt-abc", result.get("token"));
+        assertEquals("alice", result.getBody().get("username"));
+        assertTrue(result.getHeaders().getFirst(HttpHeaders.SET_COOKIE).contains("barony_token=jwt-abc"));
+        server.verify();
+    }
+
+    @Test
+    void logoutForwardsCookieAndReturnsSetCookieThatClears() {
+        server.expect(requestTo(BACKEND + "/api/auth/logout"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andRespond(withSuccess("{\"message\":\"logged out\"}", MediaType.APPLICATION_JSON)
+                        .headers(setCookie("barony_token=; Max-Age=0; Path=/")));
+
+        ResponseEntity<Map> result = service.logout("barony_token=jwt-abc");
+
+        assertTrue(result.getHeaders().getFirst(HttpHeaders.SET_COOKIE).contains("Max-Age=0"));
         server.verify();
     }
 
@@ -63,48 +80,31 @@ class BackendServiceTest {
     }
 
     @Test
-    void sessionCommandForwardsBearerToken() {
-        server.expect(requestTo(BACKEND + "/api/session/command"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer jwt-abc"))
-                .andRespond(withSuccess("{\"width\":5,\"height\":5}", MediaType.APPLICATION_JSON));
-
-        assertNotNull(service.sessionCommand("jwt-abc", new com.barony.webclient.model.Command()));
-        server.verify();
-    }
-
-    @Test
-    void logoutForwardsBearerTokenToBackend() {
-        server.expect(requestTo(BACKEND + "/api/auth/logout"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer jwt-abc"))
-                .andRespond(withSuccess("{\"message\":\"logged out\"}", MediaType.APPLICATION_JSON));
-
-        service.logout("jwt-abc");
-
-        server.verify();
-    }
-
-    @Test
-    void sessionStateForwardsBearerToken() {
+    void sessionStateForwardsAuthCookie() {
         server.expect(requestTo(BACKEND + "/api/session/state"))
                 .andExpect(method(HttpMethod.GET))
-                .andExpect(header("Authorization", "Bearer jwt-abc"))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
                 .andRespond(withSuccess("{\"width\":5,\"height\":5}", MediaType.APPLICATION_JSON));
 
-        assertNotNull(service.getSessionState("jwt-abc"));
+        assertNotNull(service.getSessionState("barony_token=jwt-abc"));
         server.verify();
     }
 
     @Test
-    void sessionTickForwardsBearerToken() {
-        server.expect(requestTo(BACKEND + "/api/session/tick"))
+    void sessionCommandForwardsAuthCookie() {
+        server.expect(requestTo(BACKEND + "/api/session/command"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer jwt-abc"))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
                 .andRespond(withSuccess("{\"width\":5,\"height\":5}", MediaType.APPLICATION_JSON));
 
-        assertNotNull(service.sessionTick("jwt-abc"));
+        assertNotNull(service.sessionCommand("barony_token=jwt-abc", new com.barony.webclient.model.Command()));
         server.verify();
+    }
+
+    private static HttpHeaders setCookie(String value) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE, value);
+        return headers;
     }
 
     private static Object readField(Object target, String name) throws Exception {
