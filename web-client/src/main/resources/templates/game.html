@@ -459,6 +459,7 @@
             
             drawMap(data);
             updateArmiesList(data.armies);
+            updateSelectedArmyPanel();
             updateRulerStats();
         }
         
@@ -805,6 +806,41 @@
             });
         }
         
+        // Reflect the currently selected army (resolved fresh from game state) into the panel
+        // under the map: show its stats and a split control, or a hint when nothing is selected.
+        function updateSelectedArmyPanel() {
+            const actions = document.getElementById('selectedArmyActions');
+            const empty = document.getElementById('selectedArmyEmpty');
+            let army = null;
+            if (selectedArmy && lastGameState && lastGameState.armies) {
+                army = lastGameState.armies.find(a => a.id === selectedArmy.id && a.playerId === 1);
+            }
+            if (!army) {
+                selectedArmy = null;
+                actions.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            actions.style.display = 'block';
+            document.getElementById('selectedArmyTitle').textContent =
+                'Army #' + army.id + ' — ' + army.soldiers + ' soldiers at (' + army.x + ', ' + army.y + ')';
+
+            const input = document.getElementById('panelSplitAmount');
+            const maxSplit = Math.max(1, army.soldiers - 1);
+            const canSplit = army.soldiers > 1;
+            input.max = String(maxSplit);
+            const current = parseInt(input.value);
+            if (isNaN(current) || current < 1 || current > maxSplit) {
+                input.value = '1';
+            }
+            input.disabled = !canSplit;
+            document.getElementById('panelSplitBtn').disabled = !canSplit;
+            document.getElementById('panelSplitHint').textContent =
+                canSplit ? ('1–' + maxSplit) : 'Needs 2+ soldiers to split';
+            document.getElementById('panelSplitMsg').style.display = 'none';
+        }
+
         function splitArmy(armyId) {
             const splitAmountInput = document.getElementById('splitAmount-' + armyId);
             const validationMsg = document.getElementById('splitMsg-' + armyId);
@@ -962,6 +998,7 @@
                         selectedArmy = army;
                         showToast('Army #' + army.id + ' selected. Click a tile to move.', 'info');
                         drawMap(lastGameState);
+                        updateSelectedArmyPanel();
                     }
                 } else {
                     // Check if clicking on an empty area (no player 1 army) to deselect
@@ -971,6 +1008,7 @@
                         selectedArmy = clickedArmy;
                         showToast('Army #' + clickedArmy.id + ' selected. Click a tile to move.', 'info');
                         drawMap(lastGameState);
+                        updateSelectedArmyPanel();
                         return;
                     }
                     
@@ -994,6 +1032,7 @@
                     .then(data => {
                         updateUI(data);
                         selectedArmy = null;
+                        updateSelectedArmyPanel();
                     })
                     .catch(error => {
                         console.error('Error:', error);
@@ -1008,6 +1047,7 @@
                 if (selectedArmy) {
                     selectedArmy = null;
                     if (lastGameState) drawMap(lastGameState);
+                    updateSelectedArmyPanel();
                     showToast('Army deselected', 'info');
                 }
             });
