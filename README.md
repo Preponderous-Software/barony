@@ -66,7 +66,7 @@ Then open http://localhost:3000 in your browser.
 - `POST /api/decision` - Change ruler policy
 - `GET /api/ruler-stats` - Get realm statistics
 
-**Authenticated, Per-Player Endpoints (require `Authorization: Bearer <token>` header):**
+**Authenticated, Per-Player Endpoints (require the `barony_token` auth cookie, or an `Authorization: Bearer <token>` header):**
 - `GET /api/session/state` - Get the authenticated player's game state
 - `POST /api/session/tick` - Advance the player's game by one turn
 - `POST /api/session/command` - Send a command for the player
@@ -74,40 +74,43 @@ Then open http://localhost:3000 in your browser.
 - `POST /api/session/decision` - Change ruler policy for the player
 - `GET /api/session/ruler-stats` - Get realm statistics for the player
 
-These endpoints validate the bearer token against UserAuth on every request, so missing,
+These endpoints validate the token against UserAuth on every request, so missing,
 invalid, expired, or revoked (logged-out) tokens are rejected with `401`. Game state is keyed
 by the authenticated username.
 
 **Authentication (proxied to the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service):**
 - `POST /api/auth/register` - Create an account (`{username, password}`)
-- `POST /api/auth/login` - Log in; returns a signed JWT (`{token, tokenType, expiresAt}`)
-- `POST /api/auth/logout` - Revoke the supplied bearer token
+- `POST /api/auth/login` - Log in; sets the JWT in an **HttpOnly** `barony_token` cookie (returns `{username, expiresAt}`, never the token)
+- `POST /api/auth/logout` - Revoke the token and clear the cookie
 
 #### Authentication flow
 
-Barony never stores credentials itself — it delegates to UserAuth. The web client posts
-credentials to the backend, which proxies them to UserAuth; the backend then validates the
-returned JWT on each authenticated game request:
+Barony never stores credentials itself — it delegates to UserAuth. On login the UserAuth-issued
+JWT is placed in an **HttpOnly, Secure, SameSite=Lax cookie** rather than handed to JavaScript, so
+an XSS can't read it; the browser then sends it automatically and the backend validates it on each
+authenticated game request. (A `Bearer` header is still accepted as a fallback for CLI / API
+clients that already hold a token.)
 
 ```
 browser → web-client (proxy) → backend → UserAuth (/register, /login, /session/validate, /logout)
 ```
 
 ```bash
-# Register, then log in to obtain a token
+# Register
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username":"alice","password":"a-strong-password"}'
 
-TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+# Log in — the JWT is set as an HttpOnly cookie (saved to the jar), not returned in the body
+curl -c cookies.txt -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"alice","password":"a-strong-password"}' | jq -r .token)
+  -d '{"username":"alice","password":"a-strong-password"}'
 
-# Use the token on per-player endpoints
-curl http://localhost:8080/api/session/state -H "Authorization: Bearer $TOKEN"
+# Use the cookie on per-player endpoints
+curl -b cookies.txt http://localhost:8080/api/session/state
 
-# Log out (revokes the token; it is refused afterward)
-curl -X POST http://localhost:8080/api/auth/logout -H "Authorization: Bearer $TOKEN"
+# Log out (revokes the token and clears the cookie; it is refused afterward)
+curl -b cookies.txt -X POST http://localhost:8080/api/auth/logout
 ```
 
 ### Command Examples

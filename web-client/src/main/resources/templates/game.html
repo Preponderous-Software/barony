@@ -151,7 +151,6 @@
         let autoPlayInterval = null;
         let isAutoPlaying = false;
         let selectedArmy = null;
-        let token = null;
         let username = null;
         let lastGameState = null;
         
@@ -347,11 +346,12 @@
         // Session Management
         // ========================
         function checkSession() {
-            token = localStorage.getItem('token');
+            // The auth token lives in an HttpOnly cookie the browser sends automatically; JS can't
+            // read it. We keep only the username (for display) in localStorage. The real gate is the
+            // server: any per-player request without a valid cookie returns 401 -> sessionExpired().
             username = localStorage.getItem('username');
 
-            if (!token || !username) {
-                clearAuth();
+            if (!username) {
                 window.location.href = '/login';
                 return false;
             }
@@ -361,33 +361,25 @@
         }
 
         function clearAuth() {
-            localStorage.removeItem('token');
             localStorage.removeItem('username');
+            // Clean up keys from the old localStorage-token scheme, if present.
+            localStorage.removeItem('token');
             localStorage.removeItem('tokenExpiresAt');
         }
 
         function logout() {
-            const currentToken = localStorage.getItem('token');
-            // Revoke the token on the server (best effort), then clear locally and
-            // redirect with a confirmation so the player knows the logout worked.
+            // The auth cookie is sent automatically; the server revokes the token and clears the
+            // cookie. Clear the local username and redirect with a confirmation either way.
             const done = function() {
                 clearAuth();
                 sessionStorage.setItem('authNotice', 'You have been logged out.');
                 window.location.href = '/login';
             };
-            if (!currentToken) {
-                done();
-                return;
-            }
-            fetch('/api/auth/logout', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + currentToken }
-            }).then(done).catch(done);
+            fetch('/api/auth/logout', { method: 'POST' }).then(done).catch(done);
         }
 
-        // Involuntary sign-out (token rejected by the server: expired/revoked).
-        // Unlike logout(), there's no valid token to revoke — just clear local
-        // state and tell the player why they're back at the login screen.
+        // Involuntary sign-out (cookie rejected by the server: missing/expired/revoked).
+        // Clear local state and tell the player why they're back at the login screen.
         function sessionExpired() {
             clearAuth();
             sessionStorage.setItem('authNotice', 'Your session expired — please log in again.');
@@ -405,8 +397,8 @@
         }
         
         function getSessionHeaders() {
+            // The auth cookie rides along automatically on same-origin requests; no token header.
             return {
-                'Authorization': 'Bearer ' + token,
                 'Content-Type': 'application/json'
             };
         }

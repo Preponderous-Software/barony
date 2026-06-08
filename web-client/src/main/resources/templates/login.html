@@ -123,12 +123,9 @@
                     const msg = (result.data && (result.data.message || result.data.error)) || 'Login failed';
                     throw new Error(msg);
                 }
-                // Store the UserAuth-issued JWT and username
-                localStorage.setItem('token', result.data.token);
+                // The token is set by the server in an HttpOnly cookie (JS never sees it); we keep
+                // only the username for display on the game screen.
                 localStorage.setItem('username', username);
-                if (result.data.expiresAt) {
-                    localStorage.setItem('tokenExpiresAt', result.data.expiresAt);
-                }
                 window.location.href = '/game';
             })
             .catch(error => {
