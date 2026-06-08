@@ -34,7 +34,25 @@
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Acts on the army selected on the map, right below it — no scrolling to the list. -->
+            <div id="selectedArmyPanel" class="selected-army-panel">
+                <div id="selectedArmyEmpty" class="selected-army-empty">
+                    Click one of your armies on the map to select it.
+                </div>
+                <div id="selectedArmyActions" style="display: none;">
+                    <span id="selectedArmyTitle" class="selected-army-title"></span>
+                    <div class="selected-army-split">
+                        <label for="panelSplitAmount">Split off</label>
+                        <input type="number" id="panelSplitAmount" class="split-input"
+                               min="1" value="1" placeholder="Amount">
+                        <span id="panelSplitHint" class="field-hint"></span>
+                        <button id="panelSplitBtn" class="split-button" onclick="panelSplit()">Split Army</button>
+                    </div>
+                    <span id="panelSplitMsg" class="split-validation-msg"></span>
+                </div>
+            </div>
+
             <details class="collapsible-section section-status" open>
                 <summary>Game Status &amp; Stats</summary>
                 <div class="game-info">
