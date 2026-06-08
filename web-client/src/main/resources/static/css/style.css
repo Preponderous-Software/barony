@@ -184,6 +184,43 @@ h3 {
     flex-direction: column;
 }
 
+/* The map column and the panel column; stacked by default (mobile-first). */
+.game-main,
+.game-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Sidebar panel order: Status, Armies, then Policy and Settings. */
+.game-sidebar > .section-status { order: 1; }
+.game-sidebar > .section-armies { order: 2; }
+.game-sidebar > .section-policy { order: 3; }
+.game-sidebar > .section-settings { order: 4; }
+
+/* Desktop: place the map and the panels side by side and use the full width,
+   instead of stacking everything in one centered column with empty sides. */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1340px;
+    }
+
+    .game-layout {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .game-main {
+        flex: 0 0 800px;
+    }
+
+    .game-sidebar {
+        flex: 1 1 0;
+        min-width: 280px;
+    }
+}
+
 /* Collapsible sections */
 .collapsible-section {
     margin-bottom: 12px;
@@ -862,35 +899,8 @@ input[type="password"]:focus {
         padding-bottom: 4px;
     }
 
-    /* Reorder game layout so canvas + controls are first on mobile */
-    .game-layout {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .game-layout > .controls {
-        order: 1;
-    }
-
-    .game-layout > #gameCanvas {
-        order: 2;
-    }
-
-    .game-layout > .section-status {
-        order: 3;
-    }
-
-    .game-layout > .section-armies {
-        order: 4;
-    }
-
-    .game-layout > .section-policy {
-        order: 5;
-    }
-
-    .game-layout > .section-settings {
-        order: 6;
-    }
+    /* Mobile stays single-column: .game-layout/.game-main/.game-sidebar are
+       already flex columns, and the sidebar order rules keep Status/Armies first. */
 
     /* Collapse panels by default on mobile — only Game Status & Armies stay open */
     .collapsible-section > summary {
