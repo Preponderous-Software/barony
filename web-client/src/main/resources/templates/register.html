@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barony Game - Login</title>
+    <title>Barony Game - Register</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <style>
         body {
@@ -17,49 +17,52 @@
 <body>
     <div class="login-container">
         <h1>🏰 Barony</h1>
-        <p class="auth-subtitle">Log in to your account</p>
-
-        <div th:if="${error}" class="error">
-            <p th:text="${error}"></p>
-        </div>
-
-        <div id="formNotice" class="notice" role="status" style="display: none;"></div>
+        <p class="auth-subtitle">Create your account</p>
 
         <div id="formError" class="error" role="alert" style="display: none;">
             <p id="formErrorText"></p>
         </div>
 
-        <form id="loginForm" onsubmit="return login(event)">
+        <form id="registerForm" onsubmit="return register(event)">
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username">Choose a Username</label>
                 <input type="text" id="username" name="username" required
-                       placeholder="Your username"
+                       placeholder="3–50 characters"
                        minlength="3"
                        maxlength="50"
                        autocomplete="username"
                        autofocus>
+                <small class="field-hint">3–50 characters.</small>
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">Choose a Password</label>
                 <div class="password-field">
                     <input type="password" id="password" name="password" required
-                           placeholder="Your password"
+                           placeholder="At least 8 characters"
                            minlength="8"
-                           autocomplete="current-password">
+                           autocomplete="new-password">
                     <button type="button" class="password-toggle"
                             onclick="togglePassword('password', this)"
                             aria-label="Show password">Show</button>
                 </div>
+                <small class="field-hint">At least 8 characters.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required
+                       placeholder="Re-enter your password"
+                       minlength="8"
+                       autocomplete="new-password">
                 <small class="caps-warning" id="capsWarning" role="alert" style="display: none;">⚠ Caps Lock is on.</small>
             </div>
 
-            <button type="submit">Log In</button>
+            <button type="submit">Create Account</button>
         </form>
 
         <div class="info">
-            <p>Don't have an account? <a th:href="@{/register}">Create one</a>.</p>
-            <p>Your game progress is saved to your account.</p>
+            <p>Already have an account? <a th:href="@{/login}">Log in</a>.</p>
         </div>
     </div>
 
@@ -79,6 +82,11 @@
             input.addEventListener('blur', function () { warn.style.display = 'none'; });
         }
 
+        document.addEventListener('DOMContentLoaded', function () {
+            wireCapsLock('password', 'capsWarning');
+            wireCapsLock('confirmPassword', 'capsWarning');
+        });
+
         function togglePassword(id, btn) {
             const input = document.getElementById(id);
             const reveal = input.type === 'password';
@@ -97,22 +105,28 @@
             document.getElementById('formError').style.display = 'none';
         }
 
-        function login(event) {
+        function register(event) {
             event.preventDefault();
             clearFormError();
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
 
             if (!username || !password) {
-                showFormError('Please enter your username and password.');
+                showFormError('Please choose a username and password.');
                 return false;
             }
 
-            const submitBtn = document.querySelector('#loginForm button[type="submit"]');
-            const restoreBtn = setButtonBusy(submitBtn, 'Logging in…');
+            if (password !== confirmPassword) {
+                showFormError('Passwords do not match.');
+                return false;
+            }
 
-            fetch('/api/auth/login', {
+            const submitBtn = document.querySelector('#registerForm button[type="submit"]');
+            const restoreBtn = setButtonBusy(submitBtn, 'Creating account…');
+
+            fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: username, password: password })
@@ -120,17 +134,19 @@
             .then(response => response.json().then(data => ({ ok: response.ok, data: data })))
             .then(result => {
                 if (!result.ok) {
-                    const msg = (result.data && (result.data.message || result.data.error)) || 'Login failed';
+                    const msg = (result.data && (result.data.message || result.data.error)) || 'Registration failed';
                     throw new Error(msg);
                 }
-                // The token is set by the server in an HttpOnly cookie (JS never sees it); we keep
-                // only the username for display on the game screen.
-                localStorage.setItem('username', username);
-                window.location.href = '/game';
+                // Registration succeeded; hand off to the login screen with a
+                // success notice and the username pre-filled so the player can
+                // log in without retyping it.
+                sessionStorage.setItem('authNotice', 'Account created — please log in.');
+                sessionStorage.setItem('prefillUsername', username);
+                window.location.href = '/login';
             })
             .catch(error => {
-                console.error('Login error:', error);
-                showFormError(error.message || 'Login failed. Please try again.');
+                console.error('Registration error:', error);
+                showFormError(error.message || 'Registration failed. Please try again.');
                 restoreBtn();
             });
 
@@ -148,25 +164,6 @@
                 button.textContent = originalLabel;
             };
         }
-
-        // Pick up a one-time handoff from register/logout: show why we're here
-        // and pre-fill the username so the player doesn't retype it.
-        document.addEventListener('DOMContentLoaded', function () {
-            wireCapsLock('password', 'capsWarning');
-            const notice = sessionStorage.getItem('authNotice');
-            if (notice) {
-                const box = document.getElementById('formNotice');
-                box.textContent = notice;
-                box.style.display = 'block';
-                sessionStorage.removeItem('authNotice');
-            }
-            const prefill = sessionStorage.getItem('prefillUsername');
-            if (prefill) {
-                document.getElementById('username').value = prefill;
-                document.getElementById('password').focus();
-                sessionStorage.removeItem('prefillUsername');
-            }
-        });
     </script>
 </body>
 </html>

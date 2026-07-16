@@ -21,10 +21,23 @@ Barony is a browser-based turn-based strategy game where you command armies to c
 
 ### Using Docker (Recommended)
 
+Barony authenticates players through the standalone [**UserAuth**](https://github.com/Preponderous-Software/UserAuth)
+service, which `docker-compose` builds from a sibling checkout. Clone it next to this repo first:
+
 ```bash
+# from the directory that contains barony/
+git clone https://github.com/Preponderous-Software/UserAuth.git
+cd barony
+# JWT_SECRET must be at least 32 bytes; override the dev default in production
+export JWT_SECRET="please-change-this-to-a-32-byte-minimum-secret"
 docker-compose up --build
 ```
-Then open http://localhost:3000 in your browser.
+
+This brings up four services together: `userauth-db` (Postgres), `userauth` (port 9998),
+`backend` (8080), and `web-client` (3000). Then open http://localhost:3000 in your browser,
+create an account, and log in.
+
+> If UserAuth lives elsewhere, point `USERAUTH_PATH` at it (e.g. `USERAUTH_PATH=../sibling/UserAuth`).
 
 ### Manual Start
 ```bash
@@ -53,16 +66,52 @@ Then open http://localhost:3000 in your browser.
 - `POST /api/decision` - Change ruler policy
 - `GET /api/ruler-stats` - Get realm statistics
 
-**Session-Aware Endpoints (require `X-Session-Id` header):**
-- `GET /api/session/state` - Get game state for session
-- `POST /api/session/tick` - Advance game by one turn for session
-- `POST /api/session/command` - Send command for session
-- `POST /api/session/reset` - Reset game for session
-- `POST /api/session/decision` - Change ruler policy for session
-- `GET /api/session/ruler-stats` - Get realm statistics for session
+**Authenticated, Per-Player Endpoints (require the `barony_token` auth cookie, or an `Authorization: Bearer <token>` header):**
+- `GET /api/session/state` - Get the authenticated player's game state
+- `POST /api/session/tick` - Advance the player's game by one turn
+- `POST /api/session/command` - Send a command for the player
+- `POST /api/session/reset` - Reset the player's game
+- `POST /api/session/decision` - Change ruler policy for the player
+- `GET /api/session/ruler-stats` - Get realm statistics for the player
 
-**Authentication:**
-- `POST /api/auth/login` - Login and get session ID
+These endpoints validate the token against UserAuth on every request, so missing,
+invalid, expired, or revoked (logged-out) tokens are rejected with `401`. Game state is keyed
+by the authenticated username.
+
+**Authentication (proxied to the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service):**
+- `POST /api/auth/register` - Create an account (`{username, password}`)
+- `POST /api/auth/login` - Log in; sets the JWT in an **HttpOnly** `barony_token` cookie (returns `{username, expiresAt}`, never the token)
+- `POST /api/auth/logout` - Revoke the token and clear the cookie
+
+#### Authentication flow
+
+Barony never stores credentials itself — it delegates to UserAuth. On login the UserAuth-issued
+JWT is placed in an **HttpOnly, Secure, SameSite=Lax cookie** rather than handed to JavaScript, so
+an XSS can't read it; the browser then sends it automatically and the backend validates it on each
+authenticated game request. (A `Bearer` header is still accepted as a fallback for CLI / API
+clients that already hold a token.)
+
+```
+browser → web-client (proxy) → backend → UserAuth (/register, /login, /session/validate, /logout)
+```
+
+```bash
+# Register
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"a-strong-password"}'
+
+# Log in — the JWT is set as an HttpOnly cookie (saved to the jar), not returned in the body
+curl -c cookies.txt -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"a-strong-password"}'
+
+# Use the cookie on per-player endpoints
+curl -b cookies.txt http://localhost:8080/api/session/state
+
+# Log out (revokes the token and clears the cookie; it is refused afterward)
+curl -b cookies.txt -X POST http://localhost:8080/api/auth/logout
+```
 
 ### Command Examples
 
@@ -151,7 +200,8 @@ GitHub Actions runs on all PRs:
 
 ### Backend
 - Spring Boot REST API
-- In-memory game state (thread-safe)
+- Per-player game state, kept in memory and **persisted per account** so games survive restarts
+- Storage: embedded **H2** saved to `./data` by default (mount it as a volume in production); set `DB_URL` (+ `DB_USERNAME`/`DB_PASSWORD`) to use Postgres instead
 - Unique army IDs (not list indices)
 - CORS: localhost only
 

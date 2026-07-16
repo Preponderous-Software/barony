@@ -1,21 +1,28 @@
 package com.barony.webclient.service;
 
-import com.barony.webclient.model.Command;
-import com.barony.webclient.model.GameState;
-import com.barony.webclient.model.RulerDecision;
-import com.barony.webclient.model.RulerStats;
+import com.barony.webclient.model.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
 
 import java.time.Duration;
 import java.util.Map;
 
+/**
+ * Proxies game and auth calls to the backend. Authentication rides on the HttpOnly
+ * {@code barony_token} cookie: the browser sends it to this web client, which forwards the
+ * {@code Cookie} header to the backend, and relays the backend's {@code Set-Cookie} back to the
+ * browser on login/logout. The token is never read or held in JavaScript or this proxy's code.
+ *
+ * (In the gateway deployment Traefik routes {@code /api/*} straight to the backend, so this proxy
+ * is exercised mainly by the local docker-compose setup; the cookie forwarding keeps that working.)
+ */
 @Service
 public class BackendService {
 
@@ -31,10 +38,23 @@ public class BackendService {
                 .build();
     }
 
-    @SuppressWarnings("unchecked")
-    public Map<String, String> login(Map<String, String> request) {
-        HttpEntity<Map<String, String>> entity = jsonEntity(request);
-        return restTemplate.postForObject(backendUrl + "/api/auth/login", entity, Map.class);
+    // Authentication (proxied through the backend to UserAuth)
+    public Map<String, Object> register(Map<String, String> request) {
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(request, jsonHeaders(null));
+        return restTemplate.postForObject(backendUrl + "/api/auth/register", entity, Map.class);
+    }
+
+    /** Login returns the full response so the caller can relay the backend's Set-Cookie. */
+    public ResponseEntity<Map> login(Map<String, String> request) {
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(request, jsonHeaders(null));
+        return restTemplate.exchange(backendUrl + "/api/auth/login", HttpMethod.POST, entity, Map.class);
+    }
+
+    /** Logout forwards the cookie (to revoke) and returns the response so the caller can relay
+        the Set-Cookie that clears it. */
+    public ResponseEntity<Map> logout(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/auth/logout", HttpMethod.POST, entity, Map.class);
     }
 
     public GameState getState() {
@@ -46,8 +66,8 @@ public class BackendService {
     }
 
     public GameState sendCommand(Command command) {
-        HttpEntity<Command> entity = jsonEntity(command);
-        return restTemplate.postForObject(backendUrl + "/command", entity, GameState.class);
+        HttpEntity<Command> request = new HttpEntity<>(command, jsonHeaders(null));
+        return restTemplate.postForObject(backendUrl + "/command", request, GameState.class);
     }
 
     public GameState reset() {
@@ -55,62 +75,51 @@ public class BackendService {
     }
 
     public GameState changePolicy(RulerDecision decision) {
-        HttpEntity<RulerDecision> entity = jsonEntity(decision);
-        return restTemplate.postForObject(backendUrl + "/api/decision", entity, GameState.class);
+        HttpEntity<RulerDecision> request = new HttpEntity<>(decision, jsonHeaders(null));
+        return restTemplate.postForObject(backendUrl + "/api/decision", request, GameState.class);
     }
 
     public RulerStats getRulerStats() {
         return restTemplate.getForObject(backendUrl + "/api/ruler-stats", RulerStats.class);
     }
 
-    public GameState getSessionState(String sessionId) {
-        HttpEntity<Void> entity = sessionEntity(sessionId);
-        return restTemplate.exchange(
-                backendUrl + "/api/session/state", HttpMethod.GET, entity, GameState.class).getBody();
+    // Authenticated, per-user backend API calls (forward the auth cookie)
+    public GameState getSessionState(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/session/state", HttpMethod.GET, entity, GameState.class).getBody();
     }
 
-    public GameState sessionTick(String sessionId) {
-        HttpEntity<Void> entity = sessionEntity(sessionId);
+    public GameState sessionTick(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
         return restTemplate.postForObject(backendUrl + "/api/session/tick", entity, GameState.class);
     }
 
-    public GameState sessionCommand(String sessionId, Command command) {
-        HttpEntity<Command> entity = sessionJsonEntity(sessionId, command);
+    public GameState sessionCommand(String cookie, Command command) {
+        HttpEntity<Command> entity = new HttpEntity<>(command, jsonHeaders(cookie));
         return restTemplate.postForObject(backendUrl + "/api/session/command", entity, GameState.class);
     }
 
-    public GameState sessionReset(String sessionId) {
-        HttpEntity<Void> entity = sessionEntity(sessionId);
+    public GameState sessionReset(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
         return restTemplate.postForObject(backendUrl + "/api/session/reset", entity, GameState.class);
     }
 
-    public GameState sessionChangePolicy(String sessionId, RulerDecision decision) {
-        HttpEntity<RulerDecision> entity = sessionJsonEntity(sessionId, decision);
+    public GameState sessionChangePolicy(String cookie, RulerDecision decision) {
+        HttpEntity<RulerDecision> entity = new HttpEntity<>(decision, jsonHeaders(cookie));
         return restTemplate.postForObject(backendUrl + "/api/session/decision", entity, GameState.class);
     }
 
-    public RulerStats sessionRulerStats(String sessionId) {
-        HttpEntity<Void> entity = sessionEntity(sessionId);
-        return restTemplate.exchange(
-                backendUrl + "/api/session/ruler-stats", HttpMethod.GET, entity, RulerStats.class).getBody();
+    public RulerStats sessionRulerStats(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/session/ruler-stats", HttpMethod.GET, entity, RulerStats.class).getBody();
     }
 
-    private <T> HttpEntity<T> jsonEntity(T body) {
+    private HttpHeaders jsonHeaders(String cookie) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        return new HttpEntity<>(body, headers);
-    }
-
-    private HttpEntity<Void> sessionEntity(String sessionId) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Session-Id", sessionId);
-        return new HttpEntity<>(headers);
-    }
-
-    private <T> HttpEntity<T> sessionJsonEntity(String sessionId, T body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-Session-Id", sessionId);
-        return new HttpEntity<>(body, headers);
+        if (cookie != null && !cookie.isBlank()) {
+            headers.add(HttpHeaders.COOKIE, cookie);
+        }
+        return headers;
     }
 }

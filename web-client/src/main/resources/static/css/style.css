@@ -32,6 +32,33 @@ h1 {
     font-size: 2.5em;
 }
 
+/* Caps Lock warning shown while typing in a password field. */
+.caps-warning {
+    display: block;
+    margin-top: 6px;
+    color: #d9a441;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* Persistent requirement hint under a form field (survives typing, unlike a
+   placeholder), so the rules are visible before the player triggers an error. */
+.field-hint {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-secondary, #8a8278);
+    font-size: 13px;
+}
+
+/* Names the current auth screen (login vs register) under the Barony title. */
+.auth-subtitle {
+    text-align: center;
+    color: var(--text-secondary, #b8b0a4);
+    margin-top: -18px;
+    margin-bottom: 28px;
+    font-size: 1.1em;
+}
+
 h3 {
     color: var(--accent, #c9a96e);
     border-bottom: 2px solid var(--accent, #8b7355);
@@ -46,6 +73,18 @@ h3 {
     border-radius: 8px;
     text-align: center;
     color: #ff6b6b;
+}
+
+/* Neutral/positive notice (e.g. "account created", "session expired") —
+   visually distinct from the red .error so it doesn't read as a failure. */
+.notice {
+    background: #1f2e1f;
+    border: 2px solid #5a8b5a;
+    padding: 15px 20px;
+    border-radius: 8px;
+    text-align: center;
+    color: #a8d8a8;
+    margin-bottom: 20px;
 }
 
 .controls {
@@ -145,6 +184,43 @@ h3 {
     flex-direction: column;
 }
 
+/* The map column and the panel column; stacked by default (mobile-first). */
+.game-main,
+.game-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Sidebar panel order: Status, Armies, then Policy and Settings. */
+.game-sidebar > .section-status { order: 1; }
+.game-sidebar > .section-armies { order: 2; }
+.game-sidebar > .section-policy { order: 3; }
+.game-sidebar > .section-settings { order: 4; }
+
+/* Desktop: place the map and the panels side by side and use the full width,
+   instead of stacking everything in one centered column with empty sides. */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1340px;
+    }
+
+    .game-layout {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .game-main {
+        flex: 0 0 800px;
+    }
+
+    .game-sidebar {
+        flex: 1 1 0;
+        min-width: 280px;
+    }
+}
+
 /* Collapsible sections */
 .collapsible-section {
     margin-bottom: 12px;
@@ -242,6 +318,40 @@ h3 {
     margin-top: 8px;
 }
 
+/* "Selected army" action panel that sits directly under the map, so the player
+   can split the army they just clicked without scrolling down to the list. */
+.selected-army-panel {
+    background: var(--bg-secondary, #2b2520);
+    border: 1px solid #5a4e3c;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 12px 0;
+}
+
+.selected-army-empty {
+    color: #8a8278;
+    font-size: 14px;
+    text-align: center;
+}
+
+.selected-army-title {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: var(--accent, #c9a96e);
+}
+
+.selected-army-split {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selected-army-split label {
+    color: var(--text-primary, #d4cfc8);
+}
+
 .split-input {
     width: 80px;
     padding: 6px 10px;
@@ -253,7 +363,7 @@ h3 {
 }
 
 .split-button {
-    background: #8b3a3a;
+    background: #6b5a3e;
     color: #f0e8d8;
     border: none;
     padding: 6px 16px;
@@ -265,7 +375,13 @@ h3 {
 }
 
 .split-button:hover {
-    background: #a04040;
+    background: #7d6a4c;
+}
+
+.split-button:disabled {
+    background: #44403a;
+    color: #8a8278;
+    cursor: not-allowed;
 }
 
 .user-info {
@@ -281,9 +397,9 @@ h3 {
 }
 
 .user-info .logout-button {
-    background: #8b3a3a;
+    background: #4f463a;
     color: #f0e8d8;
-    border: none;
+    border: 1px solid #6b5a3e;
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
@@ -291,7 +407,7 @@ h3 {
 }
 
 .user-info .logout-button:hover {
-    background: #a04040;
+    background: #615647;
 }
 
 .form-group {
@@ -305,7 +421,8 @@ h3 {
     font-weight: bold;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
     width: 100%;
     padding: 12px;
     border: 2px solid #5a4e3c;
@@ -317,9 +434,44 @@ input[type="text"] {
     color: var(--text-primary, #d4cfc8);
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="password"]:focus {
     outline: none;
     border-color: var(--accent, #c9a96e);
+}
+
+/* Password field with an inline Show/Hide reveal toggle. */
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 72px;
+}
+
+.password-field .password-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: auto;
+    margin: 0;
+    padding: 0 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    transform: none;
+    color: var(--accent, #c9a96e);
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.password-field .password-toggle:hover {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    text-decoration: underline;
 }
 
 .login-container button {
@@ -350,6 +502,18 @@ input[type="text"]:focus {
     color: #8a8278;
     margin-top: 20px;
     font-size: 14px;
+}
+
+/* The login/register cross-links ("Create one", "Log in") — make them read as
+   obviously clickable and on-theme instead of inheriting muted body text. */
+.info a {
+    color: var(--accent, #c9a96e);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.info a:hover {
+    text-decoration: underline;
 }
 
 #armiesList {
@@ -735,35 +899,8 @@ input[type="text"]:focus {
         padding-bottom: 4px;
     }
 
-    /* Reorder game layout so canvas + controls are first on mobile */
-    .game-layout {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .game-layout > .controls {
-        order: 1;
-    }
-
-    .game-layout > #gameCanvas {
-        order: 2;
-    }
-
-    .game-layout > .section-status {
-        order: 3;
-    }
-
-    .game-layout > .section-armies {
-        order: 4;
-    }
-
-    .game-layout > .section-policy {
-        order: 5;
-    }
-
-    .game-layout > .section-settings {
-        order: 6;
-    }
+    /* Mobile stays single-column: .game-layout/.game-main/.game-sidebar are
+       already flex columns, and the sidebar order rules keep Status/Armies first. */
 
     /* Collapse panels by default on mobile — only Game Status & Armies stay open */
     .collapsible-section > summary {
@@ -958,7 +1095,8 @@ input[type="text"]:focus {
         padding: 12px;
     }
 
-    .form-group input[type="text"] {
+    .form-group input[type="text"],
+    .form-group input[type="password"] {
         min-height: 44px;
         font-size: 16px;
         padding: 10px;

@@ -27,3 +27,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local embedded H2 game-save data (dev)
+backend/data/

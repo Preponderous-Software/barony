@@ -2,6 +2,31 @@
 
 All notable changes to the Barony Prototype MVP are documented in this file.
 
+## [Unreleased]
+
+### Persistence
+
+- ✅ Each player's game is now **saved per account and restored after backend restarts/redeploys** instead of being held only in memory (and lost on every restart)
+- ✅ Storage is an embedded **H2** database persisted to `./data` (mount as a volume in production); `DB_URL` switches it to Postgres
+- ✅ Game state is serialized as JSON; a fresh game is persisted on creation and re-saved after every turn, command, reset, and policy change
+- ✅ Army id counter advances past restored armies on load, so a split after reload can't reuse an existing id
+
+### Security
+
+- ✅ Auth token moved from `localStorage` into an **HttpOnly, Secure, SameSite=Lax cookie** (`barony_token`), so browser JavaScript can no longer read it and an XSS can't exfiltrate the session (#46)
+- ✅ Login sets the cookie and no longer returns the JWT in the response body; logout revokes the token and clears the cookie
+- ✅ Backend reads the token from the cookie (with a `Bearer` header fallback for CLI/API clients); the web client transparently forwards the cookie and relays `Set-Cookie`
+
+### Authentication (UserAuth integration)
+
+- ✅ Player accounts via the standalone [UserAuth](https://github.com/Preponderous-Software/UserAuth) service (registration, login, logout)
+- ✅ Register and login screens in the web client; logout revokes the token server-side
+- ✅ Login issues a signed JWT (stored client-side) sent as `Authorization: Bearer <token>` on game requests
+- ✅ Backend proxies `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` to UserAuth and validates the token on every authenticated request
+- ✅ Per-player game endpoints (`/api/session/*`) reject missing, invalid, expired, or revoked tokens with `401`
+- ✅ Game state is keyed by the authenticated username instead of an anonymous session id
+- ✅ `docker-compose` now starts UserAuth and its Postgres alongside Barony (configurable via `JWT_SECRET`, `USERAUTH_PATH`, `ALLOWED_ORIGINS`)
+
 ## [MVP v1.0.0] - 2026-02-11
 
 ### Core Game Features
