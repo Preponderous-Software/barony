@@ -53,76 +53,75 @@ public class RulerDecision {
         this.choice = choice;
     }
     
-    // Helper methods to get policy effects
     public static int getIncomeModifier(EconomicPolicy policy) {
         switch (policy) {
             case HEAVY_TAXATION:
-                return 20; // +20%
+                return 20;
             case INFRASTRUCTURE_INVESTMENT:
-                return -10; // -10%
+                return -10;
             case BALANCED_BUDGET:
             default:
-                return 0; // No modifier
+                return 0;
         }
     }
     
     public static int getStabilityModifier(EconomicPolicy policy) {
         switch (policy) {
             case HEAVY_TAXATION:
-                return -10; // -10%
+                return -10;
             case INFRASTRUCTURE_INVESTMENT:
-                return 10; // +10%
+                return 10;
             case BALANCED_BUDGET:
             default:
-                return 0; // No modifier
+                return 0;
         }
     }
     
     public static int getMoraleModifier(MilitaryPolicy policy) {
         switch (policy) {
             case AGGRESSIVE_TRAINING:
-                return 10; // +10%
+                return 10;
             case VETERAN_BENEFITS:
-                return -10; // -10%
+                return -10;
             case STANDARD_SERVICE:
             default:
-                return 0; // No modifier
+                return 0;
         }
     }
     
     public static int getLoyaltyModifier(MilitaryPolicy policy) {
         switch (policy) {
             case AGGRESSIVE_TRAINING:
-                return -5; // -5%
+                return -5;
             case VETERAN_BENEFITS:
-                return 10; // +10%
+                return 10;
             case STANDARD_SERVICE:
             default:
-                return 0; // No modifier
+                return 0;
         }
     }
     
     public static int getPopulationGrowthModifier(PopulationPolicy policy) {
         switch (policy) {
             case GROWTH_FOCUS:
-                return 15; // +15%
+                return 15;
             case QUALITY_OVER_QUANTITY:
-                return -10; // -10%
+                return -10;
             case STABLE_POPULATION:
             default:
-                return 0; // No modifier
+                return 0;
         }
     }
     
     public static int getPopulationStabilityModifier(PopulationPolicy policy) {
         switch (policy) {
             case GROWTH_FOCUS:
-                return -5; // -5%
+                return -5;
             case QUALITY_OVER_QUANTITY:
-                return 10; // +10%
+                return 10;
             case STABLE_POPULATION:
             default:
-                return 0; // No modifier
+                return 0;
         }
     }
 }
