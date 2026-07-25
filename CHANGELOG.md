@@ -4,6 +4,12 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ## [Unreleased]
 
+### Documentation
+
+- ✅ `PLAYER_GUIDE.md` now documents the controls the web client actually has (Advance Turn / Reset Game / Auto Play buttons, the split panel under the map, the policy dropdowns) instead of keyboard shortcuts that were never implemented
+- ✅ "Reading the Interface" rewritten to match the real layout (sidebar panels, selected-army panel) — the old top bar, side panel, and event log it described don't exist
+- ✅ Removed the `[Unreleased]` bullet that said the auth token is stored client-side; it contradicted the **Security** entries above it (#61)
+
 ### Persistence
 
 - ✅ Each player's game is now **saved per account and restored after backend restarts/redeploys** instead of being held only in memory (and lost on every restart)
@@ -21,7 +27,7 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 - ✅ Player accounts via the standalone [UserAuth](https://github.com/Preponderous-Software/UserAuth) service (registration, login, logout)
 - ✅ Register and login screens in the web client; logout revokes the token server-side
-- ✅ Login issues a signed JWT (stored client-side) sent as `Authorization: Bearer <token>` on game requests
+- ✅ Login issues a signed JWT via UserAuth, which the backend validates on every authenticated game request (see **Security** above for how the token is carried)
 - ✅ Backend proxies `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` to UserAuth and validates the token on every authenticated request
 - ✅ Per-player game endpoints (`/api/session/*`) reject missing, invalid, expired, or revoked tokens with `401`
 - ✅ Game state is keyed by the authenticated username instead of an anonymous session id

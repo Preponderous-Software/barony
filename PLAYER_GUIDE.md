@@ -47,7 +47,7 @@ The first screen asks you to log in. New players click **Create one** to registe
 - **Your Goal:** Capture all enemy castles to win
 - **You Control:** Player 1 (Blue armies)
 - **Enemy:** Player 2 AI (Red armies)
-- **Turn-Based:** Press SPACE to advance one turn (tick)
+- **Turn-Based:** Click **Advance Turn** to advance one turn (tick)
 
 ## How to Play
 
@@ -82,10 +82,15 @@ The game board is a 10x10 grid with different tile types:
    - Light blue square shows where army will go
 3. **Right-click** to deselect the army
 
-**Keyboard Shortcuts:**
-- **SPACE** - Advance one turn
-- **S** - Enter split mode for first army (press 1-9 to choose split amount, S/ESC to cancel)
-- **R** - Play again (when game ends)
+**Buttons (above the map):**
+- **Advance Turn** - Advance the game by one turn
+- **Reset Game** - Start a fresh game (also how you play again after a game ends)
+- **Auto Play** - Advance a turn automatically every second; click again (**Stop Auto**) to pause.
+  Auto Play stops on its own when the game ends.
+
+**Splitting armies:** select an army on the map and use the **Split off** control in the panel
+below the map, or use the split control next to any of your armies in the **Armies** panel.
+There are currently no keyboard shortcuts — every action has a button.
 
 **Tip:** Hover over any tile or army to see detailed information. In-game tooltips now cover most of what previously required consulting this guide mid-session.
 
@@ -102,9 +107,9 @@ The game board is a 10x10 grid with different tile types:
 - Don't attack with weak armies!
 
 **3. Split Your Armies**
-- Press **S** to enter split mode (targets first army in list)
-- Press number keys **1-9** to choose how many soldiers to split off
-- Press **S** or **ESC** to cancel split mode
+- Click one of your armies on the map, then enter an amount in **Split off** and click **Split Army**
+- Or use the split control beside that army in the **Armies** panel
+- You can split off at most one fewer soldier than the army has (both armies keep at least 1)
 - Useful for capturing multiple villages at once
 - Can garrison villages while your main force attacks
 
@@ -150,7 +155,7 @@ Red progress bar shows capture status (0/3 to 3/3).
 
 - **Victory:** Capture all enemy castles
 - **Defeat:** Lose all your castles
-- **Press R** to play again
+- A banner appears over the map (**Victory!** or **Defeat**); click **Reset Game** to play again
 
 ## Advanced Strategy: Ruler Policies
 
@@ -158,26 +163,24 @@ As a ruler, you can enact policies that affect your realm. These provide strateg
 
 ### How to Change Policies
 
-1. **Press P** to open the policy menu
-2. **Press E, M, or O** to select a category:
-   - **E** = Economic policies
-   - **M** = Military policies  
-   - **O** = pOpulation policies
-3. **Press 1, 2, or 3** to choose a policy
-4. Wait 15 turns before changing policies again (cooldown)
+1. Open the **Change Policy** panel in the sidebar
+2. Pick an option from the **Economic**, **Military**, or **Population** dropdown
+3. Click that category's **Apply** button
+4. Wait 15 turns before changing policies again (cooldown — the **Next Decision In** bar in
+   **Game Status & Stats** counts it down)
 
 ### Economic Policies
 
 Affect village income and stability:
 
-- **[1] Heavy Taxation**: +20% income, -10% stability
+- **Heavy Taxation**: +20% income, -10% stability
   - More soldiers generated, but villages less stable
   - Good for aggressive expansion
 
-- **[2] Balanced Budget**: No modifiers
+- **Balanced Budget**: No modifiers
   - Default, safe option
 
-- **[3] Infrastructure Investment**: -10% income, +10% stability
+- **Infrastructure Investment**: -10% income, +10% stability
   - Slower growth, but villages more stable
   - Good for defensive play
 
@@ -185,14 +188,14 @@ Affect village income and stability:
 
 Affect army morale and loyalty:
 
-- **[1] Aggressive Training**: +10% morale, -5% loyalty
+- **Aggressive Training**: +10% morale, -5% loyalty
   - Armies fight better, but may desert over time
   - Good for offensive campaigns
 
-- **[2] Standard Service**: No modifiers
+- **Standard Service**: No modifiers
   - Default, balanced option
 
-- **[3] Veteran Benefits**: -10% morale, +10% loyalty
+- **Veteran Benefits**: -10% morale, +10% loyalty
   - Armies less aggressive, but very loyal (no desertion)
   - Good for long games
 
@@ -200,14 +203,14 @@ Affect army morale and loyalty:
 
 Affect village growth and stability:
 
-- **[1] Growth Focus**: +15% population growth, -5% stability
+- **Growth Focus**: +15% population growth, -5% stability
   - Villages grow faster, slightly less stable
   - Good for early game expansion
 
-- **[2] Stable Population**: No modifiers
+- **Stable Population**: No modifiers
   - Default option
 
-- **[3] Quality Over Quantity**: -10% growth, +10% stability
+- **Quality Over Quantity**: -10% growth, +10% stability
   - Slower growth, more stable villages
   - Good for defensive consolidation
 
@@ -255,39 +258,28 @@ Check the **Ruler Stats** panel (right side) to monitor:
 
 ## Reading the Interface
 
-### Top Bar
-Shows game statistics for both players:
-- **Tick count**: Current turn number
-- **Armies**: Number of armies each player has
-- **Castles**: Castles owned (need to protect yours!)
-- **Villages**: Villages owned (more = better income)
-- **Income**: Soldiers generated per turn (+X/turn)
+### Controls (above the map)
+**Advance Turn**, **Reset Game**, and the **Auto Play** toggle.
 
-### Side Panel (Right)
-Shows selected army details:
-- Army ID and player
-- Current soldier count
-- Current position (X, Y)
-- Destination (if moving)
+### Selected Army Panel (below the map)
+Shows the army you clicked on the map — its ID, soldier count, and position — plus the
+**Split off** control. Until you select one of your armies it just prompts you to click one.
 
-### Bottom Panel
-Game event log showing recent actions:
-- Army movements
-- Village captures
-- Combat results
-- Turn advances
+### Game Status & Stats (sidebar)
+- **Game Status**: current turn, whether the game is over, and the winner once it is
+- **Ruler Stats**: average stability, morale, and loyalty, plus total population
+  (color-coded: green ≥ 90, amber 70–89, red < 70)
+- **Policies**: the policy in force in each category and a **Next Decision In** cooldown bar
 
-### Ruler Stats Panel (Right)
-Shows your realm statistics:
-- Current policies in each category
-- Policy change cooldown timer
-- Average stability, morale, loyalty (color-coded: green ≥ 90, amber 70–89, red < 70)
-- Total population
+### Change Policy, Settings, and Armies (sidebar)
+Three more collapsible panels: the policy dropdowns, the display settings, and the **Armies**
+list. Each army in the list shows its ID, owner, position, soldiers, morale, and loyalty, and
+your armies with 2+ soldiers get a split control.
 
 ## Accessibility & Visual Settings
 
 ### Settings Panel
-The Settings panel appears in the game info area. Changes apply immediately:
+Open the **Settings** panel in the sidebar. Changes apply immediately:
 
 - **Colorblind Mode:** None (default), Deuteranopia, Protanopia, Tritanopia
   - Applies to faction colors and map ownership indicators
@@ -336,7 +328,10 @@ A: Left-click the army to select it, then left-click where you want it to go. Th
 A: Villages only generate soldiers for armies of the owning player stationed on the village. Neutral villages don't generate anything.
 
 **Q: How do I split an army?**
-A: Press **S** to enter split mode (targets first army). Press a number key (**1**-**9**) to choose how many soldiers to split off. Press **S** or **ESC** to cancel. Both armies must have at least 1 soldier after splitting.
+A: Click the army on the map, enter how many soldiers to split off in the **Split off** box
+below the map, and click **Split Army** — or use the same control beside that army in the
+**Armies** panel. Both armies must have at least 1 soldier after splitting, so an army needs
+at least 2 soldiers to split.
 
 **Q: Can I undo a move?**
 A: No, all commands are final. Plan carefully!
@@ -365,13 +360,12 @@ A: You can only change policies every 15 turns to prevent rapid switching exploi
 **Armies won't move:**
 - Make sure you selected the army first (left-click)
 - Verify the destination is within the 10x10 grid
-- Check the backend is running (armies move when you press SPACE)
+- Check the backend is running (armies move when you click **Advance Turn**)
 
 **Can't split armies:**
-- You need at least 2 soldiers to split
-- Press **S** to enter split mode (targets first army)
-- Press number keys **1-9** to choose split amount
-- Press **S** or **ESC** to cancel
+- You need at least 2 soldiers to split — the control is disabled below that
+- You can't split off more than one fewer soldier than the army has
+- Split from the panel below the map (after selecting the army) or from the **Armies** panel
 
 ## Next Steps
 
