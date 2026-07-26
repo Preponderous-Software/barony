@@ -4,6 +4,15 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ## [Unreleased]
 
+### Gameplay
+
+- ✅ **Army desertion actually happens now** (#60) — it was inert in every reachable game state: the only policy that lowered loyalty targeted 95%, and `(100 - 95) / 20` truncated to a 0% desertion rate for any army size
+- ✅ Desertion is tracked in basis points with the fraction under one soldier carried between turns, so the documented `(100 - loyalty) / 20`% rate bites on the few-dozen-soldier armies the game actually produces instead of rounding to nothing
+- ✅ Restoring an army to 100% loyalty clears whatever desertion was still pending
+- ✅ **Aggressive Training is now a real trade-off**: loyalty modifier changed from -5% to -25%, putting its target at 75% — inside the "armies may lose soldiers" band the player guide has always described
+- ✅ A totally disloyal army can finally shrink to nothing and be removed; previously that path was unreachable
+- ✅ **Split armies now inherit the parent's morale and loyalty** instead of arriving as fresh recruits at 100/100 — otherwise splitting would be a free one-click reset of a disloyal army's desertion
+
 ### Documentation
 
 - ✅ `PLAYER_GUIDE.md` now documents the controls the web client actually has (Advance Turn / Reset Game / Auto Play buttons, the split panel under the map, the policy dropdowns) instead of keyboard shortcuts that were never implemented

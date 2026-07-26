@@ -190,7 +190,7 @@ class PolicyServiceTest {
 
         policyService.applyStatRecovery(gameState);
 
-        // Morale target 110 (drift 1/tick), loyalty target 95 (drift 2/tick).
+        // Morale target 110 (drift 1/tick), loyalty target 75 (drift 2/tick).
         assertEquals(101, army.getMorale());
         assertEquals(98, army.getLoyalty());
     }
@@ -360,17 +360,69 @@ class PolicyServiceTest {
     }
 
     @Test
-    void desertionNeverWipesOutASurvivingArmy() {
+    void desertionSmallerThanOneSoldierIsCarriedRatherThanLost() {
+        GameState gameState = newGameState();
+        Army army = placeArmy(gameState, 1, 1, 40, PLAYER_1);
+        army.setLoyalty(95);
+
+        policyService.processDesertion(gameState);
+
+        // Rate (100 - 95) / 20 = 0.25%, so 40 soldiers owe 0.1 of a soldier this tick: nobody
+        // leaves yet, but the fraction is banked as 1000 basis points instead of rounding away.
+        assertEquals(40, army.getSoldiers());
+        assertEquals(1000, army.getDesertionCarryBasisPoints());
+    }
+
+    @Test
+    void carriedDesertionEventuallyCostsAWholeSoldier() {
+        GameState gameState = newGameState();
+        Army army = placeArmy(gameState, 1, 1, 40, PLAYER_1);
+        army.setLoyalty(95);
+
+        // 0.1 of a soldier per tick, so the tenth tick is the one that takes a soldier.
+        for (int tick = 0; tick < 9; tick++) {
+            policyService.processDesertion(gameState);
+        }
+        assertEquals(40, army.getSoldiers());
+
+        policyService.processDesertion(gameState);
+
+        assertEquals(39, army.getSoldiers());
+        assertEquals(0, army.getDesertionCarryBasisPoints());
+    }
+
+    @Test
+    void restoringLoyaltyClearsPendingDesertion() {
+        GameState gameState = newGameState();
+        Army army = placeArmy(gameState, 1, 1, 40, PLAYER_1);
+        army.setLoyalty(95);
+        policyService.processDesertion(gameState);
+        assertEquals(1000, army.getDesertionCarryBasisPoints());
+
+        army.setLoyalty(100);
+        policyService.processDesertion(gameState);
+
+        assertEquals(40, army.getSoldiers());
+        assertEquals(0, army.getDesertionCarryBasisPoints());
+    }
+
+    @Test
+    void aTotallyDisloyalSingleSoldierArmyEventuallyDesertsAndIsRemoved() {
         GameState gameState = newGameState();
         Army army = placeArmy(gameState, 1, 1, 1, PLAYER_1);
         army.setLoyalty(0);
 
-        policyService.processDesertion(gameState);
-
-        // Characterizes current behaviour: at the maximum 5% rate, (1 * 5 + 50) / 100 rounds
-        // down to 0, so even a totally disloyal single-soldier army survives.
+        // At the maximum 5% rate a lone soldier takes 20 ticks to amount to one desertion.
+        for (int tick = 0; tick < 19; tick++) {
+            policyService.processDesertion(gameState);
+        }
         assertEquals(1, army.getSoldiers());
         assertEquals(1, gameState.getArmiesInternal().size());
+
+        policyService.processDesertion(gameState);
+
+        assertEquals(0, army.getSoldiers());
+        assertTrue(gameState.getArmiesInternal().isEmpty());
     }
 
     @Test

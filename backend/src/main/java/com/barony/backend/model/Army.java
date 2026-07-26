@@ -20,6 +20,14 @@ public class Army {
     private int morale;
     private int loyalty;
 
+    /**
+     * Fractional desertion carried over between ticks, in basis points of a single soldier.
+     * Desertion is a fraction of a percent per tick applied to armies that are usually only a few
+     * dozen soldiers strong, so truncating it to whole soldiers every tick would round the mechanic
+     * away entirely. Part of the army state so it survives a save/load.
+     */
+    private int desertionCarryBasisPoints;
+
     private static final AtomicInteger nextId = new AtomicInteger(1);
 
     /**
@@ -51,6 +59,7 @@ public class Army {
         this.destinationY = other.destinationY;
         this.morale = other.morale;
         this.loyalty = other.loyalty;
+        this.desertionCarryBasisPoints = other.desertionCarryBasisPoints;
     }
 
     public boolean isMoving() {
