@@ -38,7 +38,7 @@ class RulerDecisionTest {
         int moraleModifier = RulerDecision.getMoraleModifier(RulerDecision.MilitaryPolicy.AGGRESSIVE_TRAINING);
         int loyaltyModifier = RulerDecision.getLoyaltyModifier(RulerDecision.MilitaryPolicy.AGGRESSIVE_TRAINING);
         assertEquals(10, moraleModifier);
-        assertEquals(-5, loyaltyModifier);
+        assertEquals(-25, loyaltyModifier);
     }
     
     @Test

@@ -32,8 +32,9 @@ class PolicyService {
     private static final int PERCENTAGE_ROUNDING_OFFSET = 50;
     private static final int PERCENTAGE_DIVISOR = 100;
     private static final int SOLDIERS_PER_POPULATION = 100;
-    private static final int MAX_DESERTION_LOYALTY_THRESHOLD = 100;
-    private static final int DESERTION_DIVISOR = 20;
+    private static final int NO_DESERTION_LOYALTY = 100;
+    /** {@code (100 - loyalty) / 20} percent per tick, expressed in basis points: 100 / 20 = 5. */
+    private static final int DESERTION_BASIS_POINTS_PER_LOYALTY_POINT = 5;
 
     void applyStatRecovery(GameState gameState) {
         applyVillageStatRecovery(gameState);
@@ -147,15 +148,36 @@ class PolicyService {
         while (iterator.hasNext()) {
             Army army = iterator.next();
             if (army.getPlayerId() == PLAYER_1_ID) {
-                int desertionRate = Math.max(0, (MAX_DESERTION_LOYALTY_THRESHOLD - army.getLoyalty()) / DESERTION_DIVISOR);
-                int desertions = (army.getSoldiers() * desertionRate + PERCENTAGE_ROUNDING_OFFSET) / PERCENTAGE_DIVISOR;
-                army.setSoldiers(Math.max(0, army.getSoldiers() - desertions));
+                army.setSoldiers(Math.max(0, army.getSoldiers() - takeDesertions(army)));
 
                 if (army.getSoldiers() <= 0) {
                     iterator.remove();
                 }
             }
         }
+    }
+
+    /**
+     * Whole soldiers deserting this tick, banking the fraction that hasn't added up to one yet on
+     * the army.
+     *
+     * <p>The rate is {@code (100 - loyalty) / 20}% per tick as documented, held in basis points.
+     * At the loyalty targets the policies can actually reach that is a fraction of a percent of a
+     * force of a few dozen soldiers, so applying it as truncated whole soldiers each tick would
+     * always come out as zero. A fully loyal army banks nothing, so restoring loyalty also clears
+     * whatever attrition was still pending.
+     */
+    private int takeDesertions(Army army) {
+        int rateBasisPoints = Math.max(0,
+                (NO_DESERTION_LOYALTY - army.getLoyalty()) * DESERTION_BASIS_POINTS_PER_LOYALTY_POINT);
+        if (rateBasisPoints == 0 || army.getSoldiers() <= 0) {
+            army.setDesertionCarryBasisPoints(0);
+            return 0;
+        }
+
+        long pending = army.getDesertionCarryBasisPoints() + (long) army.getSoldiers() * rateBasisPoints;
+        army.setDesertionCarryBasisPoints((int) (pending % BASIS_POINTS_DIVISOR));
+        return (int) (pending / BASIS_POINTS_DIVISOR);
     }
 
     boolean canChangePolicy(GameState gameState) {

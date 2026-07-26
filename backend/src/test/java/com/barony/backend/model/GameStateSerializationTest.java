@@ -24,6 +24,7 @@ class GameStateSerializationTest {
         GameState original = new MapGenerator().generate();
         original.setTickCount(7);
         original.setEconomicPolicy("HEAVY_TAXATION");
+        original.getArmiesInternal().get(0).setDesertionCarryBasisPoints(3750);
 
         String json = mapper.writeValueAsString(original);
         GameState restored = mapper.readValue(json, GameState.class);
@@ -41,6 +42,8 @@ class GameStateSerializationTest {
         assertEquals(oa.getId(), ra.getId());
         assertEquals(oa.getSoldiers(), ra.getSoldiers());
         assertEquals(oa.getPlayerId(), ra.getPlayerId());
+        // Pending fractional desertion is game state, not a derived value: it must survive too.
+        assertEquals(3750, ra.getDesertionCarryBasisPoints());
 
         // Grid tiles round-trip (type + ownership).
         Tile ot = original.getGrid()[0][0];

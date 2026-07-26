@@ -96,6 +96,11 @@ public class GameService {
         }
 
         Army newArmy = new Army(targetArmy.getX(), targetArmy.getY(), soldierCount, targetArmy.getPlayerId());
+        // Detached soldiers keep the parent's morale and loyalty rather than arriving as fresh
+        // recruits at 100/100 — otherwise splitting is a free reset of a disloyal army's desertion.
+        // The pending desertion fraction stays with the parent instead of being duplicated.
+        newArmy.setMorale(targetArmy.getMorale());
+        newArmy.setLoyalty(targetArmy.getLoyalty());
         targetArmy.setSoldiers(targetArmy.getSoldiers() - soldierCount);
         gameState.getArmiesInternal().add(newArmy);
     }

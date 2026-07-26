@@ -92,7 +92,8 @@ The prototype initially supported:
 
 #### Features
 - **Army Display:** Show soldier count directly on army visualization
-- **Army Splitting:** Split an army into two armies at the same location
+- **Army Splitting:** Split an army into two armies at the same location; the new army inherits the
+  parent's morale and loyalty, so a split can't launder away accumulated desertion
 - **Army Merging:** Automatically merge friendly armies at the same location
 - **Minimum Army Size:** Require at least 1 soldier per army (can't split to 0)
 
@@ -308,7 +309,7 @@ The prototype initially supported:
    - Infrastructure Investment: -10% income, +10% stability
 
 2. **Military Policies** (affects army morale and loyalty)
-   - Aggressive Training: +10% morale, -5% loyalty
+   - Aggressive Training: +10% morale, -25% loyalty
    - Standard Service: No change to morale or loyalty
    - Veteran Benefits: -10% morale, +10% loyalty
 
@@ -345,7 +346,12 @@ The prototype initially supported:
 - Base desertion: 0% per tick
 - Modified desertion: `(100 - loyalty) / 20`% per tick
 - Example: 80% loyalty = 1% desertion per tick
+- Fractions of a soldier are carried between ticks (`Army.desertionCarryBasisPoints`) rather than
+  truncated away, so the rate applies to the few-dozen-soldier armies the game actually produces
+- Reaching 100% loyalty clears any carried fraction
 - Loyalty recovers slowly over time toward 100% (2% per tick)
+- Aggressive Training targets 75% loyalty so this band is reachable; the other military policies
+  target 100% or above, i.e. no desertion at all
 
 *Population Growth:*
 - Affects maximum soldiers that can be generated at villages

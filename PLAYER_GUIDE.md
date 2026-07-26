@@ -110,6 +110,7 @@ There are currently no keyboard shortcuts — every action has a button.
 - Click one of your armies on the map, then enter an amount in **Split off** and click **Split Army**
 - Or use the split control beside that army in the **Armies** panel
 - You can split off at most one fewer soldier than the army has (both armies keep at least 1)
+- The new army inherits the parent's morale and loyalty — splitting won't reset a disloyal force
 - Useful for capturing multiple villages at once
 - Can garrison villages while your main force attacks
 
@@ -188,9 +189,10 @@ Affect village income and stability:
 
 Affect army morale and loyalty:
 
-- **Aggressive Training**: +10% morale, -5% loyalty
-  - Armies fight better, but may desert over time
-  - Good for offensive campaigns
+- **Aggressive Training**: +10% morale, -25% loyalty
+  - Armies fight better, but loyalty settles at 75% and soldiers steadily desert
+  - The bigger the army, the more soldiers per turn it loses
+  - Good for offensive campaigns — win before the attrition adds up
 
 - **Standard Service**: No modifiers
   - Default, balanced option
@@ -228,8 +230,11 @@ Check the **Ruler Stats** panel (right side) to monitor:
   - Below 80% = warning (weaker in combat)
   
 - **Loyalty** (armies): Affects desertion rate
-  - 100% = no desertion
-  - Below 80% = warning (armies may lose soldiers over time)
+  - 100% = no desertion, and restoring it to 100% clears any desertion still pending
+  - Each turn an army loses `(100 - loyalty) / 20`% of its soldiers
+  - Below 80% = warning (Aggressive Training's 75% target lands here)
+  - Losses under one whole soldier carry over between turns rather than being ignored, so
+    even a small army eventually feels a fractional rate
   
 - **Population**: Total population across all villages
   - Higher population = more soldier generation
@@ -239,7 +244,7 @@ Check the **Ruler Stats** panel (right side) to monitor:
 **Aggressive Strategy:**
 - Use Heavy Taxation + Aggressive Training
 - Rapid expansion with strong combat bonus
-- Monitor loyalty to prevent desertion
+- Switch back to Standard Service to stop desertion once you've taken what you need
 - Best for short, decisive games
 
 **Defensive Strategy:**

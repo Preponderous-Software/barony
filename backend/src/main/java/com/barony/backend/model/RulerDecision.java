@@ -89,10 +89,16 @@ public class RulerDecision {
         }
     }
     
+    /**
+     * Loyalty target offsets from the 100% baseline. Aggressive Training's -25 puts its target at
+     * 75%, below the 80% mark the player guide describes as the point where armies start losing
+     * soldiers — at the old -5 the target was 95%, which never reached a desertion rate that could
+     * take a single soldier, so the policy was a strictly-better morale buff with no cost.
+     */
     public static int getLoyaltyModifier(MilitaryPolicy policy) {
         switch (policy) {
             case AGGRESSIVE_TRAINING:
-                return -5;
+                return -25;
             case VETERAN_BENEFITS:
                 return 10;
             case STANDARD_SERVICE:
