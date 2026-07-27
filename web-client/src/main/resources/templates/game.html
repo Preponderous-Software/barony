@@ -845,6 +845,16 @@
             document.getElementById('panelSplitMsg').style.display = 'none';
         }
 
+        // Clear the selected army (mirrors right-click deselect); shared by the
+        // canvas contextmenu handler and the Escape keyboard shortcut.
+        function deselectArmy() {
+            if (!selectedArmy) return;
+            selectedArmy = null;
+            if (lastGameState) drawMap(lastGameState);
+            updateSelectedArmyPanel();
+            showToast('Army deselected', 'info');
+        }
+
         function splitArmy(armyId) {
             const splitAmountInput = document.getElementById('splitAmount-' + armyId);
             const validationMsg = document.getElementById('splitMsg-' + armyId);
@@ -1075,12 +1085,7 @@
             // Right-click to deselect
             canvas.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
-                if (selectedArmy) {
-                    selectedArmy = null;
-                    if (lastGameState) drawMap(lastGameState);
-                    updateSelectedArmyPanel();
-                    showToast('Army deselected', 'info');
-                }
+                deselectArmy();
             });
             
             // Hover tooltip (throttled via requestAnimationFrame)
@@ -1167,6 +1172,45 @@
                 resizeTimer = setTimeout(function() {
                     if (lastGameState) drawMap(lastGameState);
                 }, 150);
+            });
+
+            // Keyboard shortcuts (Space=tick, R=reset, S=focus split amount,
+            // A=toggle auto play, Escape=deselect). Ignored while typing in a
+            // form field, or with a modifier held (so Cmd/Ctrl+R refresh etc.
+            // still work), so as not to fight normal browser/input behavior.
+            document.addEventListener('keydown', function(e) {
+                const tag = e.target && e.target.tagName;
+                if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+                if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+                switch (e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        tick();
+                        break;
+                    case 'r':
+                    case 'R':
+                        reset();
+                        break;
+                    case 's':
+                    case 'S':
+                        if (selectedArmy) {
+                            const input = document.getElementById('panelSplitAmount');
+                            if (input && !input.disabled) {
+                                e.preventDefault();
+                                input.focus();
+                                input.select();
+                            }
+                        }
+                        break;
+                    case 'a':
+                    case 'A':
+                        toggleAutoPlay();
+                        break;
+                    case 'Escape':
+                        deselectArmy();
+                        break;
+                }
             });
         });
     </script>

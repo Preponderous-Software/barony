@@ -4,6 +4,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ## [Unreleased]
 
+### Web Client
+
+- ✅ **Keyboard shortcuts** for the most common actions (#63): `Space` advances a turn, `R` resets
+  the game, `S` jumps focus to the split-amount box for the selected army, `A` toggles Auto Play,
+  and `Escape` deselects the current army (same as right-click). Ignored while typing in a form
+  field or with a modifier key held, so browser/input shortcuts still work.
+
 ### Gameplay
 
 - ✅ **Army desertion actually happens now** (#60) — it was inert in every reachable game state: the only policy that lowered loyalty targeted 95%, and `(100 - 95) / 20` truncated to a 0% desertion rate for any army size
