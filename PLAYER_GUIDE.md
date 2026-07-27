@@ -90,7 +90,13 @@ The game board is a 10x10 grid with different tile types:
 
 **Splitting armies:** select an army on the map and use the **Split off** control in the panel
 below the map, or use the split control next to any of your armies in the **Armies** panel.
-There are currently no keyboard shortcuts — every action has a button.
+
+**Keyboard shortcuts** (ignored while typing in a text field, or with Ctrl/Cmd/Alt held):
+- **Space** — Advance Turn
+- **R** — Reset Game
+- **S** — jump to the **Split off** amount box for the selected army
+- **A** — toggle Auto Play
+- **Escape** — deselect the current army (same as right-click)
 
 **Tip:** Hover over any tile or army to see detailed information. In-game tooltips now cover most of what previously required consulting this guide mid-session.
 
