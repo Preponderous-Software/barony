@@ -10,6 +10,9 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   the game, `S` jumps focus to the split-amount box for the selected army, `A` toggles Auto Play,
   and `Escape` deselects the current army (same as right-click). Ignored while typing in a form
   field or with a modifier key held, so browser/input shortcuts still work.
+- ✅ **Castle objective progress** in the Game Status panel (progress toward #53): shows how many
+  castles you control, how many the enemy controls, and how many are neutral, derived from the
+  game state already sent to the client (no extra request).
 
 ### Gameplay
 
