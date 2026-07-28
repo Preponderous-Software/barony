@@ -63,6 +63,7 @@
                         <h3>Game Status</h3>
                         <p>Turn: <span id="tickCount">0</span></p>
                         <p>Game Over: <span id="gameOver">false</span></p>
+                        <p>Castles: <span id="castlesYou">0</span> yours, <span id="castlesEnemy">0</span> enemy, <span id="castlesNeutral">0</span> neutral (of <span id="castlesTotal">0</span> total)</p>
                         <p id="winnerLine" style="display:none;">
                             Winner: Player <span id="winnerId">-</span>
                         </p>
@@ -465,6 +466,26 @@
             updateArmiesList(data.armies);
             updateSelectedArmyPanel();
             updateRulerStats();
+            updateCastleProgress(data);
+        }
+
+        // Objective progress: how many castles each side controls, derived
+        // from the tiles already sent in the game state (no extra request).
+        function updateCastleProgress(gameState) {
+            let yours = 0, enemy = 0, neutral = 0;
+            for (let x = 0; x < gameState.width; x++) {
+                for (let y = 0; y < gameState.height; y++) {
+                    const tile = gameState.grid[x][y];
+                    if (tile.type !== 'CASTLE') continue;
+                    if (tile.ownerId === 1) yours++;
+                    else if (tile.ownerId === 2) enemy++;
+                    else neutral++;
+                }
+            }
+            document.getElementById('castlesYou').textContent = yours;
+            document.getElementById('castlesEnemy').textContent = enemy;
+            document.getElementById('castlesNeutral').textContent = neutral;
+            document.getElementById('castlesTotal').textContent = yours + enemy + neutral;
         }
         
         // ========================

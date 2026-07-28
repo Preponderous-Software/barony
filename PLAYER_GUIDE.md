@@ -277,7 +277,8 @@ Shows the army you clicked on the map — its ID, soldier count, and position �
 **Split off** control. Until you select one of your armies it just prompts you to click one.
 
 ### Game Status & Stats (sidebar)
-- **Game Status**: current turn, whether the game is over, and the winner once it is
+- **Game Status**: current turn, whether the game is over and the winner once it is, and a
+  castle count (yours, the enemy's, and neutral, out of the total on the map)
 - **Ruler Stats**: average stability, morale, and loyalty, plus total population
   (color-coded: green ≥ 90, amber 70–89, red < 70)
 - **Policies**: the policy in force in each category and a **Next Decision In** cooldown bar
