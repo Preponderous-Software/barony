@@ -15,7 +15,7 @@ All 7 major features have been successfully implemented and tested. See [CHANGEL
 3. ✅ **Territory Control & Village Mechanics** - Ownership system with persistent villages
 4. ✅ **Castle Capture & Win Conditions** - 3-tick capture timer with game over state
 5. ✅ **Basic AI Opponent** - Rule-based AI with priority decision-making
-6. ✅ **Enhanced UI & User Experience** - Mouse controls, tooltips, HUD panels, game log
+6. ✅ **Enhanced UI & User Experience** - Mouse controls, canvas tooltips, sidebar panels, toast notifications
 7. ✅ **Ruler Decision System (CK-Lite)** - Policy-based strategic layer with stat mechanics
 
 ### Success Metrics Achievement
@@ -243,39 +243,48 @@ The prototype initially supported:
 **Current:** Minimal rendering with keyboard-only controls  
 **MVP:** Improved visualization and mouse-based interaction
 
+**Note:** this section originally specified a native/desktop UI (GLFW mouse callbacks, a
+top/bottom HUD bar, a scrolling game log). The web client was instead built as a
+Thymeleaf + HTML5 Canvas browser app, so those items were superseded by the browser-native
+equivalents below. See [PLAYER_GUIDE.md](PLAYER_GUIDE.md)'s "Reading the Interface" section
+for the player-facing description of the real UI.
+
 #### Features
 - **Mouse Controls:**
   - Click army to select it
   - Click destination to move selected army
   - Right-click to deselect
 - **Visual Feedback:**
-  - Highlight selected army (glowing effect or border)
-  - Show movement range/destination preview
-  - Display hover tooltips (tile type, army size, ownership)
-- **HUD Elements:**
-  - Top bar: Tick count, player income, army count
-  - Side panel: Selected army details
-  - Bottom bar: Game status messages
-- **Game Log:** Recent events (army moved, village captured, combat occurred)
+  - Highlight selected army (gold ring around the selected army)
+  - Display hover tooltips (tile type, ownership, army stats, castle capture progress,
+    village generation info)
+- **Sidebar Panels:** Collapsible Game Status & Stats, Change Policy, Settings, and Armies
+  panels alongside the canvas and controls
+- **Toast Notifications:** Non-blocking, auto-dismissing toasts (info/success/warning/danger)
+  report events such as turn advances, village captures, and army destruction, replacing the
+  originally-planned scrolling game log
+- **Keyboard Shortcuts:** Shortcuts for advancing the turn, resetting the game, and other
+  common actions (see PLAYER_GUIDE.md)
 
 #### Web Client Changes
-- Implement mouse input handling (GLFW mouse callbacks)
+- Implement mouse input handling (canvas click/hover listeners)
 - Add army selection state and rendering
-- Implement tooltip system with position tracking
-- Add HUD rendering using text rendering or simple shapes
-- Add game log with scrolling message list
+- Implement canvas tooltip system with position tracking
+- Add collapsible sidebar panel rendering
+- Add toast notification system
+- Add keyboard shortcut handling
 
 #### Backend Changes
 - No changes required (all UI-side)
 
 #### Tasks
-- [ ] Web Client: Add mouse input handling
-- [ ] Web Client: Implement army selection
-- [ ] Web Client: Add tooltip system
-- [ ] Web Client: Create HUD panel rendering
-- [ ] Web Client: Implement game log
+- [x] Web Client: Add mouse input handling
+- [x] Web Client: Implement army selection
+- [x] Web Client: Add tooltip system
+- [x] Web Client: Create sidebar panel rendering
+- [x] Web Client: Implement toast notifications
 - [ ] Web Client: Add unit tests for UI interactions
-- [ ] Documentation: Update README with controls and UI
+- [x] Documentation: Update README with controls and UI
 
 ---
 
@@ -371,7 +380,7 @@ The prototype initially supported:
 
 #### Web Client Changes
 - Add policy selection UI (radio buttons or dropdown for each category)
-- Display current policies in HUD (top-right corner)
+- Display current policies in a sidebar panel
 - Show realm statistics panel (stability, morale, loyalty, population)
 - Add visual indicators for villages/armies affected by low stats:
   - Unstable villages: yellow tint
