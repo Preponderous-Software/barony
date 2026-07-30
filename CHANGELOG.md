@@ -13,6 +13,16 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ **Castle objective progress** in the Game Status panel (progress toward #53): shows how many
   castles you control, how many the enemy controls, and how many are neutral, derived from the
   game state already sent to the client (no extra request).
+- ✅ **End-of-game run summary** (#53): the game-over banner now reports turns played, castles and
+  villages held out of the map total, and the armies and soldiers you finished with, instead of a
+  bare win/lose line. Every figure is derived from the final game state, so it costs no extra
+  request.
+- ✅ **Milestone notifications** (#53): capturing or losing a castle raises a toast with the
+  updated castle count, and a siege on the last castle of either side counts down the turns until
+  it flips. Nothing is announced on first load or after a reset. Known coverage gap: the game
+  page's JavaScript has no test runner in this project, so the summary and milestone logic is
+  guarded only by a rendered-markup test (`GamePageProgressionTest`) plus manual play — its
+  behaviour is not exercised automatically (#71).
 
 ### Gameplay
 
@@ -28,6 +38,8 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ `PLAYER_GUIDE.md` now documents the controls the web client actually has (Advance Turn / Reset Game / Auto Play buttons, the split panel under the map, the policy dropdowns) instead of keyboard shortcuts that were never implemented
 - ✅ "Reading the Interface" rewritten to match the real layout (sidebar panels, selected-army panel) — the old top bar, side panel, and event log it described don't exist
 - ✅ Removed the `[Unreleased]` bullet that said the auth token is stored client-side; it contradicted the **Security** entries above it (#61)
+- ✅ `MVP.md`'s "Out of Scope" list no longer flatly says save/load doesn't exist (#53) — games *are* saved per account and restored across restarts; what's still missing is player-managed save slots
+- ✅ `MVP.md`'s toast-notification and game-over descriptions now match what the web client actually reports
 
 ### Persistence
 

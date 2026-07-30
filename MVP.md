@@ -260,9 +260,11 @@ for the player-facing description of the real UI.
     village generation info)
 - **Sidebar Panels:** Collapsible Game Status & Stats, Change Policy, Settings, and Armies
   panels alongside the canvas and controls
+- **Game-Over Banner:** Overlays the canvas with the result plus a summary of the run — turns
+  played, castles and villages held out of the map total, and armies and soldiers remaining
 - **Toast Notifications:** Non-blocking, auto-dismissing toasts (info/success/warning/danger)
-  report events such as turn advances, village captures, and army destruction, replacing the
-  originally-planned scrolling game log
+  report events such as army selection, castles changing hands, a siege on either side's last
+  castle, and rejected commands, replacing the originally-planned scrolling game log
 - **Keyboard Shortcuts:** Shortcuts for advancing the turn, resetting the game, and other
   common actions (see PLAYER_GUIDE.md)
 
@@ -563,7 +565,9 @@ These features are explicitly **NOT** in MVP:
 - ❌ Resource system beyond soldier generation
 - ❌ Technology/research tree
 - ❌ Multiplayer or networked gameplay
-- ❌ Save/load game functionality
+- ❌ Player-managed save/load (named slots, save-to-file, a save/load menu). Each player's game
+  *is* saved automatically per account and restored after a backend restart — see the Persistence
+  entries in CHANGELOG.md — but there is no way to keep or choose between multiple saves.
 - ❌ Advanced AI with multiple difficulty levels
 - ❌ Sound effects and music
 - ❌ Animations and particle effects

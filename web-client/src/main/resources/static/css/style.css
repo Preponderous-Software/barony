@@ -732,6 +732,39 @@ input[type="password"]:focus {
     margin: 0;
 }
 
+/* Run summary inside the game-over banner */
+.run-summary {
+    margin: 18px 0 0 0;
+    padding: 14px 0 0 0;
+    border-top: 1px solid #6b5b3e;
+    text-align: left;
+}
+
+.run-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 3px 0;
+}
+
+.run-summary dt {
+    color: #8a8278;
+    font-size: 0.95em;
+}
+
+.run-summary dd {
+    color: #d4cfc8;
+    font-size: 0.95em;
+    font-weight: bold;
+    margin: 0;
+}
+
+.game-over-banner-content .run-summary-hint {
+    color: #8a8278;
+    font-size: 0.9em;
+    margin-top: 14px;
+}
+
 /* ========================
    Auto Play Toggle
    ======================== */
@@ -1045,6 +1078,20 @@ input[type="password"]:focus {
 
     .game-over-banner-content p {
         font-size: 0.95em;
+    }
+
+    .run-summary {
+        margin-top: 12px;
+        padding-top: 10px;
+    }
+
+    .run-summary-row {
+        gap: 12px;
+    }
+
+    .run-summary dt,
+    .run-summary dd {
+        font-size: 0.85em;
     }
 
     /* Army list: smaller padding */
