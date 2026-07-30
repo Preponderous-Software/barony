@@ -168,8 +168,7 @@ The prototype initially supported:
 - **Castle Capture:** Occupy enemy castle for N ticks to capture it (N=3 for MVP)
 - **Win Condition:** Player wins when they own all castles
 - **Loss Condition:** Player loses when they have no castles remaining
-- **Game Over State:** Display win/loss message with a summary of the run (turns played, castles
-  and villages held, armies and soldiers remaining) and prevent further actions
+- **Game Over State:** Display win/loss message and prevent further actions
 
 #### Backend Changes
 - Add `Tile.ownerId` for castles (extend from village ownership)
@@ -261,6 +260,8 @@ for the player-facing description of the real UI.
     village generation info)
 - **Sidebar Panels:** Collapsible Game Status & Stats, Change Policy, Settings, and Armies
   panels alongside the canvas and controls
+- **Game-Over Banner:** Overlays the canvas with the result plus a summary of the run — turns
+  played, castles and villages held out of the map total, and armies and soldiers remaining
 - **Toast Notifications:** Non-blocking, auto-dismissing toasts (info/success/warning/danger)
   report events such as army selection, castles changing hands, a siege on either side's last
   castle, and rejected commands, replacing the originally-planned scrolling game log
