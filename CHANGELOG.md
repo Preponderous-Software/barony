@@ -19,10 +19,10 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   request.
 - ✅ **Milestone notifications** (#53): capturing or losing a castle raises a toast with the
   updated castle count, and a siege on the last castle of either side counts down the turns until
-  it flips. Nothing is announced on first load or after a reset.
-- ⚠️ The game page's JavaScript has no test runner in this project, so the new summary and
-  milestone logic is covered only by a rendered-markup test (`GamePageProgressionTest`) and manual
-  play — the behaviour itself is not exercised automatically.
+  it flips. Nothing is announced on first load or after a reset. Known coverage gap: the game
+  page's JavaScript has no test runner in this project, so the summary and milestone logic is
+  guarded only by a rendered-markup test (`GamePageProgressionTest`) plus manual play — its
+  behaviour is not exercised automatically (#71).
 
 ### Gameplay
 
