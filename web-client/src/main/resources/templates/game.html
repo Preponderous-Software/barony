@@ -1085,12 +1085,12 @@
             const tile = gameState.grid[gridX][gridY];
             if (tile.type === 'CASTLE') {
                 if (tile.ownerId === 0) {
-                    return 'Castle \u2014 neutral. Occupy for 3 consecutive turns to capture.';
+                    return 'Castle \u2014 neutral. Occupy for ' + CASTLE_CAPTURE_TURNS + ' consecutive turns to capture.';
                 }
                 if (tile.occupationTicks > 0) {
-                    return 'Castle \u2014 Player ' + tile.ownerId + '. Capture progress: ' + tile.occupationTicks + '/3';
+                    return 'Castle \u2014 Player ' + tile.ownerId + '. Capture progress: ' + tile.occupationTicks + '/' + CASTLE_CAPTURE_TURNS;
                 }
-                return 'Castle \u2014 Player ' + tile.ownerId + '. Hold for 3 consecutive turns to capture.';
+                return 'Castle \u2014 Player ' + tile.ownerId + '. Hold for ' + CASTLE_CAPTURE_TURNS + ' consecutive turns to capture.';
             }
             
             if (tile.type === 'VILLAGE') {
