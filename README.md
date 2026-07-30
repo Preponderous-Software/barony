@@ -157,7 +157,8 @@ Then open http://localhost:3000
 - Auto Play toggle button (single button, active-state indication)
 - Color-coded stats (green ≥ 90, amber 70–89, red < 70)
 - Policy cooldown progress bar
-- Game-over banner overlay on canvas
+- Game-over banner overlay on canvas, with a run summary (turns, castles/villages held, armies and
+  soldiers remaining)
 - Inline split validation (no alerts)
 - Colorblind modes: Deuteranopia, Protanopia, Tritanopia
 - Themes: Dark (default), Classic, High Contrast
@@ -166,6 +167,7 @@ Then open http://localhost:3000
 - Settings persisted to `localStorage` under `barony_settings`
 - Keyboard shortcuts: `Space` advance turn, `R` reset, `S` focus split amount, `A` toggle Auto Play, `Escape` deselect
 - Castle objective progress (yours / enemy / neutral, out of the map total) in the Game Status panel
+- Milestone toasts when a castle changes hands or the last castle on either side comes under siege
 
 ## Game Overview
 

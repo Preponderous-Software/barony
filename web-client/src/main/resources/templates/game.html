@@ -32,6 +32,27 @@
                     <div class="game-over-banner-content">
                         <h2 id="gameOverTitle">Game Over</h2>
                         <p id="gameOverMessage"></p>
+                        <!-- Run summary: every figure is derived from the final game state,
+                             so it costs no extra request. -->
+                        <dl class="run-summary" id="runSummary">
+                            <div class="run-summary-row">
+                                <dt>Turns played</dt><dd id="summaryTurns">0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Castles held</dt><dd id="summaryCastles">0 of 0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Villages held</dt><dd id="summaryVillages">0 of 0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Armies remaining</dt><dd id="summaryArmies">0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Soldiers remaining</dt><dd id="summarySoldiers">0</dd>
+                            </div>
+                        </dl>
+                        <p class="run-summary-hint">Use <strong>Reset Game</strong> (or press
+                            <strong>R</strong>) to start a new run.</p>
                     </div>
                 </div>
             </div>
@@ -229,6 +250,8 @@
         };
         
         const POLICY_COOLDOWN_TURNS = 15;
+        // Consecutive turns of occupation the backend requires to flip a castle.
+        const CASTLE_CAPTURE_TURNS = 3;
         const MAX_TOASTS = 4;
         const TOAST_AUTO_DISMISS_MS = 4000;
         
@@ -430,6 +453,7 @@
         // UI Update
         // ========================
         function updateUI(data) {
+            const previous = lastGameState;
             lastGameState = data;
             document.getElementById('tickCount').textContent = data.tickCount;
             document.getElementById('gameOver').textContent = data.gameOver;
@@ -452,7 +476,8 @@
                     msg.textContent = 'Player ' + data.winnerId + ' has captured your castles.';
                 }
                 banner.style.display = 'flex';
-                
+                updateRunSummary(data);
+
                 // Stop auto-play when game is over
                 if (autoPlayInterval !== null) {
                     stopAutoPlay();
@@ -461,33 +486,115 @@
                 winnerLine.style.display = 'none';
                 banner.style.display = 'none';
             }
-            
+
             drawMap(data);
             updateArmiesList(data.armies);
             updateSelectedArmyPanel();
             updateRulerStats();
             updateCastleProgress(data);
+            announceMilestones(previous, data);
         }
 
-        // Objective progress: how many castles each side controls, derived
-        // from the tiles already sent in the game state (no extra request).
-        function updateCastleProgress(gameState) {
-            let yours = 0, enemy = 0, neutral = 0;
+        // Counts the holdings both the status panel and the end-of-game summary need,
+        // derived from the tiles already sent in the game state (no extra request).
+        function summarizeHoldings(gameState) {
+            const holdings = {
+                castlesYours: 0, castlesEnemy: 0, castlesNeutral: 0,
+                villagesYours: 0, villagesTotal: 0
+            };
             for (let x = 0; x < gameState.width; x++) {
                 for (let y = 0; y < gameState.height; y++) {
                     const tile = gameState.grid[x][y];
-                    if (tile.type !== 'CASTLE') continue;
-                    if (tile.ownerId === 1) yours++;
-                    else if (tile.ownerId === 2) enemy++;
-                    else neutral++;
+                    if (tile.type === 'CASTLE') {
+                        if (tile.ownerId === 1) holdings.castlesYours++;
+                        else if (tile.ownerId === 2) holdings.castlesEnemy++;
+                        else holdings.castlesNeutral++;
+                    } else if (tile.type === 'VILLAGE') {
+                        holdings.villagesTotal++;
+                        if (tile.ownerId === 1) holdings.villagesYours++;
+                    }
                 }
             }
-            document.getElementById('castlesYou').textContent = yours;
-            document.getElementById('castlesEnemy').textContent = enemy;
-            document.getElementById('castlesNeutral').textContent = neutral;
-            document.getElementById('castlesTotal').textContent = yours + enemy + neutral;
+            holdings.castlesTotal =
+                holdings.castlesYours + holdings.castlesEnemy + holdings.castlesNeutral;
+            return holdings;
         }
-        
+
+        // Objective progress: how many castles each side controls.
+        function updateCastleProgress(gameState) {
+            const holdings = summarizeHoldings(gameState);
+            document.getElementById('castlesYou').textContent = holdings.castlesYours;
+            document.getElementById('castlesEnemy').textContent = holdings.castlesEnemy;
+            document.getElementById('castlesNeutral').textContent = holdings.castlesNeutral;
+            document.getElementById('castlesTotal').textContent = holdings.castlesTotal;
+        }
+
+        // End-of-game summary: what the run amounted to, rather than just win/lose.
+        function updateRunSummary(gameState) {
+            const holdings = summarizeHoldings(gameState);
+            const yourArmies = (gameState.armies || []).filter(army => army.playerId === 1);
+            const soldiers = yourArmies.reduce((total, army) => total + army.soldiers, 0);
+            document.getElementById('summaryTurns').textContent = gameState.tickCount;
+            document.getElementById('summaryCastles').textContent =
+                holdings.castlesYours + ' of ' + holdings.castlesTotal;
+            document.getElementById('summaryVillages').textContent =
+                holdings.villagesYours + ' of ' + holdings.villagesTotal;
+            document.getElementById('summaryArmies').textContent = yourArmies.length;
+            document.getElementById('summarySoldiers').textContent = soldiers;
+        }
+
+        // Milestone beats: castles changing hands, and a siege on the last castle of
+        // either side. Compares consecutive states, so nothing is announced on the
+        // first load or after a reset (which rewinds the turn counter).
+        function announceMilestones(previous, current) {
+            if (!previous || current.tickCount <= previous.tickCount) return;
+            if (previous.width !== current.width || previous.height !== current.height) return;
+
+            const holdings = summarizeHoldings(current);
+            let captured = 0, lost = 0;
+            for (let x = 0; x < current.width; x++) {
+                for (let y = 0; y < current.height; y++) {
+                    const now = current.grid[x][y];
+                    const before = previous.grid[x][y];
+                    if (now.type !== 'CASTLE' || before.type !== 'CASTLE') continue;
+                    if (now.ownerId === before.ownerId) continue;
+                    if (now.ownerId === 1) captured++;
+                    else if (before.ownerId === 1) lost++;
+                }
+            }
+
+            if (captured > 0) {
+                showToast('Castle captured! ' + holdings.castlesEnemy +
+                    ' enemy castle(s) left to take.', 'success');
+            }
+            if (lost > 0) {
+                showToast('Castle lost! You hold ' + holdings.castlesYours +
+                    ' of ' + holdings.castlesTotal + ' castles.', 'danger');
+            }
+            announceFinalCastleSiege(previous, current, holdings);
+        }
+
+        // The tension beat: someone's last castle is being occupied. Announced on each
+        // turn the occupation advances, so the player can see the countdown to capture.
+        function announceFinalCastleSiege(previous, current, holdings) {
+            for (let x = 0; x < current.width; x++) {
+                for (let y = 0; y < current.height; y++) {
+                    const now = current.grid[x][y];
+                    const before = previous.grid[x][y];
+                    if (now.type !== 'CASTLE') continue;
+                    if (now.occupationTicks <= 0 || now.occupationTicks <= before.occupationTicks) continue;
+                    const turnsLeft = CASTLE_CAPTURE_TURNS - now.occupationTicks;
+                    if (now.ownerId === 2 && holdings.castlesEnemy === 1) {
+                        showToast('Final enemy castle under siege — hold it ' + turnsLeft +
+                            ' more turn(s) to win.', 'warning');
+                    } else if (now.ownerId === 1 && holdings.castlesYours === 1) {
+                        showToast('Your last castle is under siege — break it within ' +
+                            turnsLeft + ' turn(s) or lose.', 'danger');
+                    }
+                }
+            }
+        }
+
         // ========================
         // Game Actions
         // ========================

@@ -13,6 +13,16 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ **Castle objective progress** in the Game Status panel (progress toward #53): shows how many
   castles you control, how many the enemy controls, and how many are neutral, derived from the
   game state already sent to the client (no extra request).
+- ✅ **End-of-game run summary** (#53): the game-over banner now reports turns played, castles and
+  villages held out of the map total, and the armies and soldiers you finished with, instead of a
+  bare win/lose line. Every figure is derived from the final game state, so it costs no extra
+  request.
+- ✅ **Milestone notifications** (#53): capturing or losing a castle raises a toast with the
+  updated castle count, and a siege on the last castle of either side counts down the turns until
+  it flips. Nothing is announced on first load or after a reset.
+- ⚠️ The game page's JavaScript has no test runner in this project, so the new summary and
+  milestone logic is covered only by a rendered-markup test (`GamePageProgressionTest`) and manual
+  play — the behaviour itself is not exercised automatically.
 
 ### Gameplay
 

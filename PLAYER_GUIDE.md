@@ -162,7 +162,14 @@ Red progress bar shows capture status (0/3 to 3/3).
 
 - **Victory:** Capture all enemy castles
 - **Defeat:** Lose all your castles
-- A banner appears over the map (**Victory!** or **Defeat**); click **Reset Game** to play again
+- A banner appears over the map (**Victory!** or **Defeat**) with a summary of the run: turns
+  played, how many castles and villages you finished holding out of the map total, and how many
+  armies and soldiers you had left
+- Click **Reset Game** (or press **R**) to play again
+
+Along the way, milestones are called out as they happen: capturing or losing a castle raises a
+notification with your updated castle count, and once either side is down to its last castle, a
+siege on it counts down the turns until it changes hands.
 
 ## Advanced Strategy: Ruler Policies
 
@@ -302,12 +309,15 @@ Settings are saved to your browser's `localStorage`.
 
 ### Notifications
 Non-blocking toast notifications keep you informed without interrupting gameplay:
-- **Info** (gray): Turn advances, army selection
-- **Success** (green): Village captured, policy applied
-- **Warning** (amber): Policy cooldown, game reset errors
-- **Danger** (red): Army destroyed, castle under attack
+- **Info** (gray): Army selected or deselected
+- **Success** (green): Castle captured, army split, policy applied
+- **Warning** (amber): Policy rejected (still on cooldown), final enemy castle under siege, reset
+  failed
+- **Danger** (red): Castle lost, your last castle under siege, a command that failed (move, split,
+  or policy change)
 
-Toasts auto-dismiss after 4 seconds. Critical events persist until dismissed.
+Toasts auto-dismiss after 4 seconds; red notifications about castles persist until you dismiss
+them, so you can't miss one while watching the map.
 
 ### Canvas Tooltips
 Hover over any tile on the canvas to see:
