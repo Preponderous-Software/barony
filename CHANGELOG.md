@@ -38,6 +38,8 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ `PLAYER_GUIDE.md` now documents the controls the web client actually has (Advance Turn / Reset Game / Auto Play buttons, the split panel under the map, the policy dropdowns) instead of keyboard shortcuts that were never implemented
 - ✅ "Reading the Interface" rewritten to match the real layout (sidebar panels, selected-army panel) — the old top bar, side panel, and event log it described don't exist
 - ✅ Removed the `[Unreleased]` bullet that said the auth token is stored client-side; it contradicted the **Security** entries above it (#61)
+- ✅ `MVP.md`'s "Out of Scope" list no longer flatly says save/load doesn't exist (#53) — games *are* saved per account and restored across restarts; what's still missing is player-managed save slots
+- ✅ `MVP.md`'s toast-notification and game-over descriptions now match what the web client actually reports
 
 ### Persistence
 

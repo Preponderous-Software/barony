@@ -564,7 +564,9 @@ These features are explicitly **NOT** in MVP:
 - ❌ Resource system beyond soldier generation
 - ❌ Technology/research tree
 - ❌ Multiplayer or networked gameplay
-- ❌ Save/load game functionality
+- ❌ Player-managed save/load (named slots, save-to-file, a save/load menu). Each player's game
+  *is* saved automatically per account and restored after a backend restart — see the Persistence
+  entries in CHANGELOG.md — but there is no way to keep or choose between multiple saves.
 - ❌ Advanced AI with multiple difficulty levels
 - ❌ Sound effects and music
 - ❌ Animations and particle effects
