@@ -19,10 +19,16 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   request.
 - ✅ **Milestone notifications** (#53): capturing or losing a castle raises a toast with the
   updated castle count, and a siege on the last castle of either side counts down the turns until
-  it flips. Nothing is announced on first load or after a reset. Known coverage gap: the game
-  page's JavaScript has no test runner in this project, so the summary and milestone logic is
-  guarded only by a rendered-markup test (`GamePageProgressionTest`) plus manual play — its
-  behaviour is not exercised automatically (#71).
+  it flips. Nothing is announced on first load or after a reset. Its castle-diffing logic is now
+  covered by an automated test (see below, #71) rather than by a rendered-markup test plus manual
+  play alone.
+- ✅ **Game page logic now has automated tests** (#71): the holdings/castle-count arithmetic, the
+  stat-class thresholds, the castle-capture diffing behind milestone toasts, and the army
+  split-amount validation are extracted from the inline `<script>` into
+  `web-client/src/main/resources/static/js/game-logic.js` and exercised by a Node test suite
+  (`web-client/src/test/js/game-logic.test.js`), run in CI. This is a refactor only — the game
+  page's behaviour is unchanged; option 2 from #71 (a headless-browser test of the click/render
+  paths) is still open.
 
 ### Gameplay
 
