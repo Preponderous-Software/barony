@@ -112,7 +112,19 @@
                     </div>
                 </div>
             </details>
-            
+
+            <details class="collapsible-section section-run-history">
+                <summary>Run History</summary>
+                <div class="run-history">
+                    <p class="run-history-tally">
+                        <span id="runHistoryWins">0</span> win(s) &middot; <span id="runHistoryLosses">0</span> loss(es)
+                    </p>
+                    <ul class="run-history-list" id="runHistoryList">
+                        <li class="run-history-empty" id="runHistoryEmpty">No finished runs yet.</li>
+                    </ul>
+                </div>
+            </details>
+
             <details class="collapsible-section section-policy">
                 <summary>Change Policy</summary>
                 <div class="policy-controls">
@@ -454,14 +466,14 @@
             lastGameState = data;
             document.getElementById('tickCount').textContent = data.tickCount;
             document.getElementById('gameOver').textContent = data.gameOver;
-            
+
             // Update winner display
             const winnerLine = document.getElementById('winnerLine');
             const banner = document.getElementById('gameOverBanner');
             if (data.gameOver && data.winnerId !== null) {
                 document.getElementById('winnerId').textContent = data.winnerId;
                 winnerLine.style.display = '';
-                
+
                 // Show game over banner
                 const title = document.getElementById('gameOverTitle');
                 const msg = document.getElementById('gameOverMessage');
@@ -474,6 +486,12 @@
                 }
                 banner.style.display = 'flex';
                 updateRunSummary(data);
+
+                // The backend records this run's history as a side effect of the tick that just
+                // ended it, so refresh the panel exactly once, on the transition into game-over.
+                if (!previous || !previous.gameOver) {
+                    loadRunHistory();
+                }
 
                 // Stop auto-play when game is over
                 if (autoPlayInterval !== null) {
@@ -826,6 +844,62 @@
         }
         
         // ========================
+        // Run History
+        // ========================
+        // Fetches the player's win/loss tally and recent finished runs (recorded server-side
+        // when a run ends) and renders them into the Run History panel.
+        function loadRunHistory() {
+            fetch('/api/session/runs', { headers: getSessionHeaders() })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load run history: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(history => renderRunHistory(history))
+                .catch(error => {
+                    console.error('Error loading run history:', error);
+                });
+        }
+
+        function renderRunHistory(history) {
+            document.getElementById('runHistoryWins').textContent = history.wins;
+            document.getElementById('runHistoryLosses').textContent = history.losses;
+
+            const list = document.getElementById('runHistoryList');
+            list.innerHTML = '';
+
+            const runs = history.runs || [];
+            if (runs.length === 0) {
+                const empty = document.createElement('li');
+                empty.className = 'run-history-empty';
+                empty.id = 'runHistoryEmpty';
+                empty.textContent = 'No finished runs yet.';
+                list.appendChild(empty);
+                return;
+            }
+
+            runs.forEach(run => {
+                const item = document.createElement('li');
+                item.className = 'run-history-item run-history-item--' + run.result.toLowerCase();
+
+                const result = document.createElement('span');
+                result.className = 'run-history-result';
+                result.textContent = run.result === 'WIN' ? 'Victory' : 'Defeat';
+                item.appendChild(result);
+
+                const details = document.createElement('span');
+                details.className = 'run-history-details';
+                details.textContent = 'Turn ' + run.turnsPlayed + ' — ' +
+                    run.castlesHeld + '/' + run.castlesTotal + ' castles, ' +
+                    run.villagesHeld + '/' + run.villagesTotal + ' villages';
+                item.appendChild(details);
+
+                list.appendChild(item);
+            });
+        }
+
+        // ========================
         // Armies List
         // ========================
         function updateArmiesList(armies) {
@@ -1062,7 +1136,8 @@
             }
             
             loadSettings();
-            
+            loadRunHistory();
+
             fetch('/api/session/state', {
                 headers: getSessionHeaders()
             })

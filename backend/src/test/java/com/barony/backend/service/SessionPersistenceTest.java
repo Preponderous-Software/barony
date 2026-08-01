@@ -1,6 +1,7 @@
 package com.barony.backend.service;
 
 import com.barony.backend.model.Session;
+import com.barony.backend.repository.RunRecordRepository;
 import com.barony.backend.repository.SavedGameRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +20,12 @@ class SessionPersistenceTest {
     @Autowired
     private SavedGameRepository repository;
 
+    @Autowired
+    private RunRecordRepository runRecordRepository;
+
     @Test
     void newGameIsPersistedOnCreation() {
-        SessionService service = new SessionService(repository);
+        SessionService service = new SessionService(repository, runRecordRepository);
         service.getOrCreateSession("persist-new-user");
         assertTrue(repository.findById("persist-new-user").isPresent(),
                 "creating a session should persist the fresh game");
@@ -29,14 +33,14 @@ class SessionPersistenceTest {
 
     @Test
     void gameSurvivesARestart() {
-        SessionService before = new SessionService(repository);
+        SessionService before = new SessionService(repository, runRecordRepository);
         Session session = before.getOrCreateSession("persist-restart-user");
         session.getGameState().setTickCount(42);
         session.getGameState().setEconomicPolicy("HEAVY_TAXATION");
         before.save(session);
 
         // Simulate a restart: a fresh SessionService has an empty cache and must reload from the DB.
-        SessionService after = new SessionService(repository);
+        SessionService after = new SessionService(repository, runRecordRepository);
         Session reloaded = after.getOrCreateSession("persist-restart-user");
 
         assertEquals("persist-restart-user", reloaded.getUsername());

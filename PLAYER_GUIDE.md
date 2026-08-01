@@ -290,6 +290,12 @@ Shows the army you clicked on the map — its ID, soldier count, and position �
   (color-coded: green ≥ 90, amber 70–89, red < 70)
 - **Policies**: the policy in force in each category and a **Next Decision In** cooldown bar
 
+### Run History (sidebar)
+Your win/loss tally and a list of your recent finished runs — result, turns played, and castles
+and villages held at the end of each. Recorded the moment a run ends, so it survives **Reset
+Game** and a server restart; it's the only thing that persists across runs, everything else about
+your realm starts fresh each time.
+
 ### Change Policy, Settings, and Armies (sidebar)
 Three more collapsible panels: the policy dropdowns, the display settings, and the **Armies**
 list. Each army in the list shows its ID, owner, position, soldiers, morale, and loyalty, and

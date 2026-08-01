@@ -1,6 +1,7 @@
 package com.barony.backend.controller;
 
 import com.barony.backend.model.GameState;
+import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GameService;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -85,5 +87,30 @@ class GameControllerAuthTest {
                 .andExpect(status().isOk());
 
         verify(userAuthClient).validate("hdr");
+    }
+
+    @Test
+    void sessionRunsRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/session/runs"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void sessionRunsReturnsTheAuthenticatedUsersHistory() throws Exception {
+        Session session = new Session("alice", new GameState(5, 5));
+        when(userAuthClient.validate("good")).thenReturn(Optional.of("alice"));
+        when(sessionService.getOrCreateSession("alice")).thenReturn(session);
+        RunHistory history = new RunHistory();
+        history.setWins(3);
+        history.setLosses(1);
+        history.setRuns(List.of());
+        when(sessionService.getRunHistory("alice")).thenReturn(history);
+
+        mockMvc.perform(get("/api/session/runs").cookie(new Cookie("barony_token", "good")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.wins").value(3))
+                .andExpect(jsonPath("$.losses").value(1));
+
+        verify(sessionService).getRunHistory("alice");
     }
 }

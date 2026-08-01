@@ -6,6 +6,10 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Run history across games** (#70): finishing a run now writes a durable record (result, turns
+  played, castles/villages held, armies and soldiers remaining) that survives a reset and a backend
+  restart, via a new `GET /api/session/runs` endpoint. The sidebar's new Run History panel shows the
+  player's win/loss tally and their recent runs.
 - ✅ **Keyboard shortcuts** for the most common actions (#63): `Space` advances a turn, `R` resets
   the game, `S` jumps focus to the split-amount box for the selected army, `A` toggles Auto Play,
   and `Escape` deselects the current army (same as right-click). Ignored while typing in a form
