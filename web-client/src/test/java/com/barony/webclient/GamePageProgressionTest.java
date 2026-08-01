@@ -49,6 +49,15 @@ class GamePageProgressionTest {
                 "updateUI must compare against the previous state to announce milestones");
     }
 
+    @Test
+    void gamePageLoadsTheTestedPureLogicScript() throws Exception {
+        String html = renderGamePage();
+
+        assertTrue(html.matches("(?s).*<script src=\"/js/game-logic(-[0-9a-fA-F]{8,})?\\.js\"></script>.*"),
+                "Expected the game page to load /js/game-logic.js, whose behaviour is covered by "
+                        + "web-client/src/test/js/game-logic.test.js");
+    }
+
     private String renderGamePage() throws Exception {
         return mockMvc.perform(get("/game"))
                 .andExpect(status().isOk())

@@ -58,18 +58,26 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: 'maven'
-        
+
     - name: Build web-client
       run: |
         cd web-client
         mvn clean compile
-        
+
     - name: Run web-client tests
       run: |
         cd web-client
         mvn test
-        
+
     - name: Package web-client
       run: |
         cd web-client
         mvn package -DskipTests
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run game page JS tests
+      run: node --test web-client/src/test/js/

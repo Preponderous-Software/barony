@@ -190,7 +190,9 @@
     </div>
 
     <div id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
-    
+
+    <!-- Pure game-state calculations, tested independently under web-client/src/test/js/. -->
+    <script th:src="@{/js/game-logic.js}"></script>
     <script>
         let autoPlayInterval = null;
         let isAutoPlaying = false;
@@ -375,12 +377,7 @@
         // ========================
         // Stat Color Coding
         // ========================
-        function getStatClass(value) {
-            if (value >= 90) return 'stat--good';
-            if (value >= 70) return 'stat--warn';
-            return 'stat--danger';
-        }
-        
+        // getStatClass is defined in game-logic.js (loaded above) and exposed as a global.
         function colorCodeStat(elementId, value) {
             const el = document.getElementById(elementId);
             if (!el) return;
@@ -495,30 +492,8 @@
             announceMilestones(previous, data);
         }
 
-        // Counts the holdings both the status panel and the end-of-game summary need,
-        // derived from the tiles already sent in the game state (no extra request).
-        function summarizeHoldings(gameState) {
-            const holdings = {
-                castlesYours: 0, castlesEnemy: 0, castlesNeutral: 0,
-                villagesYours: 0, villagesTotal: 0
-            };
-            for (let x = 0; x < gameState.width; x++) {
-                for (let y = 0; y < gameState.height; y++) {
-                    const tile = gameState.grid[x][y];
-                    if (tile.type === 'CASTLE') {
-                        if (tile.ownerId === 1) holdings.castlesYours++;
-                        else if (tile.ownerId === 2) holdings.castlesEnemy++;
-                        else holdings.castlesNeutral++;
-                    } else if (tile.type === 'VILLAGE') {
-                        holdings.villagesTotal++;
-                        if (tile.ownerId === 1) holdings.villagesYours++;
-                    }
-                }
-            }
-            holdings.castlesTotal =
-                holdings.castlesYours + holdings.castlesEnemy + holdings.castlesNeutral;
-            return holdings;
-        }
+        // summarizeHoldings and diffCastleMilestones are defined in game-logic.js (loaded
+        // above) and exposed as globals; tested independently under web-client/src/test/js/.
 
         // Objective progress: how many castles each side controls.
         function updateCastleProgress(gameState) {
@@ -547,31 +522,18 @@
         // either side. Compares consecutive states, so nothing is announced on the
         // first load or after a reset (which rewinds the turn counter).
         function announceMilestones(previous, current) {
-            if (!previous || current.tickCount <= previous.tickCount) return;
-            if (previous.width !== current.width || previous.height !== current.height) return;
+            const diff = diffCastleMilestones(previous, current);
+            if (!diff) return;
 
-            const holdings = summarizeHoldings(current);
-            let captured = 0, lost = 0;
-            for (let x = 0; x < current.width; x++) {
-                for (let y = 0; y < current.height; y++) {
-                    const now = current.grid[x][y];
-                    const before = previous.grid[x][y];
-                    if (now.type !== 'CASTLE' || before.type !== 'CASTLE') continue;
-                    if (now.ownerId === before.ownerId) continue;
-                    if (now.ownerId === 1) captured++;
-                    else if (before.ownerId === 1) lost++;
-                }
-            }
-
-            if (captured > 0) {
-                showToast('Castle captured! ' + holdings.castlesEnemy +
+            if (diff.captured > 0) {
+                showToast('Castle captured! ' + diff.holdings.castlesEnemy +
                     ' enemy castle(s) left to take.', 'success');
             }
-            if (lost > 0) {
-                showToast('Castle lost! You hold ' + holdings.castlesYours +
-                    ' of ' + holdings.castlesTotal + ' castles.', 'danger');
+            if (diff.lost > 0) {
+                showToast('Castle lost! You hold ' + diff.holdings.castlesYours +
+                    ' of ' + diff.holdings.castlesTotal + ' castles.', 'danger');
             }
-            announceFinalCastleSiege(previous, current, holdings);
+            announceFinalCastleSiege(previous, current, diff.holdings);
         }
 
         // The tension beat: someone's last castle is being occupied. Announced on each
@@ -988,25 +950,17 @@
             const validationMsg = document.getElementById('splitMsg-' + armyId);
             const splitAmount = parseInt(splitAmountInput.value);
             const maxSplit = parseInt(splitAmountInput.max);
-            
-            if (isNaN(splitAmount) || splitAmount < 1) {
-                splitAmountInput.setCustomValidity('Enter a valid amount (at least 1)');
+
+            const result = validateSplitAmount(splitAmount, maxSplit);
+            if (!result.valid) {
+                splitAmountInput.setCustomValidity(result.message);
                 if (validationMsg) {
-                    validationMsg.textContent = 'Enter a valid amount (at least 1)';
+                    validationMsg.textContent = result.message;
                     validationMsg.style.display = 'block';
                 }
                 return;
             }
-            
-            if (splitAmount > maxSplit) {
-                splitAmountInput.setCustomValidity('Cannot exceed ' + maxSplit + ' soldiers');
-                if (validationMsg) {
-                    validationMsg.textContent = 'Cannot exceed ' + maxSplit + ' soldiers';
-                    validationMsg.style.display = 'block';
-                }
-                return;
-            }
-            
+
             sendSplitCommand(armyId, splitAmount, validationMsg);
         }
 
@@ -1051,13 +1005,9 @@
             const msgEl = document.getElementById('panelSplitMsg');
             const amount = parseInt(input.value);
             const maxSplit = parseInt(input.max);
-            if (isNaN(amount) || amount < 1) {
-                msgEl.textContent = 'Enter a valid amount (at least 1)';
-                msgEl.style.display = 'block';
-                return;
-            }
-            if (amount > maxSplit) {
-                msgEl.textContent = 'Cannot exceed ' + maxSplit + ' soldiers';
+            const result = validateSplitAmount(amount, maxSplit);
+            if (!result.valid) {
+                msgEl.textContent = result.message;
                 msgEl.style.display = 'block';
                 return;
             }

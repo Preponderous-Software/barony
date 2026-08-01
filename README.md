@@ -183,7 +183,8 @@ See [PLAYER_GUIDE.md](PLAYER_GUIDE.md) for complete gameplay instructions.
 
 ## Development
 
-**Requirements:** Java 17, Maven (wrapper included)
+**Requirements:** Java 17, Maven (wrapper included). Node.js 18+ if you also want to run the game
+page's JS tests locally (`node --test web-client/src/test/js/`).
 
 ### Build & Test
 ```bash
@@ -192,12 +193,16 @@ cd backend && ./mvnw clean package test
 
 # Web Client
 cd web-client && ./mvnw clean package test
+
+# Web Client game page logic (pure JS, no build step needed)
+node --test web-client/src/test/js/
 ```
 
 ### CI/CD
 GitHub Actions runs on all PRs:
 - Builds backend and web client
 - Runs all unit and integration tests
+- Runs the game page's JS test suite (`web-client/src/test/js/`) with Node
 - Uses JDK 17 with Maven caching
 
 ## Technical Architecture
