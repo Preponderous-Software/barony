@@ -766,6 +766,13 @@ input[type="password"]:focus {
 }
 
 /* Run History sidebar panel: past finished runs and the win/loss tally */
+.run-history {
+    background: var(--bg-secondary, #352f28);
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent, #8b7355);
+}
+
 .run-history-tally {
     color: #d4cfc8;
     font-weight: bold;
