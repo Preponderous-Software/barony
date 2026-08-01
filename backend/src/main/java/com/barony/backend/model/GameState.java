@@ -17,6 +17,9 @@ public class GameState {
     private int tickCount;
     private boolean gameOver;
     private Integer winnerId;
+    // Set once a finished run has been written to run history, so a restart or a repeated tick
+    // after game-over can't record the same run twice.
+    private boolean runRecorded;
     private boolean aiEnabled;
     private String economicPolicy;
     private String militaryPolicy;
@@ -29,6 +32,7 @@ public class GameState {
         this.tickCount = 0;
         this.gameOver = false;
         this.winnerId = null;
+        this.runRecorded = false;
         this.aiEnabled = true;
         this.economicPolicy = "BALANCED_BUDGET";
         this.militaryPolicy = "STANDARD_SERVICE";

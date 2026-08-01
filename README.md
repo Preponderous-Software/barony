@@ -73,6 +73,7 @@ Then open http://localhost:3000 in your browser.
 - `POST /api/session/reset` - Reset the player's game
 - `POST /api/session/decision` - Change ruler policy for the player
 - `GET /api/session/ruler-stats` - Get realm statistics for the player
+- `GET /api/session/runs` - Get the player's win/loss tally and recent finished-run history
 
 These endpoints validate the token against UserAuth on every request, so missing,
 invalid, expired, or revoked (logged-out) tokens are rejected with `401`. Game state is keyed

@@ -4,6 +4,7 @@ import com.barony.backend.model.Command;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.RulerDecision;
 import com.barony.backend.model.RulerStats;
+import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GameService;
@@ -177,6 +178,14 @@ public class GameController {
             gameService.setGameState(session.getGameState());
             return gameService.getRulerStats();
         }
+    }
+
+    // Runs are recorded by SessionService as a side effect of save() (see sessionTick), so this
+    // is a plain read with no need to touch the shared GameService/gameState.
+    @GetMapping("/api/session/runs")
+    public RunHistory sessionRuns(HttpServletRequest request) {
+        Session session = authenticate(request);
+        return sessionService.getRunHistory(session.getUsername());
     }
 
     private void validateDecision(RulerDecision decision) {

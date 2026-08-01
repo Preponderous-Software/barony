@@ -765,6 +765,56 @@ input[type="password"]:focus {
     margin-top: 14px;
 }
 
+/* Run History sidebar panel: past finished runs and the win/loss tally */
+.run-history-tally {
+    color: #d4cfc8;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+}
+
+.run-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.run-history-empty {
+    color: #8a8278;
+    font-size: 0.9em;
+}
+
+.run-history-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 0;
+    border-bottom: 1px solid #3a3228;
+}
+
+.run-history-item:last-child {
+    border-bottom: none;
+}
+
+.run-history-result {
+    font-weight: bold;
+    font-size: 0.95em;
+}
+
+.run-history-item--win .run-history-result {
+    color: #6bbf6b;
+}
+
+.run-history-item--loss .run-history-result {
+    color: #e07a7a;
+}
+
+.run-history-details {
+    color: #8a8278;
+    font-size: 0.85em;
+}
+
 /* ========================
    Auto Play Toggle
    ======================== */

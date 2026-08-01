@@ -25,6 +25,11 @@ class GameStateSerializationTest {
         original.setTickCount(7);
         original.setEconomicPolicy("HEAVY_TAXATION");
         original.getArmiesInternal().get(0).setDesertionCarryBasisPoints(3750);
+        // Must round-trip accurately: SessionService relies on it to avoid double-recording a
+        // finished run's history after a restart.
+        original.setGameOver(true);
+        original.setWinnerId(1);
+        original.setRunRecorded(true);
 
         String json = mapper.writeValueAsString(original);
         GameState restored = mapper.readValue(json, GameState.class);
@@ -33,6 +38,9 @@ class GameStateSerializationTest {
         assertEquals(original.getHeight(), restored.getHeight());
         assertEquals(7, restored.getTickCount());
         assertEquals("HEAVY_TAXATION", restored.getEconomicPolicy());
+        assertTrue(restored.isGameOver());
+        assertEquals(1, restored.getWinnerId());
+        assertTrue(restored.isRunRecorded(), "runRecorded must survive persistence or a restart could re-record the same run");
         assertEquals(original.getArmies().size(), restored.getArmies().size());
         assertFalse(restored.getArmies().isEmpty(), "a generated game should have armies");
 
