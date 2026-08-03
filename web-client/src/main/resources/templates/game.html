@@ -77,7 +77,7 @@
             </div><!-- /game-main -->
 
             <div class="game-sidebar">
-            <details class="collapsible-section section-status" open>
+            <details class="collapsible-section section-status" data-panel-id="status" open>
                 <summary>Game Status &amp; Stats</summary>
                 <div class="game-info">
                     <div class="info-section">
@@ -113,7 +113,7 @@
                 </div>
             </details>
 
-            <details class="collapsible-section section-run-history">
+            <details class="collapsible-section section-run-history" data-panel-id="run-history">
                 <summary>Run History</summary>
                 <div class="run-history">
                     <p class="run-history-tally">
@@ -125,7 +125,7 @@
                 </div>
             </details>
 
-            <details class="collapsible-section section-policy">
+            <details class="collapsible-section section-policy" data-panel-id="policy">
                 <summary>Change Policy</summary>
                 <div class="policy-controls">
                     <div class="policy-section">
@@ -158,7 +158,7 @@
                 </div>
             </details>
             
-            <details class="collapsible-section section-settings">
+            <details class="collapsible-section section-settings" data-panel-id="settings">
                 <summary>Settings</summary>
                 <div class="settings-panel" id="settingsPanel">
                     <div class="settings-row">
@@ -189,7 +189,7 @@
                 </div>
             </details>
             
-            <details class="collapsible-section section-armies" open>
+            <details class="collapsible-section section-armies" data-panel-id="armies" open>
                 <summary>Armies</summary>
                 <div class="armies-list">
                     <div id="armiesList">
@@ -212,11 +212,16 @@
         let username = null;
         let lastGameState = null;
         
-        // On desktop, ensure all collapsible sections are open by default
+        // Restore each sidebar panel's remembered open/closed state (see
+        // "Panel State Management" below): a saved per-panel preference wins; otherwise every
+        // panel opens by default on desktop, or falls back to its own HTML default on mobile.
         (function() {
-            if (window.innerWidth > 768) {
-                document.querySelectorAll('.collapsible-section').forEach(function(d) { d.open = true; });
-            }
+            const saved = loadPanelState();
+            const isDesktop = window.innerWidth > 768;
+            document.querySelectorAll('.collapsible-section[data-panel-id]').forEach(function(d) {
+                d.open = resolvePanelOpenState(d.dataset.panelId, saved, isDesktop, d.open);
+                d.addEventListener('toggle', savePanelState);
+            });
         })();
         
         // Color palette for canvas drawing (swapped by colorblind modes)
@@ -316,6 +321,31 @@
             setTimeout(function() { toast.remove(); }, 300);
         }
         
+        // ========================
+        // Panel State Management
+        // ========================
+        // Remembers which sidebar panels the player has collapsed/expanded, per browser, so
+        // reopening the game page doesn't reset the layout to the defaults on every load.
+        // The open/closed decision itself is pure and lives in game-logic.js
+        // (resolvePanelOpenState) so it's covered by the Node test suite.
+        function loadPanelState() {
+            try {
+                const saved = localStorage.getItem('barony_panel_state');
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                console.error('Error loading panel state:', e);
+                return {};
+            }
+        }
+
+        function savePanelState() {
+            const state = {};
+            document.querySelectorAll('.collapsible-section[data-panel-id]').forEach(function(d) {
+                state[d.dataset.panelId] = d.open;
+            });
+            localStorage.setItem('barony_panel_state', JSON.stringify(state));
+        }
+
         // ========================
         // Settings Management
         // ========================

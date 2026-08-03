@@ -8,7 +8,8 @@ const {
     summarizeHoldings,
     getStatClass,
     diffCastleMilestones,
-    validateSplitAmount
+    validateSplitAmount,
+    resolvePanelOpenState
 } = require('../../main/resources/static/js/game-logic.js');
 
 function tile(type, ownerId, occupationTicks) {
@@ -166,4 +167,23 @@ test('validateSplitAmount accepts the maximum amount itself', () => {
     const result = validateSplitAmount(10, 10);
 
     assert.equal(result.valid, true);
+});
+
+test('resolvePanelOpenState uses the saved preference when one exists, even against the HTML default', () => {
+    assert.equal(resolvePanelOpenState('settings', { settings: true }, false, false), true);
+    assert.equal(resolvePanelOpenState('status', { status: false }, true, true), false);
+});
+
+test('resolvePanelOpenState forces panels open on desktop when there is no saved preference', () => {
+    assert.equal(resolvePanelOpenState('policy', {}, true, false), true);
+});
+
+test('resolvePanelOpenState falls back to the HTML default on mobile when there is no saved preference', () => {
+    assert.equal(resolvePanelOpenState('policy', {}, false, false), false);
+    assert.equal(resolvePanelOpenState('armies', {}, false, true), true);
+});
+
+test('resolvePanelOpenState treats a missing saved-state object like no preference', () => {
+    assert.equal(resolvePanelOpenState('status', undefined, true, false), true);
+    assert.equal(resolvePanelOpenState('status', undefined, false, true), true);
 });
