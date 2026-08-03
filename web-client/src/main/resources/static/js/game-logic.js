@@ -83,10 +83,22 @@
         return { valid: true, message: null };
     }
 
+    // Decides whether a sidebar panel should render open, given a per-panel preference
+    // remembered from a previous visit (`savedState`, keyed by panel id). A remembered
+    // preference always wins; otherwise falls back to forcing every panel open on desktop,
+    // or the panel's own HTML default on mobile.
+    function resolvePanelOpenState(panelId, savedState, isDesktop, defaultOpen) {
+        if (savedState && Object.prototype.hasOwnProperty.call(savedState, panelId)) {
+            return !!savedState[panelId];
+        }
+        return isDesktop ? true : !!defaultOpen;
+    }
+
     return {
         summarizeHoldings: summarizeHoldings,
         getStatClass: getStatClass,
         diffCastleMilestones: diffCastleMilestones,
-        validateSplitAmount: validateSplitAmount
+        validateSplitAmount: validateSplitAmount,
+        resolvePanelOpenState: resolvePanelOpenState
     };
 });

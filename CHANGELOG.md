@@ -6,6 +6,12 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Sidebar panels remember their open/closed state** (progress on #55): each collapsible
+  panel (Game Status, Run History, Change Policy, Settings, Armies) now persists whether the
+  player left it open or collapsed, per browser, instead of resetting to the defaults on every
+  reload. The open/closed decision is a pure function (`resolvePanelOpenState` in
+  `game-logic.js`) covered by the Node test suite. Reordering, showing/hiding panels, and
+  persisting the layout server-side per account are still open (see #55).
 - ✅ **Run history across games** (#70): finishing a run now writes a durable record (result, turns
   played, castles/villages held, armies and soldiers remaining) that survives a reset and a backend
   restart, via a new `GET /api/session/runs` endpoint. The sidebar's new Run History panel shows the

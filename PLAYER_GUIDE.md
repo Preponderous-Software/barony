@@ -301,6 +301,9 @@ Three more collapsible panels: the policy dropdowns, the display settings, and t
 list. Each army in the list shows its ID, owner, position, soldiers, morale, and loyalty, and
 your armies with 2+ soldiers get a split control.
 
+Each sidebar panel remembers whether you left it open or collapsed, per browser, so reopening
+the game doesn't reset your layout back to the defaults.
+
 ## Accessibility & Visual Settings
 
 ### Settings Panel
