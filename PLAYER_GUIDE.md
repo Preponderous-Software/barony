@@ -296,13 +296,24 @@ and villages held at the end of each. Recorded the moment a run ends, so it surv
 Game** and a server restart; it's the only thing that persists across runs, everything else about
 your realm starts fresh each time.
 
-### Change Policy, Settings, and Armies (sidebar)
-Three more collapsible panels: the policy dropdowns, the display settings, and the **Armies**
-list. Each army in the list shows its ID, owner, position, soldiers, morale, and loyalty, and
+### Armies, Change Policy, and Settings (sidebar)
+Three more collapsible panels: the **Armies** list, the policy dropdowns, and the display
+settings. Each army in the list shows its ID, owner, position, soldiers, morale, and loyalty, and
 your armies with 2+ soldiers get a split control.
 
-Each sidebar panel remembers whether you left it open or collapsed, per browser, so reopening
-the game doesn't reset your layout back to the defaults.
+### Arranging the sidebar
+The panels appear in this order to begin with: Game Status & Stats, Run History, Armies, Change
+Policy, Settings. That arrangement is yours to change, from the **Panels** controls in the
+Settings panel:
+
+- **Show or hide a panel** with its checkbox — a hidden panel disappears from the sidebar until
+  it is checked again. The Settings panel itself can't be hidden, since it holds these controls.
+- **Reorder the panels** with the ▲ and ▼ buttons beside each name.
+- **Reset Panel Layout** puts every panel back, in the order above.
+
+Each panel also remembers whether you left it open or collapsed. The whole arrangement — order,
+which panels are shown, and which are open — is saved in your browser, so reopening the game
+doesn't reset it back to the defaults. It does not yet follow you to another browser or device.
 
 ## Accessibility & Visual Settings
 
@@ -313,6 +324,8 @@ Open the **Settings** panel in the sidebar. Changes apply immediately:
   - Applies to faction colors and map ownership indicators
 - **Theme:** Dark (default), Classic, High Contrast
 - **Font Size:** Small, Medium (default), Large
+- **Panels:** which sidebar panels are shown and in what order (see
+  [Arranging the sidebar](#arranging-the-sidebar) above)
 
 Settings are saved to your browser's `localStorage`.
 
