@@ -9,8 +9,14 @@ const {
     getStatClass,
     diffCastleMilestones,
     validateSplitAmount,
-    resolvePanelOpenState
+    resolvePanelOpenState,
+    resolvePanelOrder,
+    movePanelInOrder,
+    isPanelHidden
 } = require('../../main/resources/static/js/game-logic.js');
+
+// The sidebar panels in markup order, as game.html captures them for DEFAULT_PANEL_ORDER.
+const DEFAULT_PANELS = ['status', 'run-history', 'armies', 'policy', 'settings'];
 
 function tile(type, ownerId, occupationTicks) {
     return { type: type, ownerId: ownerId === undefined ? null : ownerId, occupationTicks: occupationTicks || 0 };
@@ -186,4 +192,75 @@ test('resolvePanelOpenState falls back to the HTML default on mobile when there 
 test('resolvePanelOpenState treats a missing saved-state object like no preference', () => {
     assert.equal(resolvePanelOpenState('status', undefined, true, false), true);
     assert.equal(resolvePanelOpenState('status', undefined, false, true), true);
+});
+
+test('resolvePanelOrder falls back to the default order when nothing is remembered', () => {
+    assert.deepEqual(resolvePanelOrder([], DEFAULT_PANELS), DEFAULT_PANELS);
+    assert.deepEqual(resolvePanelOrder(undefined, DEFAULT_PANELS), DEFAULT_PANELS);
+});
+
+test('resolvePanelOrder keeps a fully remembered arrangement', () => {
+    const saved = ['armies', 'policy', 'status', 'settings', 'run-history'];
+
+    assert.deepEqual(resolvePanelOrder(saved, DEFAULT_PANELS), saved);
+});
+
+test('resolvePanelOrder drops remembered panels that no longer exist', () => {
+    const saved = ['armies', 'treasury', 'status', 'run-history', 'policy', 'settings'];
+
+    assert.deepEqual(resolvePanelOrder(saved, DEFAULT_PANELS),
+        ['armies', 'status', 'run-history', 'policy', 'settings']);
+});
+
+test('resolvePanelOrder collapses a duplicated panel id', () => {
+    const saved = ['status', 'status', 'run-history', 'armies', 'policy', 'settings'];
+
+    assert.deepEqual(resolvePanelOrder(saved, DEFAULT_PANELS), DEFAULT_PANELS);
+});
+
+test('resolvePanelOrder inserts a newly added panel after the panel it follows by default', () => {
+    // The player arranged the sidebar before "run-history" existed, so it is missing from their
+    // saved order — it belongs after "status", not at the bottom of the sidebar.
+    const saved = ['status', 'armies', 'policy', 'settings'];
+
+    assert.deepEqual(resolvePanelOrder(saved, DEFAULT_PANELS),
+        ['status', 'run-history', 'armies', 'policy', 'settings']);
+});
+
+test('resolvePanelOrder puts a new first panel at the top rather than the bottom', () => {
+    const saved = ['run-history', 'armies', 'policy', 'settings'];
+
+    assert.deepEqual(resolvePanelOrder(saved, DEFAULT_PANELS), DEFAULT_PANELS);
+});
+
+test('resolvePanelOrder keeps consecutive new panels in their default relative order', () => {
+    const saved = ['status', 'settings'];
+
+    assert.deepEqual(resolvePanelOrder(saved, DEFAULT_PANELS), DEFAULT_PANELS);
+});
+
+test('movePanelInOrder moves a panel up and down without mutating the original', () => {
+    const order = DEFAULT_PANELS.slice();
+
+    assert.deepEqual(movePanelInOrder(order, 'armies', -1),
+        ['status', 'armies', 'run-history', 'policy', 'settings']);
+    assert.deepEqual(movePanelInOrder(order, 'armies', 1),
+        ['status', 'run-history', 'policy', 'armies', 'settings']);
+    assert.deepEqual(order, DEFAULT_PANELS);
+});
+
+test('movePanelInOrder is a no-op past either end of the sidebar', () => {
+    assert.deepEqual(movePanelInOrder(DEFAULT_PANELS, 'status', -1), DEFAULT_PANELS);
+    assert.deepEqual(movePanelInOrder(DEFAULT_PANELS, 'settings', 1), DEFAULT_PANELS);
+});
+
+test('movePanelInOrder is a no-op for a panel that is not in the order', () => {
+    assert.deepEqual(movePanelInOrder(DEFAULT_PANELS, 'treasury', -1), DEFAULT_PANELS);
+});
+
+test('isPanelHidden reports only panels the player explicitly hid', () => {
+    assert.equal(isPanelHidden('policy', { policy: true }), true);
+    assert.equal(isPanelHidden('policy', { policy: false }), false);
+    assert.equal(isPanelHidden('policy', {}), false);
+    assert.equal(isPanelHidden('policy', undefined), false);
 });

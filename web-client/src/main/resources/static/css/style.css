@@ -192,11 +192,10 @@ h3 {
     min-width: 0;
 }
 
-/* Sidebar panel order: Status, Armies, then Policy and Settings. */
-.game-sidebar > .section-status { order: 1; }
-.game-sidebar > .section-armies { order: 2; }
-.game-sidebar > .section-policy { order: 3; }
-.game-sidebar > .section-settings { order: 4; }
+/* Sidebar panel order — Status, Run History, Armies, Policy, Settings — is the markup order in
+   game.html, so it also serves as the tab order. A player's own arrangement is applied by moving
+   the panels in the DOM (see "Panel Layout Management" in game.html), not by CSS `order`, which
+   would leave the keyboard and screen-reader order stuck at the default. */
 
 /* Desktop: place the map and the panels side by side and use the full width,
    instead of stacking everything in one centered column with empty sides. */
@@ -226,6 +225,13 @@ h3 {
     margin-bottom: 12px;
     border-radius: 8px;
     overflow: hidden;
+}
+
+/* Panels the player has hidden from the Settings panel's layout controls. Stated explicitly so a
+   later `display` rule on .collapsible-section can't quietly outrank the browser's [hidden]
+   default and leave a hidden panel on screen. */
+.collapsible-section[hidden] {
+    display: none;
 }
 
 .collapsible-section > summary {
@@ -964,6 +970,69 @@ input[type="password"]:focus {
     margin-bottom: 0;
 }
 
+/* Sidebar layout controls: one row per panel, with a show/hide checkbox and move buttons. */
+.settings-row--layout {
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.settings-group-label {
+    min-width: 120px;
+    font-weight: bold;
+    color: var(--text-primary, #d4cfc8);
+}
+
+.layout-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 180px;
+}
+
+.layout-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Overrides the bold, wide .settings-row label above: these name a panel, they don't label the
+   row, and the row has to stay narrow enough for the sidebar. */
+.settings-row--layout .layout-row-name {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.layout-move-button {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 2px 6px;
+    border: 1px solid var(--text-secondary, #5a4e3c);
+    border-radius: 4px;
+    background: var(--bg-primary, #2b2520);
+    color: var(--text-primary, #d4cfc8);
+    cursor: pointer;
+}
+
+.layout-move-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.layout-reset-button {
+    padding: 6px 10px;
+    border: 1px solid var(--text-secondary, #5a4e3c);
+    border-radius: 4px;
+    background: var(--bg-primary, #2b2520);
+    color: var(--text-primary, #d4cfc8);
+    font-size: var(--font-size-base, 14px);
+    cursor: pointer;
+}
+
 /* ========================
    Mobile / Responsive Layout
    ======================== */
@@ -990,7 +1059,7 @@ input[type="password"]:focus {
     }
 
     /* Mobile stays single-column: .game-layout/.game-main/.game-sidebar are
-       already flex columns, and the sidebar order rules keep Status/Armies first. */
+       already flex columns, and the panels keep whatever order the player arranged them in. */
 
     /* Collapse panels by default on mobile — only Game Status & Armies stay open */
     .collapsible-section > summary {

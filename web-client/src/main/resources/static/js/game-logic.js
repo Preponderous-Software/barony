@@ -94,11 +94,63 @@
         return isDesktop ? true : !!defaultOpen;
     }
 
+    // Reconciles a remembered sidebar order against the panels actually on the page.
+    // Remembered ids that no longer exist are dropped, duplicates are collapsed, and a panel
+    // the player has never arranged (one added since they last touched the layout) is inserted
+    // just after whichever default-order panel precedes it, rather than silently sinking to the
+    // bottom of the sidebar.
+    function resolvePanelOrder(savedOrder, defaultOrder) {
+        var resolved = [];
+        var placed = {};
+        (savedOrder || []).forEach(function (panelId) {
+            if (defaultOrder.indexOf(panelId) === -1) return;
+            if (placed[panelId]) return;
+            placed[panelId] = true;
+            resolved.push(panelId);
+        });
+        defaultOrder.forEach(function (panelId, defaultIndex) {
+            if (placed[panelId]) return;
+            var insertAt = 0;
+            for (var i = defaultIndex - 1; i >= 0; i--) {
+                var predecessorAt = resolved.indexOf(defaultOrder[i]);
+                if (predecessorAt !== -1) {
+                    insertAt = predecessorAt + 1;
+                    break;
+                }
+            }
+            resolved.splice(insertAt, 0, panelId);
+            placed[panelId] = true;
+        });
+        return resolved;
+    }
+
+    // Moves one panel up (-1) or down (+1) in the order, returning a new array. A move past
+    // either end, or of a panel that isn't in the order, is a no-op, so the caller can wire the
+    // buttons up without bounds checks of its own.
+    function movePanelInOrder(order, panelId, delta) {
+        var moved = (order || []).slice();
+        var from = moved.indexOf(panelId);
+        if (from === -1) return moved;
+        var to = from + delta;
+        if (to < 0 || to >= moved.length) return moved;
+        moved.splice(to, 0, moved.splice(from, 1)[0]);
+        return moved;
+    }
+
+    // A panel is visible unless the player has explicitly hidden it, so a panel added later
+    // starts out shown rather than inheriting some other panel's preference.
+    function isPanelHidden(panelId, hiddenState) {
+        return !!(hiddenState && hiddenState[panelId] === true);
+    }
+
     return {
         summarizeHoldings: summarizeHoldings,
         getStatClass: getStatClass,
         diffCastleMilestones: diffCastleMilestones,
         validateSplitAmount: validateSplitAmount,
-        resolvePanelOpenState: resolvePanelOpenState
+        resolvePanelOpenState: resolvePanelOpenState,
+        resolvePanelOrder: resolvePanelOrder,
+        movePanelInOrder: movePanelInOrder,
+        isPanelHidden: isPanelHidden
     };
 });

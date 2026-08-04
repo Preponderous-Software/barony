@@ -125,6 +125,15 @@
                 </div>
             </details>
 
+            <details class="collapsible-section section-armies" data-panel-id="armies" open>
+                <summary>Armies</summary>
+                <div class="armies-list">
+                    <div id="armiesList">
+                        <!-- Armies will be loaded dynamically via JavaScript -->
+                    </div>
+                </div>
+            </details>
+
             <details class="collapsible-section section-policy" data-panel-id="policy">
                 <summary>Change Policy</summary>
                 <div class="policy-controls">
@@ -186,14 +195,14 @@
                             <option value="large">Large</option>
                         </select>
                     </div>
-                </div>
-            </details>
-            
-            <details class="collapsible-section section-armies" data-panel-id="armies" open>
-                <summary>Armies</summary>
-                <div class="armies-list">
-                    <div id="armiesList">
-                        <!-- Armies will be loaded dynamically via JavaScript -->
+                    <div class="settings-row settings-row--layout">
+                        <span class="settings-group-label" id="layoutControlsLabel">Panels:</span>
+                        <div class="layout-controls" id="layoutControls"
+                             role="group" aria-labelledby="layoutControlsLabel">
+                            <!-- One row per sidebar panel, built by renderLayoutControls(). -->
+                        </div>
+                        <button type="button" class="layout-reset-button"
+                                onclick="resetPanelLayout()">Reset Panel Layout</button>
                     </div>
                 </div>
             </details>
@@ -212,9 +221,23 @@
         let username = null;
         let lastGameState = null;
         
+        // Sidebar layout preferences (see "Panel Layout Management" below). The default order is
+        // read off the markup once, before any saved layout is applied, so it stays the authoring
+        // order that "Reset Panel Layout" and resolvePanelOrder() fall back to. Declared here
+        // rather than beside those functions because the restore below runs before them.
+        const PANEL_LAYOUT_KEY = 'barony_panel_layout';
+        // The Settings panel holds the layout controls, so it may be reordered but never hidden —
+        // hiding it would leave no way to bring the other panels back.
+        const LAYOUT_LOCKED_PANEL_ID = 'settings';
+        const DEFAULT_PANEL_ORDER = Array.prototype.map.call(
+            document.querySelectorAll('.collapsible-section[data-panel-id]'),
+            function(d) { return d.dataset.panelId; });
+
         // Restore each sidebar panel's remembered open/closed state (see
         // "Panel State Management" below): a saved per-panel preference wins; otherwise every
         // panel opens by default on desktop, or falls back to its own HTML default on mobile.
+        // The remembered order and visibility are applied in the same pass, before first paint,
+        // so a returning player never sees the default sidebar flash past their own arrangement.
         (function() {
             const saved = loadPanelState();
             const isDesktop = window.innerWidth > 768;
@@ -222,6 +245,8 @@
                 d.open = resolvePanelOpenState(d.dataset.panelId, saved, isDesktop, d.open);
                 d.addEventListener('toggle', savePanelState);
             });
+            applyPanelLayout();
+            renderLayoutControls();
         })();
         
         // Color palette for canvas drawing (swapped by colorblind modes)
@@ -344,6 +369,148 @@
                 state[d.dataset.panelId] = d.open;
             });
             localStorage.setItem('barony_panel_state', JSON.stringify(state));
+        }
+
+        // ========================
+        // Panel Layout Management
+        // ========================
+        // Lets the player arrange the sidebar: which panels are shown and in what order, kept per
+        // browser alongside the open/closed state above. The order/visibility rules themselves are
+        // pure and live in game-logic.js (resolvePanelOrder, movePanelInOrder, isPanelHidden) so
+        // they're covered by the Node test suite.
+        function loadPanelLayout() {
+            try {
+                const saved = localStorage.getItem(PANEL_LAYOUT_KEY);
+                const parsed = saved ? JSON.parse(saved) : {};
+                return {
+                    order: Array.isArray(parsed.order) ? parsed.order : [],
+                    hidden: (parsed.hidden && typeof parsed.hidden === 'object') ? parsed.hidden : {}
+                };
+            } catch (e) {
+                console.error('Error loading panel layout:', e);
+                return { order: [], hidden: {} };
+            }
+        }
+
+        function savePanelLayout(layout) {
+            localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
+        }
+
+        function getPanel(panelId) {
+            return document.querySelector(
+                '.collapsible-section[data-panel-id="' + panelId + '"]');
+        }
+
+        // Applies the remembered arrangement to the sidebar. Panels are moved in the DOM rather
+        // than reordered with CSS `order` so that keyboard tab order and screen-reader reading
+        // order match what is on screen.
+        function applyPanelLayout() {
+            const sidebar = document.querySelector('.game-sidebar');
+            if (!sidebar) return;
+            const layout = loadPanelLayout();
+            resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER).forEach(function(panelId) {
+                const panel = getPanel(panelId);
+                if (!panel) return;
+                sidebar.appendChild(panel);
+                panel.hidden = panelId !== LAYOUT_LOCKED_PANEL_ID
+                    && isPanelHidden(panelId, layout.hidden);
+            });
+        }
+
+        // Builds the Settings-panel list of sidebar panels — a show/hide checkbox and move
+        // up/down buttons per panel — from whatever panels are on the page.
+        function renderLayoutControls() {
+            const container = document.getElementById('layoutControls');
+            if (!container) return;
+            const layout = loadPanelLayout();
+            const order = resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER);
+            container.innerHTML = '';
+            order.forEach(function(panelId, index) {
+                const panel = getPanel(panelId);
+                if (!panel) return;
+                const summary = panel.querySelector('summary');
+                const name = summary ? summary.textContent.trim() : panelId;
+
+                const row = document.createElement('div');
+                row.className = 'layout-row';
+
+                const label = document.createElement('label');
+                label.className = 'layout-row-name';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.dataset.panel = panelId;
+                checkbox.checked = !panel.hidden;
+                if (panelId === LAYOUT_LOCKED_PANEL_ID) {
+                    checkbox.disabled = true;
+                    label.title = 'The Settings panel holds these controls, so it cannot be hidden.';
+                }
+                checkbox.addEventListener('change', function() {
+                    setPanelHidden(panelId, !checkbox.checked);
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + name));
+                row.appendChild(label);
+
+                row.appendChild(makeMoveButton(panelId, name, 'up', index === 0));
+                row.appendChild(makeMoveButton(panelId, name, 'down', index === order.length - 1));
+                container.appendChild(row);
+            });
+        }
+
+        function makeMoveButton(panelId, name, direction, disabled) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'layout-move-button';
+            button.dataset.move = direction;
+            button.dataset.panel = panelId;
+            button.textContent = direction === 'up' ? '▲' : '▼';
+            button.setAttribute('aria-label', 'Move ' + name + ' ' + direction);
+            button.disabled = disabled;
+            button.addEventListener('click', function() {
+                movePanel(panelId, direction === 'up' ? -1 : 1);
+            });
+            return button;
+        }
+
+        function movePanel(panelId, delta) {
+            const layout = loadPanelLayout();
+            const order = movePanelInOrder(
+                resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER), panelId, delta);
+            savePanelLayout({ order: order, hidden: layout.hidden });
+            applyPanelLayout();
+            renderLayoutControls();
+            // Re-rendering the rows throws away the button that was just clicked, so put focus
+            // back on it — or on its counterpart when the panel has reached an end and the
+            // button the player was using is now disabled.
+            const moved = document.querySelector('.layout-move-button[data-panel="' + panelId +
+                '"][data-move="' + (delta < 0 ? 'up' : 'down') + '"]');
+            const counterpart = document.querySelector('.layout-move-button[data-panel="' +
+                panelId + '"][data-move="' + (delta < 0 ? 'down' : 'up') + '"]');
+            const target = (moved && !moved.disabled) ? moved : counterpart;
+            if (target) target.focus();
+        }
+
+        function setPanelHidden(panelId, hidden) {
+            if (panelId === LAYOUT_LOCKED_PANEL_ID) return;
+            const layout = loadPanelLayout();
+            layout.hidden[panelId] = hidden;
+            savePanelLayout({
+                order: resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER),
+                hidden: layout.hidden
+            });
+            applyPanelLayout();
+            renderLayoutControls();
+            // Same re-render, same lost focus as in movePanel(): return it to the rebuilt checkbox.
+            const rebuilt = document.querySelector(
+                '.layout-row-name input[data-panel="' + panelId + '"]');
+            if (rebuilt) rebuilt.focus();
+        }
+
+        function resetPanelLayout() {
+            savePanelLayout({ order: DEFAULT_PANEL_ORDER.slice(), hidden: {} });
+            applyPanelLayout();
+            renderLayoutControls();
+            showToast('Panel layout reset to the default arrangement.', 'info');
         }
 
         // ========================
