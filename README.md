@@ -166,6 +166,9 @@ Then open http://localhost:3000
 - Adjustable font size: Small, Medium, Large
 - Settings panel with live preview
 - Settings persisted to `localStorage` under `barony_settings`
+- Arrangeable sidebar: panels can be shown/hidden and reordered from the Settings panel, and the
+  arrangement is persisted to `localStorage` under `barony_panel_layout` (open/closed state under
+  `barony_panel_state`)
 - Keyboard shortcuts: `Space` advance turn, `R` reset, `S` focus split amount, `A` toggle Auto Play, `Escape` deselect
 - Castle objective progress (yours / enemy / neutral, out of the map total) in the Game Status panel
 - Milestone toasts when a castle changes hands or the last castle on either side comes under siege

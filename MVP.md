@@ -258,8 +258,9 @@ for the player-facing description of the real UI.
   - Highlight selected army (gold ring around the selected army)
   - Display hover tooltips (tile type, ownership, army stats, castle capture progress,
     village generation info)
-- **Sidebar Panels:** Collapsible Game Status & Stats, Change Policy, Settings, and Armies
-  panels alongside the canvas and controls
+- **Sidebar Panels:** Collapsible Game Status & Stats, Run History, Armies, Change Policy, and
+  Settings panels alongside the canvas and controls, which the player can show/hide and reorder
+  from the Settings panel
 - **Game-Over Banner:** Overlays the canvas with the result plus a summary of the run — turns
   played, castles and villages held out of the map total, and armies and soldiers remaining
 - **Toast Notifications:** Non-blocking, auto-dismissing toasts (info/success/warning/danger)
