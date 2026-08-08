@@ -162,6 +162,12 @@ public class WebController {
         return proxy(() -> backendService.sessionRulerStats(cookie(request)));
     }
 
+    @GetMapping("/api/session/runs")
+    @ResponseBody
+    public ResponseEntity<?> getSessionRuns(HttpServletRequest request) {
+        return proxy(() -> backendService.sessionRuns(cookie(request)));
+    }
+
     /**
      * Run a backend call and translate failures so the browser sees the backend's status.
      * Without this, a backend 401 (missing/invalid/expired/revoked token) would surface from the

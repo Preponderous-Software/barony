@@ -114,6 +114,11 @@ public class BackendService {
         return restTemplate.exchange(backendUrl + "/api/session/ruler-stats", HttpMethod.GET, entity, RulerStats.class).getBody();
     }
 
+    public RunHistory sessionRuns(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/session/runs", HttpMethod.GET, entity, RunHistory.class).getBody();
+    }
+
     private HttpHeaders jsonHeaders(String cookie) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

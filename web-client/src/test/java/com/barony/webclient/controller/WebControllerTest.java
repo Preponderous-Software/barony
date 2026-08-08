@@ -1,5 +1,7 @@
 package com.barony.webclient.controller;
 
+import com.barony.webclient.model.RunHistory;
+import com.barony.webclient.model.RunRecord;
 import com.barony.webclient.service.BackendService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
@@ -51,6 +54,35 @@ class WebControllerTest {
 
         mockMvc.perform(post("/api/session/tick"))
                 .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void sessionRunsReturnsBackendRunHistoryToBrowser() throws Exception {
+        RunRecord run = new RunRecord();
+        run.setResult("WIN");
+        run.setTurnsPlayed(42);
+        RunHistory history = new RunHistory();
+        history.setWins(2);
+        history.setLosses(1);
+        history.setRuns(List.of(run));
+        when(backendService.sessionRuns(any())).thenReturn(history);
+
+        mockMvc.perform(get("/api/session/runs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.wins").value(2))
+                .andExpect(jsonPath("$.losses").value(1))
+                .andExpect(jsonPath("$.runs[0].result").value("WIN"))
+                .andExpect(jsonPath("$.runs[0].turnsPlayed").value(42));
+    }
+
+    @Test
+    void sessionRunsPassesBackend401ThroughToBrowser() throws Exception {
+        when(backendService.sessionRuns(any()))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.UNAUTHORIZED,
+                        "Unauthorized", HttpHeaders.EMPTY, new byte[0], null));
+
+        mockMvc.perform(get("/api/session/runs"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

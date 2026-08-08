@@ -6,6 +6,14 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **The Run History panel is filled in again** (#82): the game page's request for the player's
+  win/loss tally and recent runs was made against the web client, which had no route for it, so it
+  was answered with a 404 and the panel stayed empty wherever `/api/*` is not routed straight to
+  the backend — including the documented `docker-compose` / `localhost:3000` setup. `GET
+  /api/session/runs` is now proxied like every other per-player endpoint, forwarding the auth
+  cookie and passing the backend's status back so a 401 still triggers the re-login flow. A new
+  `GamePageProxyCoverageTest` reads the API calls out of the rendered page and fails if any of them
+  has no route on the web client, so the same gap cannot reopen for the next endpoint either.
 - ✅ **Sidebar moves always move something on screen** (#80): the ▲/▼ buttons now move a shown
   panel past the next panel the player can see, instead of swapping it with a hidden panel and
   looking like nothing happened. Hidden panels travel with the shown panel they sit under, so
