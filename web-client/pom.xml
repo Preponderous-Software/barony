@@ -13,7 +13,7 @@
 
     <groupId>com.barony</groupId>
     <artifactId>web-client</artifactId>
-    <version>1.0.0</version>
+    <version>2.0.0-SNAPSHOT-8-8-2026</version>
     <name>Barony Web Client</name>
 
     <properties>

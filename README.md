@@ -1,6 +1,6 @@
 # Barony
 
-**Version:** 1.0.0  
+**Version:** 2.0.0-SNAPSHOT-8-8-2026  
 **A single-player online strategy game with army movement, territory control, and AI opponent**
 
 Barony is a browser-based turn-based strategy game where you command armies to capture villages and castles against an AI opponent. Build your forces, control territory, and use strategic policies to defeat your enemy.
