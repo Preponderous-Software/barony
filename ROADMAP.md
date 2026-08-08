@@ -2,7 +2,7 @@
 
 > **Note for Players:** This document is for developers planning future features. If you want to learn how to play Barony now, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md) instead.
 
-**Current Version:** 1.0.0 (MVP Complete)  
+**Current Version:** 2.0.0-SNAPSHOT-8-8-2026 (MVP Complete)  
 **Last Updated:** February 16, 2026
 
 This document outlines the planned features and enhancements for Barony Prototype beyond the MVP. Features are organized into versioned releases with estimated effort and priorities.
