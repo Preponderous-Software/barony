@@ -222,6 +222,9 @@ GitHub Actions runs on all PRs:
 - Spring Boot + Thymeleaf
 - HTML5 Canvas rendering
 - RESTful backend communication
+- Pages are served from the web client's own origin, so every `/api/*` call they make is answered
+  by the web client and proxied to the backend with the auth cookie forwarded — a backend endpoint
+  a page calls needs a matching proxy route here (guarded by `ProxyRouteCoverageTest`)
 
 ## Troubleshooting
 
