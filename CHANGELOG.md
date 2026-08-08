@@ -12,7 +12,7 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   the backend — including the documented `docker-compose` / `localhost:3000` setup. `GET
   /api/session/runs` is now proxied like every other per-player endpoint, forwarding the auth
   cookie and passing the backend's status back so a 401 still triggers the re-login flow. A new
-  `GamePageProxyCoverageTest` reads the API calls out of the rendered page and fails if any of them
+  `ProxyRouteCoverageTest` reads the API calls out of every rendered page and fails if any of them
   has no route on the web client, so the same gap cannot reopen for the next endpoint either.
 - ✅ **Sidebar moves always move something on screen** (#80): the ▲/▼ buttons now move a shown
   panel past the next panel the player can see, instead of swapping it with a hidden panel and

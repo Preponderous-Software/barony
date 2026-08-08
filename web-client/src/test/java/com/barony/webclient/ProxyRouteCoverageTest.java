@@ -21,23 +21,29 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Guards the contract between the game page and the web client that serves it: the page is served
- * from the web client's own origin, so every `/api/*` call it makes has to be answered here and
- * proxied to the backend. A backend endpoint that gained no matching proxy still worked behind the
- * gateway deployment (where `/api/*` is routed straight to the backend) while 404ing in the
- * documented `docker-compose` setup — which is how `/api/session/runs` was missed (#82).
+ * Guards the contract between the pages this web client serves and the web client itself: a page
+ * is loaded from the web client's own origin, so every API call it makes has to be answered here
+ * and proxied to the backend. A backend endpoint that gained no matching proxy still worked behind
+ * the gateway deployment (where {@code /api/*} is routed straight to the backend) while 404ing in
+ * the documented docker-compose setup — which is how {@code /api/session/runs} was missed (#82).
  *
- * The page's calls are read out of the rendered markup rather than listed here, so a call added
- * later is checked without this test being updated.
+ * The calls are read out of the rendered markup rather than listed here, so a call added later is
+ * checked without this test being updated. Two things it deliberately does not see: a call whose
+ * URL is built at runtime rather than written as a literal, and a mapping registered under a URL
+ * pattern rather than a literal path (none of either exists today) — a pattern mapping added later
+ * would show up here as a false failure.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-class GamePageProxyCoverageTest {
+class ProxyRouteCoverageTest {
 
-    /** `fetch('/api/...'` — the form every call on the game page takes. */
+    /** The pages this web client serves; each is rendered and read for the calls it makes. */
+    private static final List<String> PAGES = List.of("/login", "/register", "/game");
+
+    /** {@code fetch('/api/...'} — the form every call on those pages takes. */
     private static final Pattern FETCH_CALL = Pattern.compile("fetch\\('(/[^']*)'");
 
-    /** `method: 'POST'` inside the options object that follows; absent means GET. */
+    /** {@code method: 'POST'} inside the options object that follows; absent means GET. */
     private static final Pattern METHOD_OPTION = Pattern.compile("method:\\s*'([A-Z]+)'");
 
     @Autowired
@@ -47,24 +53,26 @@ class GamePageProxyCoverageTest {
     private RequestMappingHandlerMapping handlerMapping;
 
     @Test
-    void everyApiCallTheGamePageMakesIsServedByTheWebClient() throws Exception {
-        List<String> calls = apiCallsIn(renderGamePage());
+    void everyApiCallThePagesMakeIsServedByTheWebClient() throws Exception {
         Set<String> served = servedRoutes();
 
-        assertFalse(calls.isEmpty(),
-                "Expected the game page to call the API; none were found, so this guard would "
-                        + "pass vacuously");
-        for (String call : calls) {
-            assertTrue(served.contains(call),
-                    "The game page calls " + call + ", but the web client serves no such route, "
-                            + "so the browser gets a 404 instead of the backend's response. "
-                            + "Routes served: " + served);
+        for (String page : PAGES) {
+            List<String> calls = apiCallsIn(render(page));
+            assertFalse(calls.isEmpty(),
+                    "Expected " + page + " to call the API; no call was found, so this guard "
+                            + "would pass vacuously for that page");
+            for (String call : calls) {
+                assertTrue(served.contains(call),
+                        page + " calls " + call + ", but the web client serves no such route, so "
+                                + "the browser gets a 404 instead of the backend's response. "
+                                + "Routes served: " + served);
+            }
         }
     }
 
     /**
-     * Every API call the page makes, as "METHOD /path". The options object is looked for between
-     * one call and the next, so a call's method is not read off a later one.
+     * Every API call a page makes, as "METHOD /path". The options object is looked for between one
+     * call and the next, so a call's method is not read off a later one.
      */
     private List<String> apiCallsIn(String html) {
         List<String> calls = new ArrayList<>();
@@ -100,7 +108,7 @@ class GamePageProxyCoverageTest {
         return routes;
     }
 
-    /** A mapping with no method condition answers every method, so name the ones the page uses. */
+    /** A mapping with no method condition answers every method, so name the ones the pages use. */
     private Set<String> methodNames(RequestMappingInfo info) {
         Set<String> methods = new LinkedHashSet<>();
         info.getMethodsCondition().getMethods().forEach(method -> methods.add(method.name()));
@@ -111,8 +119,8 @@ class GamePageProxyCoverageTest {
         return methods;
     }
 
-    private String renderGamePage() throws Exception {
-        return mockMvc.perform(get("/game"))
+    private String render(String page) throws Exception {
+        return mockMvc.perform(get(page))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
     }
