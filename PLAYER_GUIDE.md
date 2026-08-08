@@ -308,7 +308,13 @@ Settings panel:
 
 - **Show or hide a panel** with its checkbox — a hidden panel disappears from the sidebar until
   it is checked again. The Settings panel itself can't be hidden, since it holds these controls.
-- **Reorder the panels** with the ▲ and ▼ buttons beside each name.
+  A hidden panel keeps its place in the list, so checking it again brings it back where you left
+  it rather than at the bottom.
+- **Reorder the panels** with the ▲ and ▼ buttons beside each name. A shown panel moves past the
+  next panel you can see, so every press moves it in the sidebar even when hidden panels sit in
+  between; the ▲ or ▼ is greyed out once the panel is at the top or bottom of what is shown. A
+  hidden panel moves one place at a time in the list, which is how you position it before showing
+  it again.
 - **Reset Panel Layout** puts every panel back, in the order above.
 
 Each panel also remembers whether you left it open or collapsed. The whole arrangement — order,
