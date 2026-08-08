@@ -376,8 +376,8 @@
         // ========================
         // Lets the player arrange the sidebar: which panels are shown and in what order, kept per
         // browser alongside the open/closed state above. The order/visibility rules themselves are
-        // pure and live in game-logic.js (resolvePanelOrder, movePanelInOrder, isPanelHidden) so
-        // they're covered by the Node test suite.
+        // pure and live in game-logic.js (resolvePanelOrder, movePanelAmongVisible, canMovePanel,
+        // isPanelHidden) so they're covered by the Node test suite.
         function loadPanelLayout() {
             try {
                 const saved = localStorage.getItem(PANEL_LAYOUT_KEY);
@@ -396,6 +396,14 @@
             localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
         }
 
+        // The Settings panel holds the layout controls and so is never hidden; the layout rules are
+        // given a visibility map that says so, even if a hand-edited preference claims otherwise.
+        function panelVisibility(layout) {
+            const hidden = Object.assign({}, layout.hidden);
+            delete hidden[LAYOUT_LOCKED_PANEL_ID];
+            return hidden;
+        }
+
         function getPanel(panelId) {
             return document.querySelector(
                 '.collapsible-section[data-panel-id="' + panelId + '"]');
@@ -408,12 +416,12 @@
             const sidebar = document.querySelector('.game-sidebar');
             if (!sidebar) return;
             const layout = loadPanelLayout();
+            const hidden = panelVisibility(layout);
             resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER).forEach(function(panelId) {
                 const panel = getPanel(panelId);
                 if (!panel) return;
                 sidebar.appendChild(panel);
-                panel.hidden = panelId !== LAYOUT_LOCKED_PANEL_ID
-                    && isPanelHidden(panelId, layout.hidden);
+                panel.hidden = isPanelHidden(panelId, hidden);
             });
         }
 
@@ -423,9 +431,10 @@
             const container = document.getElementById('layoutControls');
             if (!container) return;
             const layout = loadPanelLayout();
+            const hidden = panelVisibility(layout);
             const order = resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER);
             container.innerHTML = '';
-            order.forEach(function(panelId, index) {
+            order.forEach(function(panelId) {
                 const panel = getPanel(panelId);
                 if (!panel) return;
                 const summary = panel.querySelector('summary');
@@ -451,8 +460,10 @@
                 label.appendChild(document.createTextNode(' ' + name));
                 row.appendChild(label);
 
-                row.appendChild(makeMoveButton(panelId, name, 'up', index === 0));
-                row.appendChild(makeMoveButton(panelId, name, 'down', index === order.length - 1));
+                row.appendChild(makeMoveButton(panelId, name, 'up',
+                    !canMovePanel(order, hidden, panelId, -1)));
+                row.appendChild(makeMoveButton(panelId, name, 'down',
+                    !canMovePanel(order, hidden, panelId, 1)));
                 container.appendChild(row);
             });
         }
@@ -474,8 +485,9 @@
 
         function movePanel(panelId, delta) {
             const layout = loadPanelLayout();
-            const order = movePanelInOrder(
-                resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER), panelId, delta);
+            const order = movePanelAmongVisible(
+                resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER),
+                panelVisibility(layout), panelId, delta);
             savePanelLayout({ order: order, hidden: layout.hidden });
             applyPanelLayout();
             renderLayoutControls();

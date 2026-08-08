@@ -143,6 +143,59 @@
         return !!(hiddenState && hiddenState[panelId] === true);
     }
 
+    // Moves a visible panel past the next panel the player can actually see, so one press of ▲/▼
+    // always produces a visible move even when hidden panels sit in between. Hidden panels travel
+    // with the visible panel they sit under, so their place in the sidebar survives the move and
+    // showing them again puts them back where they were rather than at the bottom. A hidden panel
+    // has nothing to move past on screen, so it moves one step through the full order instead —
+    // which is what the layout controls, where every panel is listed, show.
+    function movePanelAmongVisible(order, hiddenState, panelId, delta) {
+        var current = (order || []).slice();
+        if (current.indexOf(panelId) === -1) return current;
+        if (isPanelHidden(panelId, hiddenState)) {
+            return movePanelInOrder(current, panelId, delta);
+        }
+
+        var visible = [];
+        var leading = [];
+        var followers = {};
+        var anchor = null;
+        current.forEach(function (id) {
+            if (!isPanelHidden(id, hiddenState)) {
+                visible.push(id);
+                anchor = id;
+                return;
+            }
+            if (anchor === null) {
+                leading.push(id);
+                return;
+            }
+            if (!Object.prototype.hasOwnProperty.call(followers, anchor)) followers[anchor] = [];
+            followers[anchor].push(id);
+        });
+
+        var merged = leading.slice();
+        movePanelInOrder(visible, panelId, delta).forEach(function (id) {
+            merged.push(id);
+            if (!Object.prototype.hasOwnProperty.call(followers, id)) return;
+            followers[id].forEach(function (hiddenId) {
+                merged.push(hiddenId);
+            });
+        });
+        return merged;
+    }
+
+    // Whether a ▲/▼ button should be offered at all: a move that would leave the order untouched
+    // is a dead button, so the caller can disable it without repeating the end-of-sidebar rules
+    // (which differ for a visible panel and a hidden one).
+    function canMovePanel(order, hiddenState, panelId, delta) {
+        var current = order || [];
+        var moved = movePanelAmongVisible(current, hiddenState, panelId, delta);
+        return moved.some(function (id, index) {
+            return id !== current[index];
+        });
+    }
+
     return {
         summarizeHoldings: summarizeHoldings,
         getStatClass: getStatClass,
@@ -151,6 +204,8 @@
         resolvePanelOpenState: resolvePanelOpenState,
         resolvePanelOrder: resolvePanelOrder,
         movePanelInOrder: movePanelInOrder,
-        isPanelHidden: isPanelHidden
+        isPanelHidden: isPanelHidden,
+        movePanelAmongVisible: movePanelAmongVisible,
+        canMovePanel: canMovePanel
     };
 });

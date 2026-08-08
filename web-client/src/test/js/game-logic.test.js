@@ -12,7 +12,9 @@ const {
     resolvePanelOpenState,
     resolvePanelOrder,
     movePanelInOrder,
-    isPanelHidden
+    isPanelHidden,
+    movePanelAmongVisible,
+    canMovePanel
 } = require('../../main/resources/static/js/game-logic.js');
 
 // The sidebar panels in markup order, as game.html captures them for DEFAULT_PANEL_ORDER.
@@ -263,4 +265,88 @@ test('isPanelHidden reports only panels the player explicitly hid', () => {
     assert.equal(isPanelHidden('policy', { policy: false }), false);
     assert.equal(isPanelHidden('policy', {}), false);
     assert.equal(isPanelHidden('policy', undefined), false);
+});
+
+test('movePanelAmongVisible moves a panel past the hidden panel between it and the next visible one', () => {
+    // With Run History hidden, one press of ▼ on Game Status has to put it below Armies — the
+    // panel the player can actually see — rather than swapping it with the hidden panel.
+    assert.deepEqual(movePanelAmongVisible(DEFAULT_PANELS, { 'run-history': true }, 'status', 1),
+        ['armies', 'status', 'run-history', 'policy', 'settings']);
+});
+
+test('movePanelAmongVisible moves up past a hidden panel, mirroring the move down', () => {
+    assert.deepEqual(movePanelAmongVisible(DEFAULT_PANELS, { 'run-history': true }, 'armies', -1),
+        ['armies', 'status', 'run-history', 'policy', 'settings']);
+});
+
+test('movePanelAmongVisible keeps a hidden panel under the visible panel it sits below', () => {
+    // Change Policy is hidden below Armies, so it follows Armies down and is still there to be
+    // shown again in the same place.
+    assert.deepEqual(movePanelAmongVisible(DEFAULT_PANELS, { policy: true }, 'armies', 1),
+        ['status', 'run-history', 'settings', 'armies', 'policy']);
+});
+
+test('movePanelAmongVisible leaves a hidden panel that precedes every visible one at the top', () => {
+    const order = ['run-history', 'status', 'armies', 'policy', 'settings'];
+
+    assert.deepEqual(movePanelAmongVisible(order, { 'run-history': true }, 'status', 1),
+        ['run-history', 'armies', 'status', 'policy', 'settings']);
+});
+
+test('movePanelAmongVisible steps a hidden panel through the full order', () => {
+    // A hidden panel has nothing to move past on screen, so it moves one place in the order the
+    // layout controls list — which is how the player positions it before showing it again.
+    assert.deepEqual(movePanelAmongVisible(DEFAULT_PANELS, { 'run-history': true }, 'run-history', 1),
+        ['status', 'armies', 'run-history', 'policy', 'settings']);
+});
+
+test('movePanelAmongVisible is a no-op past the last visible panel, whatever follows it hidden', () => {
+    const order = ['status', 'armies', 'policy', 'settings', 'run-history'];
+
+    assert.deepEqual(movePanelAmongVisible(order, { 'run-history': true }, 'settings', 1), order);
+});
+
+test('movePanelAmongVisible matches movePanelInOrder when no panel is hidden', () => {
+    assert.deepEqual(movePanelAmongVisible(DEFAULT_PANELS, {}, 'armies', -1),
+        movePanelInOrder(DEFAULT_PANELS, 'armies', -1));
+    assert.deepEqual(movePanelAmongVisible(DEFAULT_PANELS, undefined, 'armies', 1),
+        movePanelInOrder(DEFAULT_PANELS, 'armies', 1));
+});
+
+test('movePanelAmongVisible is a no-op for a panel that is not in the order, and never mutates it', () => {
+    const order = DEFAULT_PANELS.slice();
+
+    assert.deepEqual(movePanelAmongVisible(order, { 'run-history': true }, 'treasury', 1),
+        DEFAULT_PANELS);
+    movePanelAmongVisible(order, { 'run-history': true }, 'status', 1);
+    assert.deepEqual(order, DEFAULT_PANELS);
+});
+
+test('canMovePanel disables ▲ on the first visible panel even when a hidden panel precedes it', () => {
+    assert.equal(canMovePanel(DEFAULT_PANELS, { 'run-history': true }, 'status', -1), false);
+    assert.equal(
+        canMovePanel(['run-history', 'status', 'armies', 'policy', 'settings'],
+            { 'run-history': true }, 'status', -1),
+        false);
+});
+
+test('canMovePanel disables ▼ on the last visible panel even when hidden panels follow it', () => {
+    assert.equal(
+        canMovePanel(['status', 'armies', 'policy', 'settings', 'run-history'],
+            { 'run-history': true }, 'settings', 1),
+        false);
+});
+
+test('canMovePanel offers both directions to a visible panel with visible panels either side', () => {
+    assert.equal(canMovePanel(DEFAULT_PANELS, { 'run-history': true }, 'armies', -1), true);
+    assert.equal(canMovePanel(DEFAULT_PANELS, { 'run-history': true }, 'armies', 1), true);
+});
+
+test('canMovePanel judges a hidden panel by the ends of the full order', () => {
+    assert.equal(canMovePanel(DEFAULT_PANELS, { 'run-history': true }, 'run-history', -1), true);
+    assert.equal(canMovePanel(DEFAULT_PANELS, { status: true }, 'status', -1), false);
+});
+
+test('canMovePanel reports no move for a panel that is not in the order', () => {
+    assert.equal(canMovePanel(DEFAULT_PANELS, {}, 'treasury', -1), false);
 });

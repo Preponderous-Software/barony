@@ -6,6 +6,14 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Sidebar moves always move something on screen** (#80): the ▲/▼ buttons now move a shown
+  panel past the next panel the player can see, instead of swapping it with a hidden panel and
+  looking like nothing happened. Hidden panels travel with the shown panel they sit under, so
+  showing one again puts it back where it was rather than at the bottom of the sidebar, and a
+  ▲/▼ is disabled once the panel reaches the top or bottom of what is shown. A hidden panel still
+  moves one place at a time in the layout list, so it can be positioned before being shown. The
+  rules are pure functions (`movePanelAmongVisible`, `canMovePanel` in `game-logic.js`) covered by
+  the Node test suite.
 - ✅ **The sidebar can be rearranged** (progress on #55): a **Panels** block in the Settings panel
   lets each sidebar panel be shown or hidden with a checkbox and moved with ▲/▼ buttons, plus a
   **Reset Panel Layout** button that restores the default arrangement. The chosen order and
