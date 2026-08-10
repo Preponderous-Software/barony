@@ -15,9 +15,10 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   another browser or device brings the arrangement along instead of starting from the defaults.
   `localStorage` stays the working copy: it is seeded from the account copy on load and receives
   every change afterwards, so an unreachable backend costs nothing beyond the arrangement not
-  travelling, and an arrangement made before signing in (or while the backend was down) is
-  uploaded rather than discarded. The rule for reconciling the two copies is a pure function
-  (`mergePreferences` in `game-logic.js`) covered by the Node test suite.
+  travelling. Where the two copies differ the account's wins; a preference the account has never
+  held — chosen before signing in, or while the backend was down — is uploaded rather than
+  discarded. The rule for reconciling the two copies is a pure function (`mergePreferences` in
+  `game-logic.js`) covered by the Node test suite.
 - ✅ **The Run History panel is filled in again** (#82): the game page's request for the player's
   win/loss tally and recent runs was made against the web client, which had no route for it, so it
   was answered with a 404 and the panel stayed empty wherever `/api/*` is not routed straight to

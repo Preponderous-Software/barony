@@ -622,6 +622,12 @@
         // Applying the account copy writes localStorage and opens or closes panels, which would
         // otherwise echo straight back up as a change the player never made.
         let applyingStoredPreferences = false;
+        // Nothing may be uploaded until the account copy has been reconciled: an upload sent while
+        // the load is still in flight would put this browser's copy over the account's, losing the
+        // arrangement the request was about to return. A change made in that window is remembered
+        // and sent once the merge has happened, so it is delayed rather than dropped.
+        let preferencesReconciled = false;
+        let preferenceUploadDeferred = false;
 
         function readLocalPreferences() {
             const local = {};
@@ -665,8 +671,22 @@
         // the visibility and the open/closed state) into one request.
         function queuePreferenceUpload() {
             if (applyingStoredPreferences || !username) return;
+            if (!preferencesReconciled) {
+                preferenceUploadDeferred = true;
+                return;
+            }
             clearTimeout(preferenceUploadTimer);
             preferenceUploadTimer = setTimeout(uploadPreferences, PREFERENCE_UPLOAD_DELAY_MS);
+        }
+
+        // Opens the gate once the account copy has been dealt with — whether it was applied or the
+        // request failed — and sends anything the player changed while it was shut.
+        function finishReconciliation(uploadNeeded) {
+            preferencesReconciled = true;
+            if (uploadNeeded || preferenceUploadDeferred) {
+                preferenceUploadDeferred = false;
+                uploadPreferences();
+            }
         }
 
         function uploadPreferences() {
@@ -692,10 +712,13 @@
                     const merged = mergePreferences(stored, readLocalPreferences());
                     writeLocalPreferences(merged.preferences);
                     applyStoredPreferences();
-                    if (merged.uploadNeeded) uploadPreferences();
+                    finishReconciliation(merged.uploadNeeded);
                 })
                 .catch(function(e) {
                     console.error('Error loading preferences:', e);
+                    // The account copy could not be read, so this browser's is all there is; let
+                    // it be uploaded rather than leaving the player unable to save at all.
+                    finishReconciliation(false);
                 });
         }
 

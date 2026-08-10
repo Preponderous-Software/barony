@@ -336,8 +336,9 @@ Open the **Settings** panel in the sidebar. Changes apply immediately:
 
 Settings are saved to your browser's `localStorage`, and — while you are signed in — to your
 account as well, so they are applied wherever you next sign in. Where the two differ, what your
-account holds wins; a change made while the server is unreachable stays in the browser and is sent
-up the next time the game page loads.
+account holds wins. A setting your account has never held — one you chose before signing in, or
+while the server was unreachable — is kept and sent up the next time the game page loads, rather
+than being discarded.
 
 ### Notifications
 Non-blocking toast notifications keep you informed without interrupting gameplay:
