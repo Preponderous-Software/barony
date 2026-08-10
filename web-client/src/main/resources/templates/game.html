@@ -236,11 +236,9 @@
         // Restore each sidebar panel's remembered open/closed state (see
         // "Panel State Management" below): a saved per-panel preference wins; otherwise every
         // panel opens by default on desktop, or falls back to its own HTML default on mobile.
-        // The remembered order and visibility are applied in the same pass, before first paint,
-        // so a returning player never sees the default sidebar flash past their own arrangement.
-        // Applying the stored preferences is a named function rather than part of the pass below
-        // because the account copy arrives later (see "Preference Sync") and has to be applied to
-        // an already-restored sidebar.
+        // Named rather than inlined into the pass below because the copy stored against the
+        // player's account arrives later (see "Preference Sync") and has to be applied to a
+        // sidebar that has already been restored once.
         function restorePanelOpenState() {
             const saved = loadPanelState();
             const isDesktop = window.innerWidth > 768;
@@ -249,6 +247,8 @@
             });
         }
 
+        // The remembered order and visibility are applied in the same pass, before first paint, so
+        // a returning player never sees the default sidebar flash past their own arrangement.
         (function() {
             restorePanelOpenState();
             document.querySelectorAll('.collapsible-section[data-panel-id]').forEach(function(d) {
@@ -619,8 +619,8 @@
         // is a pure function (mergePreferences in game-logic.js) covered by the Node test suite.
         const PREFERENCE_UPLOAD_DELAY_MS = 500;
         let preferenceUploadTimer = null;
-        // Applying the account copy writes localStorage and toggles panels, which would otherwise
-        // echo straight back up as a change the player never made.
+        // Applying the account copy writes localStorage and opens or closes panels, which would
+        // otherwise echo straight back up as a change the player never made.
         let applyingStoredPreferences = false;
 
         function readLocalPreferences() {
@@ -655,7 +655,9 @@
                 applyPanelLayout();
                 renderLayoutControls();
             } finally {
-                applyingStoredPreferences = false;
+                // Opening or closing a panel raises its `toggle` event asynchronously, so the
+                // guard has to outlive this call for those echoes to be caught by it.
+                setTimeout(function() { applyingStoredPreferences = false; }, 0);
             }
         }
 

@@ -137,6 +137,37 @@ class BackendServiceTest {
         server.verify();
     }
 
+    @Test
+    void sessionPreferencesForwardsAuthCookie() {
+        server.expect(requestTo(BACKEND + "/api/session/preferences"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andRespond(withSuccess("{\"settings\":{\"theme\":\"classic\"}}",
+                        MediaType.APPLICATION_JSON));
+
+        Map<String, Object> preferences = service.sessionPreferences("barony_token=jwt-abc");
+
+        assertEquals(Map.of("theme", "classic"), preferences.get("settings"));
+        server.verify();
+    }
+
+    @Test
+    void savingPreferencesForwardsAuthCookieAndTheWholeBody() {
+        server.expect(requestTo(BACKEND + "/api/session/preferences"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(jsonPath("$.panelLayout.order[0]").value("armies"))
+                .andExpect(jsonPath("$.settings.theme").value("classic"))
+                .andRespond(withSuccess("{\"settings\":{\"theme\":\"classic\"}}",
+                        MediaType.APPLICATION_JSON));
+
+        service.saveSessionPreferences("barony_token=jwt-abc", Map.of(
+                "settings", Map.of("theme", "classic"),
+                "panelLayout", Map.of("order", java.util.List.of("armies", "status"))));
+
+        server.verify();
+    }
+
     private static HttpHeaders setCookie(String value) {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.SET_COOKIE, value);
