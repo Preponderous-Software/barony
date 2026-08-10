@@ -5,6 +5,7 @@ import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GameService;
+import com.barony.backend.service.PreferencesService;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
 import jakarta.servlet.http.Cookie;
@@ -43,6 +44,9 @@ class GameControllerAuthTest {
 
     @MockBean
     private UserAuthClient userAuthClient;
+
+    @MockBean
+    private PreferencesService preferencesService;
 
     @Test
     void rejectsRequestWithoutCookieOrHeader() throws Exception {

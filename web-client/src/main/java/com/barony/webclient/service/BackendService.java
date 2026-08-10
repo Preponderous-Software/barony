@@ -119,6 +119,17 @@ public class BackendService {
         return restTemplate.exchange(backendUrl + "/api/session/runs", HttpMethod.GET, entity, RunHistory.class).getBody();
     }
 
+    /** The player's stored interface preferences; an empty map when they have saved none. */
+    public Map<String, Object> sessionPreferences(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/session/preferences", HttpMethod.GET, entity, Map.class).getBody();
+    }
+
+    public Map<String, Object> saveSessionPreferences(String cookie, Map<String, Object> preferences) {
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(preferences, jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/session/preferences", HttpMethod.PUT, entity, Map.class).getBody();
+    }
+
     private HttpHeaders jsonHeaders(String cookie) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

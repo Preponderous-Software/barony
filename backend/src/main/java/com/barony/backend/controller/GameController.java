@@ -8,6 +8,7 @@ import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GameService;
+import com.barony.backend.service.PreferencesService;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
 
 @RestController
 @CrossOrigin(origins = {"http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:3000", "http://127.0.0.1:3000"})
@@ -26,6 +29,7 @@ public class GameController {
     private final SessionService sessionService;
     private final UserAuthClient userAuthClient;
     private final AuthCookies authCookies;
+    private final PreferencesService preferencesService;
 
     @GetMapping("/state")
     public GameState getState() {
@@ -186,6 +190,27 @@ public class GameController {
     public RunHistory sessionRuns(HttpServletRequest request) {
         Session session = authenticate(request);
         return sessionService.getRunHistory(session.getUsername());
+    }
+
+    // Interface preferences are stored per account so a player's sidebar arrangement and display
+    // settings follow them to another browser or device. They never touch the shared
+    // GameService/gameState, so unlike the endpoints above these need no synchronization.
+    @GetMapping("/api/session/preferences")
+    public Map<String, Object> sessionPreferences(HttpServletRequest request) {
+        Session session = authenticate(request);
+        return preferencesService.load(session.getUsername());
+    }
+
+    @PutMapping("/api/session/preferences")
+    public Map<String, Object> saveSessionPreferences(
+            HttpServletRequest request,
+            @RequestBody Map<String, Object> preferences) {
+        Session session = authenticate(request);
+        try {
+            return preferencesService.save(session.getUsername(), preferences);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     private void validateDecision(RulerDecision decision) {

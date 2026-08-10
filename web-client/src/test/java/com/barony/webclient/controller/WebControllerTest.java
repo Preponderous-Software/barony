@@ -19,6 +19,8 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -83,6 +85,42 @@ class WebControllerTest {
 
         mockMvc.perform(get("/api/session/runs"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void sessionPreferencesReturnsTheStoredArrangementToBrowser() throws Exception {
+        when(backendService.sessionPreferences(any()))
+                .thenReturn(Map.of("settings", Map.of("theme", "classic")));
+
+        mockMvc.perform(get("/api/session/preferences"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.settings.theme").value("classic"));
+    }
+
+    @Test
+    void savingPreferencesForwardsTheBodyToTheBackend() throws Exception {
+        when(backendService.saveSessionPreferences(any(), any()))
+                .thenAnswer(call -> call.getArgument(1));
+
+        mockMvc.perform(put("/api/session/preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"panelState\":{\"armies\":false}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.panelState.armies").value(false));
+
+        verify(backendService).saveSessionPreferences(any(), eq(Map.of("panelState", Map.of("armies", false))));
+    }
+
+    @Test
+    void savingPreferencesPassesBackend400ThroughToBrowser() throws Exception {
+        when(backendService.saveSessionPreferences(any(), any()))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST,
+                        "Bad Request", HttpHeaders.EMPTY, new byte[0], null));
+
+        mockMvc.perform(put("/api/session/preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"settings\":{}}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
