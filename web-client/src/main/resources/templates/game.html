@@ -238,11 +238,20 @@
         // panel opens by default on desktop, or falls back to its own HTML default on mobile.
         // The remembered order and visibility are applied in the same pass, before first paint,
         // so a returning player never sees the default sidebar flash past their own arrangement.
-        (function() {
+        // Applying the stored preferences is a named function rather than part of the pass below
+        // because the account copy arrives later (see "Preference Sync") and has to be applied to
+        // an already-restored sidebar.
+        function restorePanelOpenState() {
             const saved = loadPanelState();
             const isDesktop = window.innerWidth > 768;
             document.querySelectorAll('.collapsible-section[data-panel-id]').forEach(function(d) {
                 d.open = resolvePanelOpenState(d.dataset.panelId, saved, isDesktop, d.open);
+            });
+        }
+
+        (function() {
+            restorePanelOpenState();
+            document.querySelectorAll('.collapsible-section[data-panel-id]').forEach(function(d) {
                 d.addEventListener('toggle', savePanelState);
             });
             applyPanelLayout();
@@ -369,6 +378,7 @@
                 state[d.dataset.panelId] = d.open;
             });
             localStorage.setItem('barony_panel_state', JSON.stringify(state));
+            queuePreferenceUpload();
         }
 
         // ========================
@@ -394,6 +404,7 @@
 
         function savePanelLayout(layout) {
             localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
+            queuePreferenceUpload();
         }
 
         // The Settings panel holds the layout controls and so is never hidden; the layout rules are
@@ -580,7 +591,8 @@
                 theme: theme,
                 fontSize: fontSize
             }));
-            
+            queuePreferenceUpload();
+
             // Redraw map if we have cached state
             if (lastGameState) {
                 drawMap(lastGameState);
@@ -595,6 +607,96 @@
             PALETTE.player2Army = preset.player2Army;
         }
         
+        // ========================
+        // Preference Sync
+        // ========================
+        // The sidebar arrangement, each panel's open/closed state and the display settings are
+        // kept in localStorage, which makes them one browser's. For a signed-in player they are
+        // also mirrored to the backend against their account, so the same arrangement is there on
+        // another browser or device. localStorage stays the working copy — the account copy seeds
+        // it on load and receives changes afterwards — so an unreachable backend costs the player
+        // nothing beyond the arrangement not travelling. The rule for reconciling the two copies
+        // is a pure function (mergePreferences in game-logic.js) covered by the Node test suite.
+        const PREFERENCE_UPLOAD_DELAY_MS = 500;
+        let preferenceUploadTimer = null;
+        // Applying the account copy writes localStorage and toggles panels, which would otherwise
+        // echo straight back up as a change the player never made.
+        let applyingStoredPreferences = false;
+
+        function readLocalPreferences() {
+            const local = {};
+            Object.keys(PREFERENCE_STORAGE_KEYS).forEach(function(name) {
+                const raw = localStorage.getItem(PREFERENCE_STORAGE_KEYS[name]);
+                if (raw === null) return;
+                try {
+                    local[name] = JSON.parse(raw);
+                } catch (e) {
+                    console.error('Error reading preference ' + name + ':', e);
+                }
+            });
+            return local;
+        }
+
+        function writeLocalPreferences(preferences) {
+            Object.keys(PREFERENCE_STORAGE_KEYS).forEach(function(name) {
+                if (preferences[name] === undefined) return;
+                localStorage.setItem(PREFERENCE_STORAGE_KEYS[name],
+                    JSON.stringify(preferences[name]));
+            });
+        }
+
+        // Re-applies what is now in localStorage to the page: the display settings, each panel's
+        // open/closed state, and the sidebar arrangement and layout controls.
+        function applyStoredPreferences() {
+            applyingStoredPreferences = true;
+            try {
+                loadSettings();
+                restorePanelOpenState();
+                applyPanelLayout();
+                renderLayoutControls();
+            } finally {
+                applyingStoredPreferences = false;
+            }
+        }
+
+        // Coalesces the writes a single change fans out into (a layout change re-saves the order,
+        // the visibility and the open/closed state) into one request.
+        function queuePreferenceUpload() {
+            if (applyingStoredPreferences || !username) return;
+            clearTimeout(preferenceUploadTimer);
+            preferenceUploadTimer = setTimeout(uploadPreferences, PREFERENCE_UPLOAD_DELAY_MS);
+        }
+
+        function uploadPreferences() {
+            return fetch('/api/session/preferences', {
+                method: 'PUT',
+                headers: getSessionHeaders(),
+                body: JSON.stringify(readLocalPreferences())
+            }).catch(function(e) {
+                // A failed save costs the player nothing on this browser, so it is logged rather
+                // than raised as a toast over the game.
+                console.error('Error saving preferences:', e);
+            });
+        }
+
+        function loadStoredPreferences() {
+            return fetch('/api/session/preferences', { headers: getSessionHeaders() })
+                .then(function(response) {
+                    // A rejected cookie is handled by the game-state request in the same load;
+                    // here it just means there is no account copy to apply.
+                    return response.ok ? response.json() : null;
+                })
+                .then(function(stored) {
+                    const merged = mergePreferences(stored, readLocalPreferences());
+                    writeLocalPreferences(merged.preferences);
+                    applyStoredPreferences();
+                    if (merged.uploadNeeded) uploadPreferences();
+                })
+                .catch(function(e) {
+                    console.error('Error loading preferences:', e);
+                });
+        }
+
         // ========================
         // Stat Color Coding
         // ========================
@@ -1345,6 +1447,7 @@
             }
             
             loadSettings();
+            loadStoredPreferences();
             loadRunHistory();
 
             fetch('/api/session/state', {

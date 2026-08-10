@@ -4,6 +4,7 @@ import com.barony.backend.model.GameState;
 import com.barony.backend.model.RulerStats;
 import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GameService;
+import com.barony.backend.service.PreferencesService;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,9 @@ class GameControllerTest {
 
     @MockBean
     private UserAuthClient userAuthClient;
+
+    @MockBean
+    private PreferencesService preferencesService;
 
     @Test
     void getStateReturnsCurrentGameServiceState() throws Exception {

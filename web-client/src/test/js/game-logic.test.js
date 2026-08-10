@@ -14,7 +14,9 @@ const {
     movePanelInOrder,
     isPanelHidden,
     movePanelAmongVisible,
-    canMovePanel
+    canMovePanel,
+    PREFERENCE_STORAGE_KEYS,
+    mergePreferences
 } = require('../../main/resources/static/js/game-logic.js');
 
 // The sidebar panels in markup order, as game.html captures them for DEFAULT_PANEL_ORDER.
@@ -349,4 +351,61 @@ test('canMovePanel judges a hidden panel by the ends of the full order', () => {
 
 test('canMovePanel reports no move for a panel that is not in the order', () => {
     assert.equal(canMovePanel(DEFAULT_PANELS, {}, 'treasury', -1), false);
+});
+
+// mergePreferences reconciles the copy stored against the player's account with this browser's.
+
+test('mergePreferences prefers what the account holds, so the arrangement travels between browsers', () => {
+    const merged = mergePreferences(
+        { settings: { theme: 'high-contrast' }, panelState: { armies: false } },
+        { settings: { theme: 'classic' }, panelState: { armies: true } });
+
+    assert.deepEqual(merged.preferences,
+        { settings: { theme: 'high-contrast' }, panelState: { armies: false } });
+    assert.equal(merged.uploadNeeded, false);
+});
+
+test('mergePreferences keeps a preference only this browser has, and asks for it to be uploaded', () => {
+    const merged = mergePreferences(
+        { settings: { theme: 'high-contrast' } },
+        { panelLayout: { order: ['armies', 'status'], hidden: {} } });
+
+    assert.deepEqual(merged.preferences, {
+        settings: { theme: 'high-contrast' },
+        panelLayout: { order: ['armies', 'status'], hidden: {} }
+    });
+    assert.equal(merged.uploadNeeded, true);
+});
+
+test('mergePreferences uploads everything when the account holds nothing yet', () => {
+    const local = { settings: { theme: 'classic' }, panelState: { armies: false } };
+
+    [null, undefined, {}].forEach((stored) => {
+        const merged = mergePreferences(stored, local);
+        assert.deepEqual(merged.preferences, local);
+        assert.equal(merged.uploadNeeded, true);
+    });
+});
+
+test('mergePreferences asks for no upload when neither side has anything', () => {
+    const merged = mergePreferences({}, {});
+
+    assert.deepEqual(merged.preferences, {});
+    assert.equal(merged.uploadNeeded, false);
+});
+
+test('mergePreferences carries only the preferences the page knows about', () => {
+    const merged = mergePreferences({ settings: { theme: 'classic' }, injected: 'value' },
+        { alsoInjected: 'value' });
+
+    assert.deepEqual(Object.keys(merged.preferences), ['settings']);
+    assert.equal(merged.uploadNeeded, false);
+});
+
+test('PREFERENCE_STORAGE_KEYS names the localStorage key each preference is kept under', () => {
+    assert.deepEqual(PREFERENCE_STORAGE_KEYS, {
+        settings: 'barony_settings',
+        panelLayout: 'barony_panel_layout',
+        panelState: 'barony_panel_state'
+    });
 });

@@ -319,7 +319,8 @@ Settings panel:
 
 Each panel also remembers whether you left it open or collapsed. The whole arrangement — order,
 which panels are shown, and which are open — is saved in your browser, so reopening the game
-doesn't reset it back to the defaults. It does not yet follow you to another browser or device.
+doesn't reset it back to the defaults. While you are signed in it is also saved to your account,
+so signing in on another browser or device brings your arrangement with you.
 
 ## Accessibility & Visual Settings
 
@@ -333,7 +334,10 @@ Open the **Settings** panel in the sidebar. Changes apply immediately:
 - **Panels:** which sidebar panels are shown and in what order (see
   [Arranging the sidebar](#arranging-the-sidebar) above)
 
-Settings are saved to your browser's `localStorage`.
+Settings are saved to your browser's `localStorage`, and — while you are signed in — to your
+account as well, so they are applied wherever you next sign in. Where the two differ, what your
+account holds wins; a change made while the server is unreachable stays in the browser and is sent
+up the next time the game page loads.
 
 ### Notifications
 Non-blocking toast notifications keep you informed without interrupting gameplay:

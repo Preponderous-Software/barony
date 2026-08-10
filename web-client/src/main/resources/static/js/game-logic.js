@@ -196,6 +196,38 @@
         });
     }
 
+    // The interface preferences the game page keeps, and the localStorage key each is kept under.
+    // The same names are what a signed-in player's preferences are stored against their account
+    // as, so the page can move a preference between the two without a second naming scheme.
+    var PREFERENCE_STORAGE_KEYS = {
+        settings: 'barony_settings',
+        panelLayout: 'barony_panel_layout',
+        panelState: 'barony_panel_state'
+    };
+
+    // Reconciles the preferences stored against a player's account with the ones this browser
+    // holds. What the account holds wins — following the player across browsers and devices is
+    // the point of storing them there — while a preference only this browser knows about is kept
+    // and reported as needing an upload, so arranging the sidebar before ever signing in (or
+    // while the backend was unreachable) isn't thrown away on the next load.
+    function mergePreferences(remote, local) {
+        var merged = {};
+        var uploadNeeded = false;
+        Object.keys(PREFERENCE_STORAGE_KEYS).forEach(function (name) {
+            var fromAccount = remote ? remote[name] : undefined;
+            if (fromAccount !== undefined && fromAccount !== null) {
+                merged[name] = fromAccount;
+                return;
+            }
+            var fromBrowser = local ? local[name] : undefined;
+            if (fromBrowser !== undefined && fromBrowser !== null) {
+                merged[name] = fromBrowser;
+                uploadNeeded = true;
+            }
+        });
+        return { preferences: merged, uploadNeeded: uploadNeeded };
+    }
+
     return {
         summarizeHoldings: summarizeHoldings,
         getStatClass: getStatClass,
@@ -206,6 +238,8 @@
         movePanelInOrder: movePanelInOrder,
         isPanelHidden: isPanelHidden,
         movePanelAmongVisible: movePanelAmongVisible,
-        canMovePanel: canMovePanel
+        canMovePanel: canMovePanel,
+        PREFERENCE_STORAGE_KEYS: PREFERENCE_STORAGE_KEYS,
+        mergePreferences: mergePreferences
     };
 });

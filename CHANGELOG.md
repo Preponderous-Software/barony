@@ -9,6 +9,15 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Interface preferences follow the account** (#55): the display settings and the sidebar
+  arrangement — order, which panels are shown, and which are open — are now stored against the
+  signed-in player's account through a new `GET`/`PUT /api/session/preferences`, so signing in on
+  another browser or device brings the arrangement along instead of starting from the defaults.
+  `localStorage` stays the working copy: it is seeded from the account copy on load and receives
+  every change afterwards, so an unreachable backend costs nothing beyond the arrangement not
+  travelling, and an arrangement made before signing in (or while the backend was down) is
+  uploaded rather than discarded. The rule for reconciling the two copies is a pure function
+  (`mergePreferences` in `game-logic.js`) covered by the Node test suite.
 - ✅ **The Run History panel is filled in again** (#82): the game page's request for the player's
   win/loss tally and recent runs was made against the web client, which had no route for it, so it
   was answered with a 404 and the panel stayed empty wherever `/api/*` is not routed straight to
@@ -91,6 +100,7 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ Storage is an embedded **H2** database persisted to `./data` (mount as a volume in production); `DB_URL` switches it to Postgres
 - ✅ Game state is serialized as JSON; a fresh game is persisted on creation and re-saved after every turn, command, reset, and policy change
 - ✅ Army id counter advances past restored armies on load, so a split after reload can't reuse an existing id
+- ✅ Each player's **interface preferences are saved per account** (#55) in a new `user_preferences` table, alongside their saved game; the payload is stored as opaque JSON so a preference added to the game page needs no backend change, capped at 8192 characters so an account can't be used as unbounded storage
 
 ### Security
 

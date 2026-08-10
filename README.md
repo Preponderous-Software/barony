@@ -74,6 +74,8 @@ Then open http://localhost:3000 in your browser.
 - `POST /api/session/decision` - Change ruler policy for the player
 - `GET /api/session/ruler-stats` - Get realm statistics for the player
 - `GET /api/session/runs` - Get the player's win/loss tally and recent finished-run history
+- `GET /api/session/preferences` - Get the player's stored interface preferences (`{}` when none are stored)
+- `PUT /api/session/preferences` - Replace the player's stored interface preferences (JSON object, up to 8192 characters serialized; larger is rejected with `400`)
 
 These endpoints validate the token against UserAuth on every request, so missing,
 invalid, expired, or revoked (logged-out) tokens are rejected with `401`. Game state is keyed
@@ -169,6 +171,10 @@ Then open http://localhost:3000
 - Arrangeable sidebar: panels can be shown/hidden and reordered from the Settings panel, and the
   arrangement is persisted to `localStorage` under `barony_panel_layout` (open/closed state under
   `barony_panel_state`)
+- Preferences follow the account: for a signed-in player the settings and sidebar arrangement are
+  also stored against their account (`/api/session/preferences`) and applied on any browser or
+  device they sign in from. `localStorage` remains the working copy, so an unreachable backend
+  costs nothing beyond the arrangement not travelling
 - Keyboard shortcuts: `Space` advance turn, `R` reset, `S` focus split amount, `A` toggle Auto Play, `Escape` deselect
 - Castle objective progress (yours / enemy / neutral, out of the map total) in the Game Status panel
 - Milestone toasts when a castle changes hands or the last castle on either side comes under siege
