@@ -16,7 +16,8 @@ const {
     movePanelAmongVisible,
     canMovePanel,
     PREFERENCE_STORAGE_KEYS,
-    mergePreferences
+    mergePreferences,
+    createPreferenceSync
 } = require('../../main/resources/static/js/game-logic.js');
 
 // The sidebar panels in markup order, as game.html captures them for DEFAULT_PANEL_ORDER.
@@ -408,4 +409,291 @@ test('PREFERENCE_STORAGE_KEYS names the localStorage key each preference is kept
         panelLayout: 'barony_panel_layout',
         panelState: 'barony_panel_state'
     });
+});
+
+// createPreferenceSync decides when what this browser holds may be sent to the player's account.
+// The browser it drives is stood in for below: an in-memory store for localStorage, a clock the
+// test advances by hand, an account copy the test resolves when it chooses, and a record of every
+// upload that was sent.
+
+// setTimeout/clearTimeout the test drives, so a debounce or a deferred guard is observed rather
+// than waited out. Callbacks run in due order when the clock is advanced past their delay.
+function fakeClock() {
+    let now = 0;
+    let nextHandle = 1;
+    const scheduled = new Map();
+    return {
+        schedule(callback, delay) {
+            const handle = nextHandle++;
+            scheduled.set(handle, { at: now + delay, callback: callback });
+            return handle;
+        },
+        cancel(handle) {
+            scheduled.delete(handle);
+        },
+        advance(ms) {
+            now += ms;
+            Array.from(scheduled.entries())
+                .filter(([, timer]) => timer.at <= now)
+                .sort((a, b) => a[1].at - b[1].at)
+                .forEach(([handle, timer]) => {
+                    scheduled.delete(handle);
+                    timer.callback();
+                });
+        }
+    };
+}
+
+const UPLOAD_DELAY_MS = 500;
+
+function makeSync(options) {
+    options = options || {};
+    const clock = fakeClock();
+    const store = Object.assign({}, options.local || {});
+    const harness = {
+        clock: clock,
+        store: store,
+        uploads: [],
+        applied: 0,
+        errors: [],
+        signedIn: options.signedIn !== false,
+        resolveAccountCopy: null,
+        rejectAccountCopy: null
+    };
+    const accountCopy = new Promise((resolve, reject) => {
+        harness.resolveAccountCopy = resolve;
+        harness.rejectAccountCopy = reject;
+    });
+
+    harness.sync = createPreferenceSync({
+        readLocal: () => Object.assign({}, store),
+        writeLocal: (preferences) => Object.assign(store, preferences),
+        applyPreferences: () => {
+            harness.applied++;
+            if (options.onApply) options.onApply(harness);
+        },
+        fetchRemote: () => accountCopy,
+        sendRemote: (preferences) => {
+            harness.uploads.push(preferences);
+            return Promise.resolve();
+        },
+        isSignedIn: () => harness.signedIn,
+        onError: (e) => harness.errors.push(e),
+        schedule: clock.schedule,
+        cancel: clock.cancel,
+        uploadDelayMs: UPLOAD_DELAY_MS
+    });
+    return harness;
+}
+
+// The defect found by hand during the review of #85: `username` is set before the account copy is
+// requested, so a preference changed while that request was in flight used to schedule an upload
+// that could beat the response and put this browser's stale copy over the account's, losing the
+// stored arrangement for good. Removing the gate in createPreferenceSync fails this test.
+test('a change made while the account copy is in flight is not uploaded ahead of the response', async () => {
+    const browserLayout = { order: ['armies', 'status'], hidden: {} };
+    const accountLayout = { order: ['status', 'armies'], hidden: { policy: true } };
+    const harness = makeSync({ local: { panelLayout: browserLayout } });
+
+    const loaded = harness.sync.load();
+    harness.sync.queueUpload();
+    harness.clock.advance(UPLOAD_DELAY_MS * 4);
+
+    assert.deepEqual(harness.uploads, []);
+
+    harness.resolveAccountCopy({ panelLayout: accountLayout });
+    await loaded;
+
+    assert.equal(harness.uploads.length, 1);
+    assert.deepEqual(harness.uploads[0].panelLayout, accountLayout);
+    assert.deepEqual(harness.store.panelLayout, accountLayout);
+});
+
+test('a change made while the account copy is in flight is sent once the merge has happened', async () => {
+    const harness = makeSync({ local: { settings: { theme: 'classic' } } });
+
+    const loaded = harness.sync.load();
+    harness.sync.queueUpload();
+    harness.resolveAccountCopy({ settings: { theme: 'high-contrast' }, panelState: { armies: false } });
+    await loaded;
+
+    assert.equal(harness.uploads.length, 1);
+    assert.deepEqual(harness.uploads[0], {
+        settings: { theme: 'high-contrast' },
+        panelState: { armies: false }
+    });
+});
+
+test('a load that finds nothing this browser alone holds uploads nothing', async () => {
+    const harness = makeSync({ local: { settings: { theme: 'classic' } } });
+
+    const loaded = harness.sync.load();
+    harness.resolveAccountCopy({ settings: { theme: 'high-contrast' } });
+    await loaded;
+
+    assert.deepEqual(harness.uploads, []);
+    assert.equal(harness.applied, 1);
+    assert.deepEqual(harness.store.settings, { theme: 'high-contrast' });
+});
+
+test('a preference only this browser holds is uploaded as soon as the load reconciles it', async () => {
+    const layout = { order: ['armies', 'status'], hidden: {} };
+    const harness = makeSync({ local: { panelLayout: layout } });
+
+    const loaded = harness.sync.load();
+    harness.resolveAccountCopy({ settings: { theme: 'high-contrast' } });
+    await loaded;
+
+    assert.equal(harness.uploads.length, 1);
+    assert.deepEqual(harness.uploads[0], {
+        settings: { theme: 'high-contrast' },
+        panelLayout: layout
+    });
+});
+
+test('a load that fails opens the gate, so this browser can still save afterwards', async () => {
+    const harness = makeSync({ local: { settings: { theme: 'classic' } } });
+    const failure = new Error('backend unreachable');
+
+    const loaded = harness.sync.load();
+    harness.rejectAccountCopy(failure);
+    await loaded;
+
+    assert.deepEqual(harness.errors, [failure]);
+    assert.equal(harness.applied, 0, 'there is no account copy to apply');
+    assert.deepEqual(harness.uploads, [], 'a failed load is not itself a change to send');
+
+    harness.sync.queueUpload();
+    harness.clock.advance(UPLOAD_DELAY_MS);
+
+    assert.equal(harness.uploads.length, 1);
+});
+
+test('a change made while a failed load was in flight is still sent once it fails', async () => {
+    const harness = makeSync({ local: { settings: { theme: 'classic' } } });
+
+    const loaded = harness.sync.load();
+    harness.sync.queueUpload();
+    harness.rejectAccountCopy(new Error('backend unreachable'));
+    await loaded;
+
+    assert.deepEqual(harness.uploads, [{ settings: { theme: 'classic' } }]);
+});
+
+test('applying the account copy does not echo back as a change the player made', async () => {
+    // Applying opens and closes panels, each of which reports itself as a change.
+    const harness = makeSync({
+        local: {},
+        onApply: (state) => {
+            state.sync.queueUpload();
+            state.sync.queueUpload();
+        }
+    });
+
+    const loaded = harness.sync.load();
+    harness.resolveAccountCopy({ panelState: { armies: false } });
+    await loaded;
+    harness.clock.advance(UPLOAD_DELAY_MS);
+
+    assert.deepEqual(harness.uploads, []);
+});
+
+test('the echo guard outlives the apply, catching a toggle raised after it returns', async () => {
+    const harness = makeSync({ local: {} });
+
+    const loaded = harness.sync.load();
+    harness.resolveAccountCopy({ panelState: { armies: false } });
+    await loaded;
+
+    // The `toggle` event a panel raises when it is opened arrives after applying has returned.
+    harness.sync.queueUpload();
+    harness.clock.advance(UPLOAD_DELAY_MS);
+    assert.deepEqual(harness.uploads, []);
+
+    // A change the player makes afterwards is a real one.
+    harness.sync.queueUpload();
+    harness.clock.advance(UPLOAD_DELAY_MS);
+    assert.equal(harness.uploads.length, 1);
+});
+
+test('the changes one player action fans out into are coalesced into a single upload', async () => {
+    const harness = makeSync({ local: {} });
+
+    const loaded = harness.sync.load();
+    harness.resolveAccountCopy({});
+    await loaded;
+    harness.clock.advance(0);
+
+    harness.store.panelState = { armies: false };
+    harness.sync.queueUpload();
+    harness.clock.advance(UPLOAD_DELAY_MS - 1);
+    harness.sync.queueUpload();
+    harness.store.panelLayout = { order: ['armies'], hidden: {} };
+    harness.sync.queueUpload();
+    harness.clock.advance(UPLOAD_DELAY_MS);
+
+    // One request, carrying what was stored by the time it was sent rather than when it was queued.
+    assert.equal(harness.uploads.length, 1);
+    assert.deepEqual(harness.uploads[0], {
+        panelState: { armies: false },
+        panelLayout: { order: ['armies'], hidden: {} }
+    });
+});
+
+// Every test above drives an injected clock; this one leaves the timers out, so the setTimeout /
+// clearTimeout the browser actually gets is the thing being exercised. The delay is the page's to
+// choose, so a short one is passed rather than waiting out the 500ms default.
+test('the browser timers are used when no clock is injected', async () => {
+    const uploads = [];
+    const sync = createPreferenceSync({
+        readLocal: () => ({ settings: { theme: 'classic' } }),
+        writeLocal: () => {},
+        applyPreferences: () => {},
+        fetchRemote: () => Promise.resolve({ settings: { theme: 'high-contrast' } }),
+        sendRemote: (preferences) => { uploads.push(preferences); return Promise.resolve(); },
+        isSignedIn: () => true,
+        uploadDelayMs: 1
+    });
+
+    await sync.load();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    sync.queueUpload();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    assert.deepEqual(uploads, [{ settings: { theme: 'classic' } }]);
+});
+
+test('a load that fails without an error reporter is still survivable', async () => {
+    const uploads = [];
+    const sync = createPreferenceSync({
+        readLocal: () => ({ settings: { theme: 'classic' } }),
+        writeLocal: () => {},
+        applyPreferences: () => {},
+        fetchRemote: () => Promise.reject(new Error('backend unreachable')),
+        sendRemote: (preferences) => { uploads.push(preferences); return Promise.resolve(); },
+        isSignedIn: () => true,
+        uploadDelayMs: 1
+    });
+
+    await sync.load();
+    sync.queueUpload();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    assert.deepEqual(uploads, [{ settings: { theme: 'classic' } }]);
+});
+
+test('a change is not uploaded when there is no signed-in account to upload it to', async () => {
+    const harness = makeSync({ local: {}, signedIn: false });
+
+    const loaded = harness.sync.load();
+    harness.resolveAccountCopy(null);
+    await loaded;
+    harness.clock.advance(0);
+
+    harness.store.panelState = { armies: false };
+    harness.sync.queueUpload();
+    harness.clock.advance(UPLOAD_DELAY_MS);
+
+    assert.deepEqual(harness.uploads, []);
 });
