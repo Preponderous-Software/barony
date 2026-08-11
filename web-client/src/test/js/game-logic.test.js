@@ -640,6 +640,49 @@ test('the changes one player action fans out into are coalesced into a single up
     });
 });
 
+// Every test above drives an injected clock; this one leaves the timers out, so the setTimeout /
+// clearTimeout the browser actually gets is the thing being exercised. The delay is the page's to
+// choose, so a short one is passed rather than waiting out the 500ms default.
+test('the browser timers are used when no clock is injected', async () => {
+    const uploads = [];
+    const sync = createPreferenceSync({
+        readLocal: () => ({ settings: { theme: 'classic' } }),
+        writeLocal: () => {},
+        applyPreferences: () => {},
+        fetchRemote: () => Promise.resolve({ settings: { theme: 'high-contrast' } }),
+        sendRemote: (preferences) => { uploads.push(preferences); return Promise.resolve(); },
+        isSignedIn: () => true,
+        uploadDelayMs: 1
+    });
+
+    await sync.load();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    sync.queueUpload();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    assert.deepEqual(uploads, [{ settings: { theme: 'classic' } }]);
+});
+
+test('a load that fails without an error reporter is still survivable', async () => {
+    const uploads = [];
+    const sync = createPreferenceSync({
+        readLocal: () => ({ settings: { theme: 'classic' } }),
+        writeLocal: () => {},
+        applyPreferences: () => {},
+        fetchRemote: () => Promise.reject(new Error('backend unreachable')),
+        sendRemote: (preferences) => { uploads.push(preferences); return Promise.resolve(); },
+        isSignedIn: () => true,
+        uploadDelayMs: 1
+    });
+
+    await sync.load();
+    sync.queueUpload();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    assert.deepEqual(uploads, [{ settings: { theme: 'classic' } }]);
+});
+
 test('a change is not uploaded when there is no signed-in account to upload it to', async () => {
     const harness = makeSync({ local: {}, signedIn: false });
 
