@@ -616,18 +616,11 @@
         // another browser or device. localStorage stays the working copy — the account copy seeds
         // it on load and receives changes afterwards — so an unreachable backend costs the player
         // nothing beyond the arrangement not travelling. The rule for reconciling the two copies
-        // is a pure function (mergePreferences in game-logic.js) covered by the Node test suite.
+        // (mergePreferences) and the gate deciding when an upload may be sent (createPreferenceSync)
+        // are both in game-logic.js and covered by the Node test suite; what is left here is the
+        // browser work they drive — reading and writing localStorage, applying what is stored to
+        // the page, and the two requests.
         const PREFERENCE_UPLOAD_DELAY_MS = 500;
-        let preferenceUploadTimer = null;
-        // Applying the account copy writes localStorage and opens or closes panels, which would
-        // otherwise echo straight back up as a change the player never made.
-        let applyingStoredPreferences = false;
-        // Nothing may be uploaded until the account copy has been reconciled: an upload sent while
-        // the load is still in flight would put this browser's copy over the account's, losing the
-        // arrangement the request was about to return. A change made in that window is remembered
-        // and sent once the merge has happened, so it is delayed rather than dropped.
-        let preferencesReconciled = false;
-        let preferenceUploadDeferred = false;
 
         function readLocalPreferences() {
             const local = {};
@@ -654,72 +647,47 @@
         // Re-applies what is now in localStorage to the page: the display settings, each panel's
         // open/closed state, and the sidebar arrangement and layout controls.
         function applyStoredPreferences() {
-            applyingStoredPreferences = true;
-            try {
-                loadSettings();
-                restorePanelOpenState();
-                applyPanelLayout();
-                renderLayoutControls();
-            } finally {
-                // Opening or closing a panel raises its `toggle` event asynchronously, so the
-                // guard has to outlive this call for those echoes to be caught by it.
-                setTimeout(function() { applyingStoredPreferences = false; }, 0);
-            }
+            loadSettings();
+            restorePanelOpenState();
+            applyPanelLayout();
+            renderLayoutControls();
         }
 
-        // Coalesces the writes a single change fans out into (a layout change re-saves the order,
-        // the visibility and the open/closed state) into one request.
+        // createPreferenceSync is defined in game-logic.js (loaded above) and exposed as a global.
+        const preferenceSync = createPreferenceSync({
+            readLocal: readLocalPreferences,
+            writeLocal: writeLocalPreferences,
+            applyPreferences: applyStoredPreferences,
+            fetchRemote: function() {
+                return fetch('/api/session/preferences', { headers: getSessionHeaders() })
+                    .then(function(response) {
+                        // A rejected cookie is handled by the game-state request in the same load;
+                        // here it just means there is no account copy to apply.
+                        return response.ok ? response.json() : null;
+                    });
+            },
+            sendRemote: function(preferences) {
+                return fetch('/api/session/preferences', {
+                    method: 'PUT',
+                    headers: getSessionHeaders(),
+                    body: JSON.stringify(preferences)
+                }).catch(function(e) {
+                    // A failed save costs the player nothing on this browser, so it is logged
+                    // rather than raised as a toast over the game.
+                    console.error('Error saving preferences:', e);
+                });
+            },
+            isSignedIn: function() { return !!username; },
+            onError: function(e) { console.error('Error loading preferences:', e); },
+            uploadDelayMs: PREFERENCE_UPLOAD_DELAY_MS
+        });
+
         function queuePreferenceUpload() {
-            if (applyingStoredPreferences || !username) return;
-            if (!preferencesReconciled) {
-                preferenceUploadDeferred = true;
-                return;
-            }
-            clearTimeout(preferenceUploadTimer);
-            preferenceUploadTimer = setTimeout(uploadPreferences, PREFERENCE_UPLOAD_DELAY_MS);
-        }
-
-        // Opens the gate once the account copy has been dealt with — whether it was applied or the
-        // request failed — and sends anything the player changed while it was shut.
-        function finishReconciliation(uploadNeeded) {
-            preferencesReconciled = true;
-            if (uploadNeeded || preferenceUploadDeferred) {
-                preferenceUploadDeferred = false;
-                uploadPreferences();
-            }
-        }
-
-        function uploadPreferences() {
-            return fetch('/api/session/preferences', {
-                method: 'PUT',
-                headers: getSessionHeaders(),
-                body: JSON.stringify(readLocalPreferences())
-            }).catch(function(e) {
-                // A failed save costs the player nothing on this browser, so it is logged rather
-                // than raised as a toast over the game.
-                console.error('Error saving preferences:', e);
-            });
+            preferenceSync.queueUpload();
         }
 
         function loadStoredPreferences() {
-            return fetch('/api/session/preferences', { headers: getSessionHeaders() })
-                .then(function(response) {
-                    // A rejected cookie is handled by the game-state request in the same load;
-                    // here it just means there is no account copy to apply.
-                    return response.ok ? response.json() : null;
-                })
-                .then(function(stored) {
-                    const merged = mergePreferences(stored, readLocalPreferences());
-                    writeLocalPreferences(merged.preferences);
-                    applyStoredPreferences();
-                    finishReconciliation(merged.uploadNeeded);
-                })
-                .catch(function(e) {
-                    console.error('Error loading preferences:', e);
-                    // The account copy could not be read, so this browser's is all there is; let
-                    // it be uploaded rather than leaving the player unable to save at all.
-                    finishReconciliation(false);
-                });
+            return preferenceSync.load();
         }
 
         // ========================

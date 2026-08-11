@@ -228,6 +228,93 @@
         return { preferences: merged, uploadNeeded: uploadNeeded };
     }
 
+    // The state machine that decides *when* a signed-in player's preferences may be sent to their
+    // account, kept apart from the reads, writes and requests it drives so the orderings that carry
+    // the risk can be tested without a browser. The caller supplies those as callbacks:
+    //
+    //   readLocal()             the preferences this browser holds, as mergePreferences takes them
+    //   writeLocal(prefs)       put the reconciled copy back into this browser
+    //   applyPreferences()      re-apply what is now stored to the page
+    //   fetchRemote()           a promise for the account copy, or null when there is none
+    //   sendRemote(prefs)       upload; expected to handle its own failure
+    //   isSignedIn()            whether there is an account to sync against at all
+    //   onError(e)              report a failed load
+    //   schedule/cancel         setTimeout/clearTimeout, injectable so tests can drive the clock
+    //   uploadDelayMs           how long changes are coalesced for before one upload is sent
+    //
+    // Two rules do the work. Nothing may be uploaded before the account copy has been reconciled,
+    // because an upload sent while the load is still in flight would put this browser's copy over
+    // the account's and lose the arrangement the response was about to bring back; a change made in
+    // that window is remembered and sent once the merge has happened, so it is delayed rather than
+    // dropped. And applying the account copy is not itself a change: it writes storage and opens or
+    // closes panels, which would otherwise echo straight back up as something the player never did.
+    function createPreferenceSync(options) {
+        var schedule = options.schedule || function (fn, delay) { return setTimeout(fn, delay); };
+        var cancel = options.cancel || function (handle) { clearTimeout(handle); };
+        var onError = options.onError || function () {};
+        var uploadDelayMs = options.uploadDelayMs === undefined ? 500 : options.uploadDelayMs;
+
+        var uploadTimer = null;
+        var applying = false;
+        var reconciled = false;
+        var uploadDeferred = false;
+
+        function upload() {
+            return options.sendRemote(options.readLocal());
+        }
+
+        // Coalesces the writes a single change fans out into (a layout change re-saves the order,
+        // the visibility and the open/closed state) into one request.
+        function queueUpload() {
+            if (applying || !options.isSignedIn()) return;
+            if (!reconciled) {
+                uploadDeferred = true;
+                return;
+            }
+            cancel(uploadTimer);
+            uploadTimer = schedule(upload, uploadDelayMs);
+        }
+
+        function applyWithoutEcho() {
+            applying = true;
+            try {
+                options.applyPreferences();
+            } finally {
+                // Opening or closing a panel raises its `toggle` event asynchronously, so the
+                // guard has to outlive this call for those echoes to be caught by it.
+                schedule(function () { applying = false; }, 0);
+            }
+        }
+
+        // Opens the gate once the account copy has been dealt with — whether it was applied or the
+        // request failed — and sends anything the player changed while it was shut.
+        function finishReconciliation(uploadNeeded) {
+            reconciled = true;
+            if (uploadNeeded || uploadDeferred) {
+                uploadDeferred = false;
+                upload();
+            }
+        }
+
+        function load() {
+            return options.fetchRemote()
+                .then(function (stored) {
+                    var merged = mergePreferences(stored, options.readLocal());
+                    options.writeLocal(merged.preferences);
+                    applyWithoutEcho();
+                    finishReconciliation(merged.uploadNeeded);
+                })
+                .catch(function (e) {
+                    onError(e);
+                    // The account copy could not be read, so this browser's is all there is; let it
+                    // be uploaded rather than leaving the player unable to save at all.
+                    finishReconciliation(false);
+                });
+        }
+
+        return { load: load, queueUpload: queueUpload };
+    }
+
     return {
         summarizeHoldings: summarizeHoldings,
         getStatClass: getStatClass,
@@ -240,6 +327,7 @@
         movePanelAmongVisible: movePanelAmongVisible,
         canMovePanel: canMovePanel,
         PREFERENCE_STORAGE_KEYS: PREFERENCE_STORAGE_KEYS,
-        mergePreferences: mergePreferences
+        mergePreferences: mergePreferences,
+        createPreferenceSync: createPreferenceSync
     };
 });
