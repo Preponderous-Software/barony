@@ -126,7 +126,7 @@ below the map, or use the split control next to any of your armies in the **Armi
 
 **5. Capture the Enemy Castle**
 - Must occupy enemy castle for **3 consecutive turns**
-- Hover the castle to see how far along the capture is
+- Count those turns yourself — the running total isn't shown on the map
 - Capture all enemy castles to win!
 
 ### Combat
@@ -156,9 +156,11 @@ Castles are harder to capture:
 3. **Progress resets** if enemy army arrives or you leave
 4. **Capture complete** after 3 turns → castle is yours!
 
-Hover the castle to read the capture off its tooltip (**Capture progress: 1/3**, and so on). Once
-either side is down to its last castle, each turn a siege on it advances also raises a toast
-counting down the turns until it changes hands.
+The running count isn't put on the map, so keep track of it yourself. An empty castle's tooltip
+states the hold requirement, but once an army stands on the tile the tooltip describes that army
+instead — and a capture under way always has an army standing there. The exception is a castle
+that is the last one its side holds: every turn the siege on it advances, a toast counts down the
+turns remaining.
 
 ### Winning and Losing
 
