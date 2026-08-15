@@ -79,7 +79,7 @@ The game board is a 10x10 grid with different tile types:
    - Selected army will have a glowing highlight
 2. **Left-click any tile** to move your selected army there
    - Army will move 1 tile per turn toward the destination
-   - Light blue square shows where army will go
+   - Hover the army to read where it is headed off its tooltip (**Moving to: (x, y)**)
 3. **Right-click** to deselect the army
 
 **Buttons (above the map):**
@@ -126,7 +126,7 @@ below the map, or use the split control next to any of your armies in the **Armi
 
 **5. Capture the Enemy Castle**
 - Must occupy enemy castle for **3 consecutive turns**
-- Progress bar shows capture status
+- Hover the castle to see how far along the capture is
 - Capture all enemy castles to win!
 
 ### Combat
@@ -156,7 +156,9 @@ Castles are harder to capture:
 3. **Progress resets** if enemy army arrives or you leave
 4. **Capture complete** after 3 turns → castle is yours!
 
-Red progress bar shows capture status (0/3 to 3/3).
+Hover the castle to read the capture off its tooltip (**Capture progress: 1/3**, and so on). Once
+either side is down to its last castle, each turn a siege on it advances also raises a toast
+counting down the turns until it changes hands.
 
 ### Winning and Losing
 
@@ -234,23 +236,24 @@ Affect village growth and stability:
 Check the **Ruler Stats** panel (right side) to monitor:
 
 - **Stability** (villages): Affects soldier generation efficiency
-  - 100% = normal generation
-  - Below 70% = yellow warning (reduced generation)
+  - Generation scales with it — at 100% a village generates its full amount, at 50% half of it
   
 - **Morale** (armies): Affects combat effectiveness
-  - 100% = normal combat strength
-  - Above 100% = bonus combat strength
-  - Below 80% = warning (weaker in combat)
+  - Your armies fight as though they had `soldiers × morale / 100` soldiers
+  - 100% = normal combat strength; above 100% = bonus; below 100% = weaker in combat
   
 - **Loyalty** (armies): Affects desertion rate
   - 100% = no desertion, and restoring it to 100% clears any desertion still pending
   - Each turn an army loses `(100 - loyalty) / 20`% of its soldiers
-  - Below 80% = warning (Aggressive Training's 75% target lands here)
   - Losses under one whole soldier carry over between turns rather than being ignored, so
     even a small army eventually feels a fractional rate
   
 - **Population**: Total population across all villages
   - Higher population = more soldier generation
+
+Stability, morale and loyalty are all colour-coded the same way: **green at 90 and above**,
+**amber from 70 to 89**, and **red below 70**. Aggressive Training's 75% loyalty target therefore
+shows amber. Population is reported as a plain total and is not colour-coded.
 
 ### Policy Strategy Tips
 

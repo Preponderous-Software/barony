@@ -90,6 +90,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Documentation
 
+- ✅ `PLAYER_GUIDE.md` no longer sends players looking for two indicators the map never draws (#88):
+  the "light blue square" marking an army's destination and the "red progress bar" over a castle
+  being captured don't exist — both are read off the hover tooltip, and a siege on either side's
+  last castle is announced by toast. The **Ruler Stats** warning thresholds were wrong too (below
+  70% for stability, below 80% for morale and loyalty); all three stats use the same bands the page
+  applies and `README.md` already documented — green at 90 and above, amber from 70 to 89, red
+  below 70. Adding the missing indicators is tracked on #89.
 - ✅ `PLAYER_GUIDE.md` now documents the controls the web client actually has (Advance Turn / Reset Game / Auto Play buttons, the split panel under the map, the policy dropdowns) instead of keyboard shortcuts that were never implemented
 - ✅ "Reading the Interface" rewritten to match the real layout (sidebar panels, selected-army panel) — the old top bar, side panel, and event log it described don't exist
 - ✅ Removed the `[Unreleased]` bullet that said the auth token is stored client-side; it contradicted the **Security** entries above it (#61)
