@@ -198,9 +198,11 @@
 
     // How far from the cell centre a fanned-out army circle sits, and how much of the usual
     // radius it is drawn at, both as fractions of the cell. A single army keeps the full size at
-    // dead centre; a crowd is shrunk further so the ring still fits inside its own cell.
+    // dead centre; a crowd is shrunk further so the ring still fits inside its own cell. The
+    // margin is what a fanned circle leaves free at the cell edge, so the selection ring the
+    // caller draws just outside a circle has somewhere to go without crossing into the next cell.
     var ARMY_RADIUS_FRACTION = 0.3;
-    var ARMY_CELL_MARGIN = 0.02;
+    var ARMY_CELL_MARGIN = 0.06;
 
     function armyFanScale(count) {
         if (count <= 1) return 1;

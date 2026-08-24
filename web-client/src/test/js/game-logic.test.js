@@ -239,14 +239,19 @@ test('layoutArmiesOnTiles moves two armies sharing a tile apart from each other'
         { x: second.offsetX, y: second.offsetY });
 });
 
-test('layoutArmiesOnTiles keeps every fanned-out circle inside its own cell', () => {
-    for (let count = 2; count <= 6; count++) {
+// game.html draws the selection ring just outside the circle, capped at this fraction of the cell.
+const SELECTION_RING_GAP = 0.05;
+
+test('layoutArmiesOnTiles keeps every fanned-out circle, and its selection ring, inside its own cell', () => {
+    for (let count = 1; count <= 6; count++) {
         const armies = [];
         for (let i = 1; i <= count; i++) armies.push(army(i, 1, 1));
 
         layoutArmiesOnTiles(armies).forEach(placement => {
-            assert.ok(distanceFromCentre(placement) + placement.radius <= 0.5,
-                'a stack of ' + count + ' should stay within the half-cell around its centre');
+            const outerEdge = distanceFromCentre(placement) + placement.radius + SELECTION_RING_GAP;
+            assert.ok(outerEdge <= 0.5,
+                'a stack of ' + count + ' should stay within the half-cell around its centre, '
+                    + 'with room for the selection ring (reached ' + outerEdge + ')');
         });
     }
 });

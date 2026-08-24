@@ -1130,12 +1130,14 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Draw selection highlight ring
+                // Draw selection highlight ring, just outside the circle. The gap is capped
+                // against the cell so the ring stays inside it on a small (mobile) grid and
+                // alongside a fanned-out neighbour, rather than reaching into the next cell.
                 if (selectedArmy && army.id === selectedArmy.id) {
                     ctx.strokeStyle = PALETTE.selectionRing;
                     ctx.lineWidth = 3;
                     ctx.beginPath();
-                    ctx.arc(px, py, radius + 4, 0, 2 * Math.PI);
+                    ctx.arc(px, py, radius + Math.min(4, cellSize * 0.05), 0, 2 * Math.PI);
                     ctx.stroke();
                 }
 
