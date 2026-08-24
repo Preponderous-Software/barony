@@ -1112,12 +1112,16 @@
                 }
             }
             
-            // Draw armies
-            gameState.armies.forEach(army => {
-                const px = army.x * cellWidth + cellWidth / 2;
-                const py = army.y * cellHeight + cellHeight / 2;
-                const radius = Math.min(cellWidth, cellHeight) * 0.3;
-                
+            // Draw armies. layoutArmiesOnTiles (game-logic.js) fans out armies sharing a tile so
+            // none is hidden under another; it hands back offsets and radii as fractions of the
+            // cell's smaller side, so one cell size scales both and the fan stays circular.
+            const cellSize = Math.min(cellWidth, cellHeight);
+            layoutArmiesOnTiles(gameState.armies).forEach(placement => {
+                const army = placement.army;
+                const px = army.x * cellWidth + cellWidth / 2 + placement.offsetX * cellSize;
+                const py = army.y * cellHeight + cellHeight / 2 + placement.offsetY * cellSize;
+                const radius = cellSize * placement.radius;
+
                 ctx.fillStyle = army.playerId === 1 ? PALETTE.player1Army : PALETTE.player2Army;
                 ctx.beginPath();
                 ctx.arc(px, py, radius, 0, 2 * Math.PI);
@@ -1125,7 +1129,7 @@
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 2;
                 ctx.stroke();
-                
+
                 // Draw selection highlight ring
                 if (selectedArmy && army.id === selectedArmy.id) {
                     ctx.strokeStyle = PALETTE.selectionRing;
@@ -1134,10 +1138,10 @@
                     ctx.arc(px, py, radius + 4, 0, 2 * Math.PI);
                     ctx.stroke();
                 }
-                
+
                 // Draw soldier count
                 ctx.fillStyle = PALETTE.textWhite;
-                ctx.font = '12px Arial';
+                ctx.font = Math.max(9, Math.round(12 * placement.scale)) + 'px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(army.soldiers.toString(), px, py);
@@ -1396,39 +1400,10 @@
         // ========================
         // Canvas Tooltip
         // ========================
-        function getTooltipText(gridX, gridY, gameState) {
-            if (!gameState || !gameState.grid) return null;
-            if (gridX < 0 || gridX >= gameState.width || gridY < 0 || gridY >= gameState.height) return null;
-            
-            // Check for army at this position
-            const army = gameState.armies.find(a => a.x === gridX && a.y === gridY);
-            if (army) {
-                let text = 'Army #' + army.id + ' (Player ' + army.playerId + ') \u2014 Soldiers: ' + army.soldiers + ' | Morale: ' + army.morale + ' | Loyalty: ' + army.loyalty;
-                if (army.destinationX !== undefined && army.destinationX !== null) {
-                    text += ' | Moving to: (' + army.destinationX + ', ' + army.destinationY + ')';
-                }
-                return text;
-            }
-            
-            const tile = gameState.grid[gridX][gridY];
-            if (tile.type === 'CASTLE') {
-                if (tile.ownerId === 0) {
-                    return 'Castle \u2014 neutral. Occupy for ' + CASTLE_CAPTURE_TURNS + ' consecutive turns to capture.';
-                }
-                if (tile.occupationTicks > 0) {
-                    return 'Castle \u2014 Player ' + tile.ownerId + '. Capture progress: ' + tile.occupationTicks + '/' + CASTLE_CAPTURE_TURNS;
-                }
-                return 'Castle \u2014 Player ' + tile.ownerId + '. Hold for ' + CASTLE_CAPTURE_TURNS + ' consecutive turns to capture.';
-            }
-            
-            if (tile.type === 'VILLAGE') {
-                if (tile.ownerId === 0) {
-                    return 'Village \u2014 neutral. Occupy with an army to capture and generate soldiers.';
-                }
-                return 'Village \u2014 Player ' + tile.ownerId + '. Generating +1 soldier/turn for stationed armies.';
-            }
-            
-            return 'Empty \u2014 move an army here to occupy.';
+        // The tooltip text itself is built by getTooltipText in game-logic.js (loaded above) and
+        // covered by the Node test suite; the page only supplies the capture requirement it owns.
+        function tooltipTextAt(gridX, gridY, gameState) {
+            return getTooltipText(gridX, gridY, gameState, CASTLE_CAPTURE_TURNS);
         }
         
         // ========================
@@ -1568,7 +1543,7 @@
                 const containerRect = canvasContainer.getBoundingClientRect();
                 const canvasRect = canvas.getBoundingClientRect();
                 
-                const text = getTooltipText(gridX, gridY, lastGameState);
+                const text = tooltipTextAt(gridX, gridY, lastGameState);
                 if (text) {
                     tooltip.textContent = text;
                     tooltip.style.display = 'block';
@@ -1599,7 +1574,7 @@
                 if (!lastGameState || e.touches.length !== 1) return;
                 const touch = e.touches[0];
                 const { gridX, gridY, cssX, cssY } = eventToGrid(touch);
-                const text = getTooltipText(gridX, gridY, lastGameState);
+                const text = tooltipTextAt(gridX, gridY, lastGameState);
                 if (text) {
                     const canvasContainer = document.getElementById('gameCanvas');
                     const containerRect = canvasContainer.getBoundingClientRect();

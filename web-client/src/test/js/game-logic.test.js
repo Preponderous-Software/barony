@@ -9,6 +9,8 @@ const {
     getStatClass,
     diffCastleMilestones,
     validateSplitAmount,
+    layoutArmiesOnTiles,
+    getTooltipText,
     resolvePanelOpenState,
     resolvePanelOrder,
     movePanelInOrder,
@@ -178,6 +180,231 @@ test('validateSplitAmount accepts the maximum amount itself', () => {
     const result = validateSplitAmount(10, 10);
 
     assert.equal(result.valid, true);
+});
+
+// ---------------------------------------------------------------------------
+// Army placement on the canvas
+// ---------------------------------------------------------------------------
+
+function army(id, x, y, overrides) {
+    return Object.assign({
+        id: id, x: x, y: y, playerId: 1, soldiers: 10, morale: 80, loyalty: 90
+    }, overrides || {});
+}
+
+function placementFor(placements, id) {
+    return placements.find(p => p.army.id === id);
+}
+
+// The circle a placement describes, in the same cell fractions the placement uses,
+// measured from the centre of its cell.
+function distanceFromCentre(placement) {
+    return Math.sqrt(placement.offsetX * placement.offsetX + placement.offsetY * placement.offsetY);
+}
+
+test('layoutArmiesOnTiles draws a lone army at the centre of its cell, full size', () => {
+    const placements = layoutArmiesOnTiles([army(1, 2, 3)]);
+
+    assert.equal(placements.length, 1);
+    assert.equal(placements[0].offsetX, 0);
+    assert.equal(placements[0].offsetY, 0);
+    assert.equal(placements[0].scale, 1);
+    assert.equal(placements[0].stackSize, 1);
+});
+
+test('layoutArmiesOnTiles centres armies that are on different tiles', () => {
+    const placements = layoutArmiesOnTiles([army(1, 0, 0), army(2, 1, 0), army(3, 0, 1)]);
+
+    assert.equal(placements.length, 3);
+    placements.forEach(placement => {
+        assert.equal(placement.offsetX, 0);
+        assert.equal(placement.offsetY, 0);
+        assert.equal(placement.stackSize, 1);
+    });
+});
+
+test('layoutArmiesOnTiles moves two armies sharing a tile apart from each other', () => {
+    const placements = layoutArmiesOnTiles([army(1, 4, 4), army(2, 4, 4)]);
+
+    assert.equal(placements.length, 2);
+    placements.forEach(placement => {
+        assert.equal(placement.stackSize, 2);
+        assert.ok(distanceFromCentre(placement) > 0,
+            'a co-located army should be offset from the cell centre, not drawn on top of the other');
+    });
+    const first = placementFor(placements, 1);
+    const second = placementFor(placements, 2);
+    assert.notDeepEqual(
+        { x: first.offsetX, y: first.offsetY },
+        { x: second.offsetX, y: second.offsetY });
+});
+
+test('layoutArmiesOnTiles keeps every fanned-out circle inside its own cell', () => {
+    for (let count = 2; count <= 6; count++) {
+        const armies = [];
+        for (let i = 1; i <= count; i++) armies.push(army(i, 1, 1));
+
+        layoutArmiesOnTiles(armies).forEach(placement => {
+            assert.ok(distanceFromCentre(placement) + placement.radius <= 0.5,
+                'a stack of ' + count + ' should stay within the half-cell around its centre');
+        });
+    }
+});
+
+test('layoutArmiesOnTiles keeps a pair and a trio from overlapping each other', () => {
+    [2, 3].forEach(count => {
+        const armies = [];
+        for (let i = 1; i <= count; i++) armies.push(army(i, 0, 0));
+        const placements = layoutArmiesOnTiles(armies);
+
+        for (let a = 0; a < placements.length; a++) {
+            for (let b = a + 1; b < placements.length; b++) {
+                const dx = placements[a].offsetX - placements[b].offsetX;
+                const dy = placements[a].offsetY - placements[b].offsetY;
+                const apart = Math.sqrt(dx * dx + dy * dy);
+                assert.ok(apart >= placements[a].radius + placements[b].radius,
+                    'circles in a stack of ' + count + ' should not overlap');
+            }
+        }
+    });
+});
+
+test('layoutArmiesOnTiles places co-located armies by id, so the fan does not reshuffle each tick', () => {
+    const oneOrder = layoutArmiesOnTiles([army(7, 2, 2), army(3, 2, 2), army(5, 2, 2)]);
+    const otherOrder = layoutArmiesOnTiles([army(5, 2, 2), army(7, 2, 2), army(3, 2, 2)]);
+
+    [3, 5, 7].forEach(id => {
+        assert.deepEqual(
+            { x: placementFor(oneOrder, id).offsetX, y: placementFor(oneOrder, id).offsetY },
+            { x: placementFor(otherOrder, id).offsetX, y: placementFor(otherOrder, id).offsetY },
+            'army #' + id + ' should sit in the same spot whatever order the backend sends');
+    });
+});
+
+test('layoutArmiesOnTiles shrinks co-located armies but never a lone one', () => {
+    const alone = layoutArmiesOnTiles([army(1, 0, 0)])[0];
+    const shared = layoutArmiesOnTiles([army(1, 0, 0), army(2, 0, 0)])[0];
+
+    assert.ok(shared.radius < alone.radius);
+    assert.ok(shared.scale < 1);
+});
+
+test('layoutArmiesOnTiles returns one placement per army, and none for no armies', () => {
+    const armies = [army(1, 0, 0), army(2, 0, 0), army(3, 5, 5)];
+    const ids = layoutArmiesOnTiles(armies).map(p => p.army.id).sort();
+
+    assert.deepEqual(ids, [1, 2, 3]);
+    assert.deepEqual(layoutArmiesOnTiles([]), []);
+    assert.deepEqual(layoutArmiesOnTiles(undefined), []);
+});
+
+// ---------------------------------------------------------------------------
+// Canvas tooltip
+// ---------------------------------------------------------------------------
+
+const CAPTURE_TURNS = 3;
+
+// 2x2 grid of the tiles a tooltip test needs, with no armies on it by default.
+function tooltipState(overrides) {
+    return Object.assign({
+        width: 2,
+        height: 2,
+        armies: [],
+        grid: [
+            [tile('CASTLE', 2), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0), tile('EMPTY', 0)]
+        ]
+    }, overrides || {});
+}
+
+test('getTooltipText returns null without a game state or off the map', () => {
+    assert.equal(getTooltipText(0, 0, null, CAPTURE_TURNS), null);
+    assert.equal(getTooltipText(0, 0, { width: 2, height: 2 }, CAPTURE_TURNS), null);
+    assert.equal(getTooltipText(-1, 0, tooltipState(), CAPTURE_TURNS), null);
+    assert.equal(getTooltipText(0, 2, tooltipState(), CAPTURE_TURNS), null);
+});
+
+test('getTooltipText describes an army standing on the tile', () => {
+    const state = tooltipState({ armies: [army(4, 1, 1, { soldiers: 12, morale: 77, loyalty: 65 })] });
+
+    assert.equal(getTooltipText(1, 1, state, CAPTURE_TURNS),
+        'Army #4 (Player 1) \u2014 Soldiers: 12 | Morale: 77 | Loyalty: 65');
+});
+
+test('getTooltipText adds where a moving army is headed', () => {
+    const state = tooltipState({
+        armies: [army(4, 1, 1, { destinationX: 0, destinationY: 1 })]
+    });
+
+    assert.match(getTooltipText(1, 1, state, CAPTURE_TURNS), /\| Moving to: \(0, 1\)$/);
+});
+
+// The bug behind #94: a capture in progress always has the capturing army standing on the tile,
+// so a castle branch reached only when the tile is empty could never report it.
+test('getTooltipText reports capture progress on the army holding a contested castle', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2, 2), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0), tile('EMPTY', 0)]
+        ],
+        armies: [army(4, 0, 0)]
+    });
+
+    assert.equal(getTooltipText(0, 0, state, CAPTURE_TURNS),
+        'Army #4 (Player 1) \u2014 Soldiers: 10 | Morale: 80 | Loyalty: 90 | Capturing castle: 2/3');
+});
+
+test('getTooltipText reports capture progress on an army taking a neutral castle', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0, 1), tile('EMPTY', 0)]
+        ],
+        armies: [army(4, 1, 0)]
+    });
+
+    assert.match(getTooltipText(1, 0, state, CAPTURE_TURNS), /\| Capturing castle: 1\/3$/);
+});
+
+test('getTooltipText leaves capture progress off an army on a castle that is not being taken', () => {
+    const state = tooltipState({ armies: [army(4, 0, 0)] });
+
+    assert.equal(getTooltipText(0, 0, state, CAPTURE_TURNS).indexOf('Capturing castle'), -1);
+});
+
+test('getTooltipText states the hold requirement for an unoccupied castle', () => {
+    assert.equal(getTooltipText(0, 0, tooltipState(), CAPTURE_TURNS),
+        'Castle \u2014 Player 2. Hold for 3 consecutive turns to capture.');
+    assert.equal(getTooltipText(1, 0, tooltipState(), CAPTURE_TURNS),
+        'Castle \u2014 neutral. Occupy for 3 consecutive turns to capture.');
+});
+
+test('getTooltipText reports capture progress on an unoccupied castle that still carries it', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2, 1), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0, 2), tile('EMPTY', 0)]
+        ]
+    });
+
+    assert.equal(getTooltipText(0, 0, state, CAPTURE_TURNS), 'Castle \u2014 Player 2. Capture progress: 1/3');
+    assert.equal(getTooltipText(1, 0, state, CAPTURE_TURNS), 'Castle \u2014 neutral. Capture progress: 2/3');
+});
+
+test('getTooltipText describes villages and empty ground', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2), tile('VILLAGE', 0)],
+            [tile('VILLAGE', 1), tile('EMPTY', 0)]
+        ]
+    });
+
+    assert.equal(getTooltipText(0, 1, state, CAPTURE_TURNS),
+        'Village \u2014 neutral. Occupy with an army to capture and generate soldiers.');
+    assert.equal(getTooltipText(1, 0, state, CAPTURE_TURNS),
+        'Village \u2014 Player 1. Generating +1 soldier/turn for stationed armies.');
+    assert.equal(getTooltipText(1, 1, state, CAPTURE_TURNS),
+        'Empty \u2014 move an army here to occupy.');
 });
 
 test('resolvePanelOpenState uses the saved preference when one exists, even against the HTML default', () => {

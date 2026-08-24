@@ -72,6 +72,10 @@ The game board is a 10x10 grid with different tile types:
   - Safe to move through
   - No special effects
 
+**Armies** are circles labelled with their soldier count — blue for yours, red for the enemy's.
+Where more than one army stands on a tile (a fresh split, or a fight in progress), the circles are
+drawn smaller and spread around the middle of the cell so each one can still be read.
+
 ### Controlling Your Armies
 
 **Mouse Controls:**
@@ -126,7 +130,7 @@ below the map, or use the split control next to any of your armies in the **Armi
 
 **5. Capture the Enemy Castle**
 - Must occupy enemy castle for **3 consecutive turns**
-- Count those turns yourself — the running total isn't shown on the map
+- Hover the occupying army to read the running total off its tooltip
 - Capture all enemy castles to win!
 
 ### Combat
@@ -156,11 +160,10 @@ Castles are harder to capture:
 3. **Progress resets** if enemy army arrives or you leave
 4. **Capture complete** after 3 turns → castle is yours!
 
-The running count isn't put on the map, so keep track of it yourself. An empty castle's tooltip
-states the hold requirement, but once an army stands on the tile the tooltip describes that army
-instead — and a capture under way always has an army standing there. The exception is a castle
-that is the last one its side holds: every turn the siege on it advances, a toast counts down the
-turns remaining.
+The running count isn't drawn on the map, but it is on the tooltip. Hover the army doing the
+capturing and its tooltip ends with **Capturing castle: 2/3**; hover a castle nobody is standing on
+and the tooltip states the hold requirement instead. On top of that, a castle that is the last one
+its side holds gets a toast every turn the siege on it advances, counting down the turns remaining.
 
 ### Winning and Losing
 
@@ -361,7 +364,8 @@ them, so you can't miss one while watching the map.
 Hover over any tile on the canvas to see:
 - Tile type and ownership
 - Army stats (soldiers, morale, loyalty, destination)
-- Castle capture progress
+- Castle capture progress — on the occupying army while a capture is under way, on the castle
+  itself when nobody is standing on it
 - Village generation info
 
 ### Selection Feedback
