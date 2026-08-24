@@ -117,7 +117,7 @@ The prototype initially supported:
 - [ ] Backend: Add unit tests for splitting/merging (6-8 tests)
 - [ ] Web Client: Display soldier count on armies
 - [ ] Web Client: Add split command input handling
-- [ ] Web Client: Render multiple armies at same location
+- [x] Web Client: Render multiple armies at same location
 - [ ] Web Client: Add unit tests for army display
 - [ ] Documentation: Update README with army management
 
@@ -179,7 +179,9 @@ The prototype initially supported:
 
 #### Web Client Changes
 - Color castles based on ownership (gray with blue/red outline)
-- Show capture progress bar over contested castles
+- Show capture progress bar over contested castles — landed as tooltip text on the army doing the
+  capturing (`Capturing castle: N/3`) rather than a bar on the canvas; drawing it on the canvas is
+  tracked on #89
 - Display win/loss overlay with "Play Again" option (restart via new /reset endpoint)
 - Add sound effects for capture/victory (optional)
 
@@ -191,7 +193,7 @@ The prototype initially supported:
 - [ ] Backend: Add POST /reset endpoint to restart game
 - [ ] Backend: Add unit tests for castle capture and win conditions (8-10 tests)
 - [ ] Web Client: Render castle ownership colors
-- [ ] Web Client: Display capture progress
+- [x] Web Client: Display capture progress
 - [ ] Web Client: Show win/loss overlay
 - [ ] Web Client: Add reset functionality
 - [ ] Web Client: Add unit tests

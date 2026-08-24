@@ -9,6 +9,22 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Armies sharing a tile are all visible** (#90): co-located armies were drawn at the exact
+  centre of the cell, one on top of another, so a tile showed whichever army happened to be drawn
+  last — which is what the player sees after a split (parent and child sit together until the next
+  turn) and during a fight (attacker and defender share the tile). Armies on one tile are now drawn
+  smaller and fanned evenly around the centre of the cell, ordered by army id so the arrangement
+  does not reshuffle from turn to turn. The gold selection ring is drawn a little closer to its
+  circle to suit, and its gap now scales with the cell rather than sitting at a flat 4px, so it
+  stays inside the cell on the smaller grid the mobile layout uses. The placement rule
+  (`layoutArmiesOnTiles` in `game-logic.js`) is covered by the Node test suite.
+- ✅ **Castle capture progress is readable while a capture is happening** (#94): the tooltip's
+  `Capture progress: N/3` line could not be reached in play. It was only offered for a tile with no
+  army on it, and a capture in progress always has the capturing army standing there — the backend
+  zeroes the counter the moment the tile is empty, contested or held by its owner. The progress is
+  now appended to the occupying army's own tooltip (`… | Capturing castle: 2/3`), and a castle that
+  still carries progress with nobody on it reports it whether it is owned or neutral. The tooltip
+  text moved into `game-logic.js` and is covered by the Node test suite.
 - ✅ **Interface preferences follow the account** (#55): the display settings and the sidebar
   arrangement — order, which panels are shown, and which are open — are now stored against the
   signed-in player's account through a new `GET`/`PUT /api/session/preferences`, so signing in on

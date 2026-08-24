@@ -196,6 +196,113 @@
         });
     }
 
+    // How far from the cell centre a fanned-out army circle sits, and how much of the usual
+    // radius it is drawn at, both as fractions of the cell. A single army keeps the full size at
+    // dead centre; a crowd is shrunk further so the ring still fits inside its own cell. The
+    // margin is what a fanned circle leaves free at the cell edge, so the selection ring the
+    // caller draws just outside a circle has somewhere to go without crossing into the next cell.
+    var ARMY_RADIUS_FRACTION = 0.3;
+    var ARMY_CELL_MARGIN = 0.06;
+
+    function armyFanScale(count) {
+        if (count <= 1) return 1;
+        if (count <= 4) return 0.6;
+        return 0.42;
+    }
+
+    // Places every army for one render pass. Armies sharing a tile were drawn at the exact centre
+    // of the cell, one directly on top of another, so a tile read as whichever army happened to be
+    // drawn last — which is what a split (parent and child co-located until the next turn) and a
+    // fight (attacker and defender on one tile) both leave on screen. Co-located armies are fanned
+    // evenly around the cell centre instead, smallest army id first from the top so the
+    // arrangement is stable from tick to tick rather than following the order the backend sends.
+    //
+    // Offsets and radii come back as fractions of the cell's smaller side, so the caller multiplies
+    // by one cell size and the fan stays circular on a non-square grid.
+    function layoutArmiesOnTiles(armies) {
+        var byTile = {};
+        var tileOrder = [];
+        (armies || []).forEach(function (army) {
+            var key = army.x + ',' + army.y;
+            if (!Object.prototype.hasOwnProperty.call(byTile, key)) {
+                byTile[key] = [];
+                tileOrder.push(key);
+            }
+            byTile[key].push(army);
+        });
+
+        var placements = [];
+        tileOrder.forEach(function (key) {
+            var occupants = byTile[key].slice().sort(function (a, b) { return a.id - b.id; });
+            var count = occupants.length;
+            var scale = armyFanScale(count);
+            var ring = count <= 1
+                ? 0
+                : 0.5 - ARMY_RADIUS_FRACTION * scale - ARMY_CELL_MARGIN;
+            occupants.forEach(function (army, index) {
+                var angle = -Math.PI / 2 + (2 * Math.PI * index) / count;
+                placements.push({
+                    army: army,
+                    offsetX: count <= 1 ? 0 : ring * Math.cos(angle),
+                    offsetY: count <= 1 ? 0 : ring * Math.sin(angle),
+                    radius: ARMY_RADIUS_FRACTION * scale,
+                    scale: scale,
+                    stackSize: count
+                });
+            });
+        });
+        return placements;
+    }
+
+    // The text the canvas tooltip shows for one grid cell, or null when the cell is off the map.
+    // `captureTurns` is how many consecutive turns holding a castle takes, which the page owns.
+    //
+    // An army on the tile is described first, because that is what the player is pointing at. A
+    // castle being taken, though, always has the taking army standing on it — `occupationTicks`
+    // only ever rises while exactly one player occupies the tile — so the progress is appended to
+    // the army's own line rather than left in a castle branch nothing can reach.
+    function getTooltipText(gridX, gridY, gameState, captureTurns) {
+        if (!gameState || !gameState.grid) return null;
+        if (gridX < 0 || gridX >= gameState.width || gridY < 0 || gridY >= gameState.height) return null;
+
+        var tile = gameState.grid[gridX][gridY];
+
+        var army = (gameState.armies || []).find(function (a) {
+            return a.x === gridX && a.y === gridY;
+        });
+        if (army) {
+            var text = 'Army #' + army.id + ' (Player ' + army.playerId + ') \u2014 Soldiers: '
+                + army.soldiers + ' | Morale: ' + army.morale + ' | Loyalty: ' + army.loyalty;
+            if (army.destinationX !== undefined && army.destinationX !== null) {
+                text += ' | Moving to: (' + army.destinationX + ', ' + army.destinationY + ')';
+            }
+            if (tile.type === 'CASTLE' && tile.occupationTicks > 0) {
+                text += ' | Capturing castle: ' + tile.occupationTicks + '/' + captureTurns;
+            }
+            return text;
+        }
+
+        if (tile.type === 'CASTLE') {
+            if (tile.occupationTicks > 0) {
+                var holder = tile.ownerId === 0 ? 'neutral' : 'Player ' + tile.ownerId;
+                return 'Castle \u2014 ' + holder + '. Capture progress: ' + tile.occupationTicks + '/' + captureTurns;
+            }
+            if (tile.ownerId === 0) {
+                return 'Castle \u2014 neutral. Occupy for ' + captureTurns + ' consecutive turns to capture.';
+            }
+            return 'Castle \u2014 Player ' + tile.ownerId + '. Hold for ' + captureTurns + ' consecutive turns to capture.';
+        }
+
+        if (tile.type === 'VILLAGE') {
+            if (tile.ownerId === 0) {
+                return 'Village \u2014 neutral. Occupy with an army to capture and generate soldiers.';
+            }
+            return 'Village \u2014 Player ' + tile.ownerId + '. Generating +1 soldier/turn for stationed armies.';
+        }
+
+        return 'Empty \u2014 move an army here to occupy.';
+    }
+
     // The interface preferences the game page keeps, and the localStorage key each is kept under.
     // The same names are what a signed-in player's preferences are stored against their account
     // as, so the page can move a preference between the two without a second naming scheme.
@@ -320,6 +427,8 @@
         getStatClass: getStatClass,
         diffCastleMilestones: diffCastleMilestones,
         validateSplitAmount: validateSplitAmount,
+        layoutArmiesOnTiles: layoutArmiesOnTiles,
+        getTooltipText: getTooltipText,
         resolvePanelOpenState: resolvePanelOpenState,
         resolvePanelOrder: resolvePanelOrder,
         movePanelInOrder: movePanelInOrder,
