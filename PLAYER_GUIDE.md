@@ -160,10 +160,12 @@ Castles are harder to capture:
 3. **Progress resets** if enemy army arrives or you leave
 4. **Capture complete** after 3 turns → castle is yours!
 
-The running count isn't drawn on the map, but it is on the tooltip. Hover the army doing the
-capturing and its tooltip ends with **Capturing castle: 2/3**; hover a castle nobody is standing on
-and the tooltip states the hold requirement instead. On top of that, a castle that is the last one
-its side holds gets a toast every turn the siege on it advances, counting down the turns remaining.
+The running count isn't drawn on the map, but it is on the tooltip. Since a capture under way
+always has an army standing on the castle, hover that army: its tooltip ends with
+**Capturing castle: 2/3**. A castle nobody is standing on states the hold requirement instead,
+because the count resets the moment the tile is left, contested, or held by its own owner. On top
+of that, a castle that is the last one its side holds gets a toast every turn the siege on it
+advances, counting down the turns remaining.
 
 ### Winning and Losing
 

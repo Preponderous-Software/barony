@@ -14,8 +14,10 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   last — which is what the player sees after a split (parent and child sit together until the next
   turn) and during a fight (attacker and defender share the tile). Armies on one tile are now drawn
   smaller and fanned evenly around the centre of the cell, ordered by army id so the arrangement
-  does not reshuffle from turn to turn. The placement rule (`layoutArmiesOnTiles` in
-  `game-logic.js`) is covered by the Node test suite.
+  does not reshuffle from turn to turn. The gold selection ring is drawn a little closer to its
+  circle to suit, and its gap now scales with the cell rather than sitting at a flat 4px, so it
+  stays inside the cell on the smaller grid the mobile layout uses. The placement rule
+  (`layoutArmiesOnTiles` in `game-logic.js`) is covered by the Node test suite.
 - ✅ **Castle capture progress is readable while a capture is happening** (#94): the tooltip's
   `Capture progress: N/3` line could not be reached in play. It was only offered for a tile with no
   army on it, and a capture in progress always has the capturing army standing there — the backend

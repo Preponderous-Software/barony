@@ -179,7 +179,9 @@ The prototype initially supported:
 
 #### Web Client Changes
 - Color castles based on ownership (gray with blue/red outline)
-- Show capture progress bar over contested castles
+- Show capture progress bar over contested castles — landed as tooltip text on the army doing the
+  capturing (`Capturing castle: N/3`) rather than a bar on the canvas; drawing it on the canvas is
+  tracked on #89
 - Display win/loss overlay with "Play Again" option (restart via new /reset endpoint)
 - Add sound effects for capture/victory (optional)
 
