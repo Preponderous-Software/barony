@@ -1404,8 +1404,10 @@
         // ========================
         // The tooltip text itself is built by getTooltipText in game-logic.js (loaded above) and
         // covered by the Node test suite; the page only supplies the capture requirement it owns.
-        function tooltipTextAt(gridX, gridY, gameState) {
-            return getTooltipText(gridX, gridY, gameState, CASTLE_CAPTURE_TURNS);
+        // `hoveredArmy` is which army on the tile the pointer is actually over, so a tile holding
+        // more than one describes the circle being pointed at rather than always the first.
+        function tooltipTextAt(gridX, gridY, gameState, hoveredArmy) {
+            return getTooltipText(gridX, gridY, gameState, CASTLE_CAPTURE_TURNS, hoveredArmy);
         }
         
         // ========================
@@ -1457,11 +1459,29 @@
                 return {
                     gridX: Math.floor(x / cellWidth),
                     gridY: Math.floor(y / cellHeight),
+                    canvasX: x,
+                    canvasY: y,
+                    cellWidth: cellWidth,
+                    cellHeight: cellHeight,
                     cssX: e.clientX - rect.left,
                     cssY: e.clientY - rect.top
                 };
             }
-            
+
+            // Which army a mouse or touch point is over, resolved to the nearest drawn circle by
+            // findArmyAtPoint (game-logic.js) rather than to the tile — armies sharing a tile are
+            // fanned out on screen, so the tile alone cannot say which of them is meant.
+            function armyAtEvent(e, matches) {
+                if (!lastGameState) return null;
+                const { canvasX, canvasY, cellWidth, cellHeight } = eventToGrid(e);
+                return findArmyAtPoint(
+                    lastGameState.armies, canvasX, canvasY, cellWidth, cellHeight, matches);
+            }
+
+            function isOwnArmy(army) {
+                return army.playerId === 1;
+            }
+
             canvas.addEventListener('click', function(e) {
                 if (!lastGameState) return;
                 
@@ -1469,7 +1489,7 @@
                 
                 if (!selectedArmy) {
                     // Try to select an army at this position
-                    const army = lastGameState.armies.find(a => a.x === gridX && a.y === gridY && a.playerId === 1);
+                    const army = armyAtEvent(e, isOwnArmy);
                     if (army) {
                         selectedArmy = army;
                         showToast('Army #' + army.id + ' selected. Click a tile to move.', 'info');
@@ -1478,7 +1498,7 @@
                     }
                 } else {
                     // Check if clicking on an empty area (no player 1 army) to deselect
-                    const clickedArmy = lastGameState.armies.find(a => a.x === gridX && a.y === gridY && a.playerId === 1);
+                    const clickedArmy = armyAtEvent(e, isOwnArmy);
                     if (clickedArmy && clickedArmy.id !== selectedArmy.id) {
                         // Select the new army instead
                         selectedArmy = clickedArmy;
@@ -1545,7 +1565,8 @@
                 const containerRect = canvasContainer.getBoundingClientRect();
                 const canvasRect = canvas.getBoundingClientRect();
                 
-                const text = tooltipTextAt(gridX, gridY, lastGameState);
+                const text = tooltipTextAt(
+                    gridX, gridY, lastGameState, armyAtEvent(latestTooltipMouseEvent));
                 if (text) {
                     tooltip.textContent = text;
                     tooltip.style.display = 'block';
@@ -1576,7 +1597,7 @@
                 if (!lastGameState || e.touches.length !== 1) return;
                 const touch = e.touches[0];
                 const { gridX, gridY, cssX, cssY } = eventToGrid(touch);
-                const text = tooltipTextAt(gridX, gridY, lastGameState);
+                const text = tooltipTextAt(gridX, gridY, lastGameState, armyAtEvent(touch));
                 if (text) {
                     const canvasContainer = document.getElementById('gameCanvas');
                     const containerRect = canvasContainer.getBoundingClientRect();

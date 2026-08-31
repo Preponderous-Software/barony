@@ -254,6 +254,43 @@
         return placements;
     }
 
+    // Resolves a point on the map canvas to the army the player is pointing at, or null when the
+    // tile under the point holds no army the caller is interested in. `x` and `y` are in canvas
+    // pixels, as the cell sizes are.
+    //
+    // Resolving to the tile alone picked whichever army the backend listed first, so on a tile
+    // holding more than one — a fresh split, or a fight — the others could not be selected or
+    // inspected at all, even though each is now drawn as its own circle. The nearest circle wins
+    // instead, using the very placements `layoutArmiesOnTiles` gave the renderer, so the army the
+    // player is pointing at is the one they are looking at. Candidates are still limited to the
+    // tile under the point, so a click anywhere in a cell holding one army selects it exactly as
+    // before rather than reaching into a neighbouring cell.
+    //
+    // `matches` optionally narrows which armies may be picked (the click handler only selects the
+    // player's own). The fan is laid out from every army on the tile either way, because that is
+    // what is on screen: an enemy army the player cannot select still moves their own circle.
+    function findArmyAtPoint(armies, x, y, cellWidth, cellHeight, matches) {
+        var gridX = Math.floor(x / cellWidth);
+        var gridY = Math.floor(y / cellHeight);
+        var cellSize = Math.min(cellWidth, cellHeight);
+
+        var nearest = null;
+        var nearestDistance = Infinity;
+        layoutArmiesOnTiles(armies).forEach(function (placement) {
+            var army = placement.army;
+            if (army.x !== gridX || army.y !== gridY) return;
+            if (matches && !matches(army)) return;
+            var dx = x - (army.x * cellWidth + cellWidth / 2 + placement.offsetX * cellSize);
+            var dy = y - (army.y * cellHeight + cellHeight / 2 + placement.offsetY * cellSize);
+            var distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < nearestDistance) {
+                nearest = army;
+                nearestDistance = distance;
+            }
+        });
+        return nearest;
+    }
+
     // The text the canvas tooltip shows for one grid cell, or null when the cell is off the map.
     // `captureTurns` is how many consecutive turns holding a castle takes, which the page owns.
     //
@@ -261,15 +298,21 @@
     // castle being taken, though, always has the taking army standing on it — `occupationTicks`
     // only ever rises while exactly one player occupies the tile — so the progress is appended to
     // the army's own line rather than left in a castle branch nothing can reach.
-    function getTooltipText(gridX, gridY, gameState, captureTurns) {
+    //
+    // `hoveredArmy` says which of the armies on the tile is being pointed at, as
+    // `findArmyAtPoint` resolves it; without it the first army on the tile is described, which is
+    // all a caller holding no pointer geometry can say.
+    function getTooltipText(gridX, gridY, gameState, captureTurns, hoveredArmy) {
         if (!gameState || !gameState.grid) return null;
         if (gridX < 0 || gridX >= gameState.width || gridY < 0 || gridY >= gameState.height) return null;
 
         var tile = gameState.grid[gridX][gridY];
 
-        var army = (gameState.armies || []).find(function (a) {
-            return a.x === gridX && a.y === gridY;
-        });
+        var army = hoveredArmy && hoveredArmy.x === gridX && hoveredArmy.y === gridY
+            ? hoveredArmy
+            : (gameState.armies || []).find(function (a) {
+                return a.x === gridX && a.y === gridY;
+            });
         if (army) {
             var text = 'Army #' + army.id + ' (Player ' + army.playerId + ') \u2014 Soldiers: '
                 + army.soldiers + ' | Morale: ' + army.morale + ' | Loyalty: ' + army.loyalty;
@@ -428,6 +471,7 @@
         diffCastleMilestones: diffCastleMilestones,
         validateSplitAmount: validateSplitAmount,
         layoutArmiesOnTiles: layoutArmiesOnTiles,
+        findArmyAtPoint: findArmyAtPoint,
         getTooltipText: getTooltipText,
         resolvePanelOpenState: resolvePanelOpenState,
         resolvePanelOrder: resolvePanelOrder,

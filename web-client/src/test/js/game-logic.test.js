@@ -10,6 +10,7 @@ const {
     diffCastleMilestones,
     validateSplitAmount,
     layoutArmiesOnTiles,
+    findArmyAtPoint,
     getTooltipText,
     resolvePanelOpenState,
     resolvePanelOrder,
@@ -304,6 +305,102 @@ test('layoutArmiesOnTiles returns one placement per army, and none for no armies
 });
 
 // ---------------------------------------------------------------------------
+// Pointing at an army
+// ---------------------------------------------------------------------------
+
+// A square cell, so a tile's pixels are cellX*CELL .. (cellX+1)*CELL.
+const CELL = 40;
+
+// Where a placement actually puts an army's circle on the canvas — the same arithmetic drawMap
+// applies to the fractions layoutArmiesOnTiles returns.
+function drawnCentre(armies, id, cellWidth, cellHeight) {
+    const placement = placementFor(layoutArmiesOnTiles(armies), id);
+    const cellSize = Math.min(cellWidth, cellHeight);
+    return {
+        x: placement.army.x * cellWidth + cellWidth / 2 + placement.offsetX * cellSize,
+        y: placement.army.y * cellHeight + cellHeight / 2 + placement.offsetY * cellSize
+    };
+}
+
+test('findArmyAtPoint resolves any point in the cell to the lone army standing there', () => {
+    const armies = [army(1, 2, 3)];
+
+    // centre, and each corner of the cell, which is what clicking "on the tile" has always meant
+    assert.equal(findArmyAtPoint(armies, 100, 140, CELL, CELL).id, 1);
+    assert.equal(findArmyAtPoint(armies, 81, 121, CELL, CELL).id, 1);
+    assert.equal(findArmyAtPoint(armies, 119, 159, CELL, CELL).id, 1);
+});
+
+test('findArmyAtPoint returns null for a tile with no army on it', () => {
+    assert.equal(findArmyAtPoint([army(1, 2, 3)], 20, 20, CELL, CELL), null);
+    assert.equal(findArmyAtPoint([], 20, 20, CELL, CELL), null);
+    assert.equal(findArmyAtPoint(undefined, 20, 20, CELL, CELL), null);
+});
+
+// The bug behind #96: both armies of a fresh split share a tile, and resolving the point to the
+// tile alone always answered with whichever the backend listed first — here army #2 — so the other
+// circle could not be pointed at however precisely the player aimed.
+test('findArmyAtPoint tells apart two armies sharing a tile by which circle is nearer', () => {
+    const armies = [army(2, 3, 3), army(1, 3, 3)];
+
+    // Co-located armies fan out from the top of the cell in army-id order, so the smaller id is
+    // drawn in the upper half of the cell and the larger in the lower half.
+    assert.equal(findArmyAtPoint(armies, 140, 128, CELL, CELL).id, 1);
+    assert.equal(findArmyAtPoint(armies, 140, 152, CELL, CELL).id, 2);
+});
+
+test('findArmyAtPoint answers with the army drawn at the point, for every army in a stack', () => {
+    [2, 3, 4, 5].forEach(count => {
+        const armies = [];
+        for (let i = 1; i <= count; i++) armies.push(army(i, 1, 1));
+
+        armies.forEach(each => {
+            const centre = drawnCentre(armies, each.id, CELL, CELL);
+            assert.equal(findArmyAtPoint(armies, centre.x, centre.y, CELL, CELL).id, each.id,
+                'army #' + each.id + ' of ' + count + ' should be reachable at its own circle');
+        });
+    });
+});
+
+test('findArmyAtPoint gives the same answer whatever order the backend sends', () => {
+    const oneOrder = [army(7, 2, 2), army(3, 2, 2), army(5, 2, 2)];
+    const otherOrder = [army(5, 2, 2), army(7, 2, 2), army(3, 2, 2)];
+
+    [3, 5, 7].forEach(id => {
+        const centre = drawnCentre(oneOrder, id, CELL, CELL);
+        assert.equal(findArmyAtPoint(otherOrder, centre.x, centre.y, CELL, CELL).id, id);
+    });
+});
+
+test('findArmyAtPoint skips armies the caller cannot pick, but still lays them out', () => {
+    const armies = [army(1, 0, 0), army(2, 0, 0, { playerId: 2 })];
+    const ownArmy = a => a.playerId === 1;
+    const enemyCentre = drawnCentre(armies, 2, CELL, CELL);
+
+    // The enemy's own circle is the nearest thing to this point, but it cannot be selected,
+    // so the player's army answers instead of nothing.
+    assert.equal(findArmyAtPoint(armies, enemyCentre.x, enemyCentre.y, CELL, CELL).id, 2);
+    assert.equal(findArmyAtPoint(armies, enemyCentre.x, enemyCentre.y, CELL, CELL, ownArmy).id, 1);
+    // The player's army is where the fan put it, which the enemy sharing the tile decided too.
+    const ownCentre = drawnCentre(armies, 1, CELL, CELL);
+    assert.equal(findArmyAtPoint(armies, ownCentre.x, ownCentre.y, CELL, CELL, ownArmy).id, 1);
+    assert.equal(findArmyAtPoint([army(3, 1, 1, { playerId: 2 })], 60, 60, CELL, CELL, ownArmy), null);
+});
+
+test('findArmyAtPoint holds up on a grid whose cells are not square', () => {
+    const armies = [army(1, 1, 1), army(2, 1, 1)];
+    const wide = 60;
+    const tall = 30;
+
+    armies.forEach(each => {
+        const centre = drawnCentre(armies, each.id, wide, tall);
+        assert.equal(findArmyAtPoint(armies, centre.x, centre.y, wide, tall).id, each.id);
+    });
+    // and a point in the neighbouring cell is not dragged onto this tile's stack
+    assert.equal(findArmyAtPoint(armies, 30, 45, wide, tall), null);
+});
+
+// ---------------------------------------------------------------------------
 // Canvas tooltip
 // ---------------------------------------------------------------------------
 
@@ -334,6 +431,38 @@ test('getTooltipText describes an army standing on the tile', () => {
 
     assert.equal(getTooltipText(1, 1, state, CAPTURE_TURNS),
         'Army #4 (Player 1) \u2014 Soldiers: 12 | Morale: 77 | Loyalty: 65');
+});
+
+// The other half of #96: on a tile holding two armies the tooltip described whichever the backend
+// listed first, so the newly split-off army's soldiers, morale and loyalty could not be read.
+test('getTooltipText describes the army being pointed at, not the first one on the tile', () => {
+    const state = tooltipState({
+        armies: [army(4, 1, 1, { soldiers: 12 }), army(9, 1, 1, { soldiers: 3 })]
+    });
+
+    assert.match(getTooltipText(1, 1, state, CAPTURE_TURNS, state.armies[1]), /^Army #9 .* Soldiers: 3 /);
+    assert.match(getTooltipText(1, 1, state, CAPTURE_TURNS, state.armies[0]), /^Army #4 .* Soldiers: 12 /);
+});
+
+test('getTooltipText adds the castle being taken to the army being pointed at', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2, 2), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0), tile('EMPTY', 0)]
+        ],
+        armies: [army(4, 0, 0), army(9, 0, 0)]
+    });
+
+    assert.match(getTooltipText(0, 0, state, CAPTURE_TURNS, state.armies[1]),
+        /^Army #9 .*\| Capturing castle: 2\/3$/);
+});
+
+test('getTooltipText ignores an army that is not on the tile being described', () => {
+    const state = tooltipState({ armies: [army(4, 1, 1)] });
+
+    assert.match(getTooltipText(1, 1, state, CAPTURE_TURNS, army(9, 0, 1)), /^Army #4 /);
+    assert.equal(getTooltipText(0, 1, state, CAPTURE_TURNS, army(9, 1, 1)),
+        'Village \u2014 neutral. Occupy with an army to capture and generate soldiers.');
 });
 
 test('getTooltipText adds where a moving army is headed', () => {

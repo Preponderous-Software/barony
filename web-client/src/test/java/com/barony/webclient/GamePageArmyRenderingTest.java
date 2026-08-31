@@ -17,8 +17,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * guarded is the wiring: the placements from {@code layoutArmiesOnTiles} being applied rather than
  * computed and ignored (which would put co-located armies back on top of one another), and the
  * tooltip text coming from the shared {@code getTooltipText} (which is what carries a castle's
- * capture progress while an army stands on it). Both behaviours themselves are covered by
- * web-client/src/test/js/game-logic.test.js.
+ * capture progress while an army stands on it), and a click or hover being resolved to an army by
+ * {@code findArmyAtPoint} rather than by tile coordinates (which answered with whichever army the
+ * backend listed first, so the others on a shared tile could not be pointed at). The behaviours
+ * themselves are covered by web-client/src/test/js/game-logic.test.js.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,9 +53,33 @@ class GamePageArmyRenderingTest {
     void tooltipTextComesFromTheSharedPureFunction() throws Exception {
         String html = renderGamePage();
 
-        assertTrue(html.contains("getTooltipText(gridX, gridY, gameState, CASTLE_CAPTURE_TURNS)"),
+        assertTrue(html.contains(
+                        "getTooltipText(gridX, gridY, gameState, CASTLE_CAPTURE_TURNS, hoveredArmy)"),
                 "The page must build tooltip text with the tested getTooltipText, passing the "
-                        + "capture requirement it owns");
+                        + "capture requirement it owns and which army is being pointed at");
+    }
+
+    @Test
+    void pointingAtAnArmyGoesThroughTheSharedResolutionRule() throws Exception {
+        String html = renderGamePage();
+
+        assertTrue(html.contains("findArmyAtPoint("),
+                "Clicks and hovers must resolve to an army through findArmyAtPoint, or only one "
+                        + "army on a shared tile can be pointed at");
+        assertFalse(html.contains("a.x === gridX && a.y === gridY"),
+                "No call site may pick an army by tile coordinates alone; that answers with "
+                        + "whichever army the backend listed first, whatever the player aimed at");
+    }
+
+    @Test
+    void bothTheClickHandlerAndTheTooltipResolveThePointerToAnArmy() throws Exception {
+        String html = renderGamePage();
+
+        assertTrue(html.contains("armyAtEvent(e, isOwnArmy)"),
+                "Selecting must resolve the click to one of the player's own armies");
+        assertTrue(html.contains("armyAtEvent(latestTooltipMouseEvent)") && html.contains("armyAtEvent(touch)"),
+                "Both the hover tooltip and the touch tooltip must describe the army under the "
+                        + "pointer, not the first one the backend listed on that tile");
     }
 
     private String renderGamePage() throws Exception {
