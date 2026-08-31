@@ -74,7 +74,9 @@ The game board is a 10x10 grid with different tile types:
 
 **Armies** are circles labelled with their soldier count — blue for yours, red for the enemy's.
 Where more than one army stands on a tile (a fresh split, or a fight in progress), the circles are
-drawn smaller and spread around the middle of the cell so each one can still be read.
+drawn smaller and spread around the middle of the cell so each one can still be read. Clicking or
+hovering picks the circle you are nearest, so on a shared tile you choose between them by aiming at
+the one you want rather than getting whichever the game listed first.
 
 ### Controlling Your Armies
 
@@ -365,7 +367,8 @@ them, so you can't miss one while watching the map.
 ### Canvas Tooltips
 Hover over any tile on the canvas to see:
 - Tile type and ownership
-- Army stats (soldiers, morale, loyalty, destination)
+- Army stats (soldiers, morale, loyalty, destination) — for the army whose circle you are nearest,
+  so both sides of a fight and both halves of a split can be read
 - Castle capture progress — on the occupying army while a capture is under way, on the castle
   itself when nobody is standing on it
 - Village generation info
@@ -374,6 +377,7 @@ Hover over any tile on the canvas to see:
 - Click an army to select it — a gold highlight ring appears
 - Right-click the canvas to deselect
 - Clicking another army switches selection
+- Where two of your armies share a tile, click the one you want: the nearer circle is selected
 
 ## Tips for New Players
 

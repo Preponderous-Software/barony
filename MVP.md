@@ -253,7 +253,7 @@ for the player-facing description of the real UI.
 
 #### Features
 - **Mouse Controls:**
-  - Click army to select it
+  - Click army to select it (on a tile holding more than one, the circle clicked nearest)
   - Click destination to move selected army
   - Right-click to deselect
 - **Visual Feedback:**

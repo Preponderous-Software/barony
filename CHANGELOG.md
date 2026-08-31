@@ -9,6 +9,15 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Every army on a shared tile can be clicked and hovered** (#96): the circles were drawn apart
+  (#90), but a click or a hover was still resolved to the tile, which answered with whichever army
+  the backend listed first. The newly split-off half of an army could therefore not be selected or
+  inspected at all until the next turn moved it away, and neither could the defender in a fight.
+  A click or hover now picks the nearest of the circles actually drawn in the cell, so aiming at an
+  army selects and describes that army; a tile holding one army still answers to a click anywhere
+  in the cell, exactly as before. Selection stays limited to the player's own armies, while the
+  tooltip describes whichever army is pointed at, including the enemy's. The resolution rule
+  (`findArmyAtPoint` in `game-logic.js`) is covered by the Node test suite.
 - ✅ **Armies sharing a tile are all visible** (#90): co-located armies were drawn at the exact
   centre of the cell, one on top of another, so a tile showed whichever army happened to be drawn
   last — which is what the player sees after a split (parent and child sit together until the next
