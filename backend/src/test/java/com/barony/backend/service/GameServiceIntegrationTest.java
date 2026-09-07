@@ -329,6 +329,40 @@ class GameServiceIntegrationTest {
     }
     
     /**
+     * Aggressive Training is documented as trading morale for desertion, so a real game left on it
+     * long enough must actually lose soldiers. It previously could not: the policy's loyalty target
+     * was 95, and 95 produced a desertion rate that truncated to zero for every army size.
+     */
+    @Test
+    void aggressiveTrainingActuallyCostsSoldiersOverTime() {
+        GameState internalState = gameService.getInternalStateForTest();
+        Army player1Army = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        // A garrison big enough to feel a sub-1% rate within the test's tick budget, parked on its
+        // castle so village soldier generation can't mask the losses.
+        player1Army.setSoldiers(100);
+        int initialSoldiers = player1Army.getSoldiers();
+
+        gameService.changePolicy(RulerDecision.PolicyCategory.MILITARY, "AGGRESSIVE_TRAINING");
+        for (int i = 0; i < 50; i++) {
+            gameService.tick();
+        }
+
+        GameState state = gameService.getState();
+        Army after = state.getArmies().stream()
+            .filter(a -> a.getId() == player1Army.getId())
+            .findFirst()
+            .get();
+
+        assertTrue(after.getLoyalty() <= 80,
+            "Aggressive Training should push loyalty into the desertion band, got: " + after.getLoyalty());
+        assertTrue(after.getSoldiers() < initialSoldiers,
+            "Sustained Aggressive Training should cost soldiers, still had: " + after.getSoldiers());
+    }
+
+    /**
      * Test long game session for memory leaks and stability
      */
     @Test

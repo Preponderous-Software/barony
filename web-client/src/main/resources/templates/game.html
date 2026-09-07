@@ -18,6 +18,7 @@
             <p id="errorMessage"></p>
         </div>
         <div class="game-layout">
+            <div class="game-main">
             <div class="controls">
                 <button onclick="tick()">Advance Turn</button>
                 <button onclick="reset()">Reset Game</button>
@@ -31,17 +32,59 @@
                     <div class="game-over-banner-content">
                         <h2 id="gameOverTitle">Game Over</h2>
                         <p id="gameOverMessage"></p>
+                        <!-- Run summary: every figure is derived from the final game state,
+                             so it costs no extra request. -->
+                        <dl class="run-summary" id="runSummary">
+                            <div class="run-summary-row">
+                                <dt>Turns played</dt><dd id="summaryTurns">0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Castles held</dt><dd id="summaryCastles">0 of 0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Villages held</dt><dd id="summaryVillages">0 of 0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Armies remaining</dt><dd id="summaryArmies">0</dd>
+                            </div>
+                            <div class="run-summary-row">
+                                <dt>Soldiers remaining</dt><dd id="summarySoldiers">0</dd>
+                            </div>
+                        </dl>
+                        <p class="run-summary-hint">Use <strong>Reset Game</strong> (or press
+                            <strong>R</strong>) to start a new run.</p>
                     </div>
                 </div>
             </div>
-            
-            <details class="collapsible-section section-status" open>
+
+            <!-- Acts on the army selected on the map, right below it — no scrolling to the list. -->
+            <div id="selectedArmyPanel" class="selected-army-panel">
+                <div id="selectedArmyEmpty" class="selected-army-empty">
+                    Click one of your armies on the map to select it.
+                </div>
+                <div id="selectedArmyActions" style="display: none;">
+                    <span id="selectedArmyTitle" class="selected-army-title"></span>
+                    <div class="selected-army-split">
+                        <label for="panelSplitAmount">Split off</label>
+                        <input type="number" id="panelSplitAmount" class="split-input"
+                               min="1" value="1" placeholder="Amount">
+                        <span id="panelSplitHint" class="field-hint"></span>
+                        <button id="panelSplitBtn" class="split-button" onclick="panelSplit()">Split Army</button>
+                    </div>
+                    <span id="panelSplitMsg" class="split-validation-msg"></span>
+                </div>
+            </div>
+            </div><!-- /game-main -->
+
+            <div class="game-sidebar">
+            <details class="collapsible-section section-status" data-panel-id="status" open>
                 <summary>Game Status &amp; Stats</summary>
                 <div class="game-info">
                     <div class="info-section">
                         <h3>Game Status</h3>
                         <p>Turn: <span id="tickCount">0</span></p>
                         <p>Game Over: <span id="gameOver">false</span></p>
+                        <p>Castles: <span id="castlesYou">0</span> yours, <span id="castlesEnemy">0</span> enemy, <span id="castlesNeutral">0</span> neutral (of <span id="castlesTotal">0</span> total)</p>
                         <p id="winnerLine" style="display:none;">
                             Winner: Player <span id="winnerId">-</span>
                         </p>
@@ -69,8 +112,29 @@
                     </div>
                 </div>
             </details>
-            
-            <details class="collapsible-section section-policy">
+
+            <details class="collapsible-section section-run-history" data-panel-id="run-history">
+                <summary>Run History</summary>
+                <div class="run-history">
+                    <p class="run-history-tally">
+                        <span id="runHistoryWins">0</span> win(s) &middot; <span id="runHistoryLosses">0</span> loss(es)
+                    </p>
+                    <ul class="run-history-list" id="runHistoryList">
+                        <li class="run-history-empty" id="runHistoryEmpty">No finished runs yet.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="collapsible-section section-armies" data-panel-id="armies" open>
+                <summary>Armies</summary>
+                <div class="armies-list">
+                    <div id="armiesList">
+                        <!-- Armies will be loaded dynamically via JavaScript -->
+                    </div>
+                </div>
+            </details>
+
+            <details class="collapsible-section section-policy" data-panel-id="policy">
                 <summary>Change Policy</summary>
                 <div class="policy-controls">
                     <div class="policy-section">
@@ -85,7 +149,7 @@
                     <div class="policy-section">
                         <label>Military:</label>
                         <select id="militaryPolicySelect">
-                            <option value="AGGRESSIVE_TRAINING">Aggressive Training (+10% morale, -5% loyalty)</option>
+                            <option value="AGGRESSIVE_TRAINING">Aggressive Training (+10% morale, -25% loyalty)</option>
                             <option value="STANDARD_SERVICE" selected>Standard Service</option>
                             <option value="VETERAN_BENEFITS">Veteran Benefits (-10% morale, +10% loyalty)</option>
                         </select>
@@ -103,7 +167,7 @@
                 </div>
             </details>
             
-            <details class="collapsible-section section-settings">
+            <details class="collapsible-section section-settings" data-panel-id="settings">
                 <summary>Settings</summary>
                 <div class="settings-panel" id="settingsPanel">
                     <div class="settings-row">
@@ -131,35 +195,58 @@
                             <option value="large">Large</option>
                         </select>
                     </div>
-                </div>
-            </details>
-            
-            <details class="collapsible-section section-armies" open>
-                <summary>Armies</summary>
-                <div class="armies-list">
-                    <div id="armiesList">
-                        <!-- Armies will be loaded dynamically via JavaScript -->
+                    <div class="settings-row settings-row--layout">
+                        <span class="settings-group-label" id="layoutControlsLabel">Panels:</span>
+                        <div class="layout-controls" id="layoutControls"
+                             role="group" aria-labelledby="layoutControlsLabel">
+                            <!-- One row per sidebar panel, built by renderLayoutControls(). -->
+                        </div>
+                        <button type="button" class="layout-reset-button"
+                                onclick="resetPanelLayout()">Reset Panel Layout</button>
                     </div>
                 </div>
             </details>
+            </div><!-- /game-sidebar -->
         </div>
     </div>
-    
+
     <div id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
-    
+
+    <!-- Pure game-state calculations, tested independently under web-client/src/test/js/. -->
+    <script th:src="@{/js/game-logic.js}"></script>
     <script>
         let autoPlayInterval = null;
         let isAutoPlaying = false;
         let selectedArmy = null;
-        let sessionId = null;
         let username = null;
         let lastGameState = null;
         
-        // On desktop, ensure all collapsible sections are open by default
+        // Sidebar layout preferences (see "Panel Layout Management" below). The default order is
+        // read off the markup once, before any saved layout is applied, so it stays the authoring
+        // order that "Reset Panel Layout" and resolvePanelOrder() fall back to. Declared here
+        // rather than beside those functions because the restore below runs before them.
+        const PANEL_LAYOUT_KEY = 'barony_panel_layout';
+        // The Settings panel holds the layout controls, so it may be reordered but never hidden —
+        // hiding it would leave no way to bring the other panels back.
+        const LAYOUT_LOCKED_PANEL_ID = 'settings';
+        const DEFAULT_PANEL_ORDER = Array.prototype.map.call(
+            document.querySelectorAll('.collapsible-section[data-panel-id]'),
+            function(d) { return d.dataset.panelId; });
+
+        // Restore each sidebar panel's remembered open/closed state (see
+        // "Panel State Management" below): a saved per-panel preference wins; otherwise every
+        // panel opens by default on desktop, or falls back to its own HTML default on mobile.
+        // The remembered order and visibility are applied in the same pass, before first paint,
+        // so a returning player never sees the default sidebar flash past their own arrangement.
         (function() {
-            if (window.innerWidth > 768) {
-                document.querySelectorAll('.collapsible-section').forEach(function(d) { d.open = true; });
-            }
+            const saved = loadPanelState();
+            const isDesktop = window.innerWidth > 768;
+            document.querySelectorAll('.collapsible-section[data-panel-id]').forEach(function(d) {
+                d.open = resolvePanelOpenState(d.dataset.panelId, saved, isDesktop, d.open);
+                d.addEventListener('toggle', savePanelState);
+            });
+            applyPanelLayout();
+            renderLayoutControls();
         })();
         
         // Color palette for canvas drawing (swapped by colorblind modes)
@@ -207,6 +294,8 @@
         };
         
         const POLICY_COOLDOWN_TURNS = 15;
+        // Consecutive turns of occupation the backend requires to flip a castle.
+        const CASTLE_CAPTURE_TURNS = 3;
         const MAX_TOASTS = 4;
         const TOAST_AUTO_DISMISS_MS = 4000;
         
@@ -257,6 +346,185 @@
             setTimeout(function() { toast.remove(); }, 300);
         }
         
+        // ========================
+        // Panel State Management
+        // ========================
+        // Remembers which sidebar panels the player has collapsed/expanded, per browser, so
+        // reopening the game page doesn't reset the layout to the defaults on every load.
+        // The open/closed decision itself is pure and lives in game-logic.js
+        // (resolvePanelOpenState) so it's covered by the Node test suite.
+        function loadPanelState() {
+            try {
+                const saved = localStorage.getItem('barony_panel_state');
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                console.error('Error loading panel state:', e);
+                return {};
+            }
+        }
+
+        function savePanelState() {
+            const state = {};
+            document.querySelectorAll('.collapsible-section[data-panel-id]').forEach(function(d) {
+                state[d.dataset.panelId] = d.open;
+            });
+            localStorage.setItem('barony_panel_state', JSON.stringify(state));
+        }
+
+        // ========================
+        // Panel Layout Management
+        // ========================
+        // Lets the player arrange the sidebar: which panels are shown and in what order, kept per
+        // browser alongside the open/closed state above. The order/visibility rules themselves are
+        // pure and live in game-logic.js (resolvePanelOrder, movePanelAmongVisible, canMovePanel,
+        // isPanelHidden) so they're covered by the Node test suite.
+        function loadPanelLayout() {
+            try {
+                const saved = localStorage.getItem(PANEL_LAYOUT_KEY);
+                const parsed = saved ? JSON.parse(saved) : {};
+                return {
+                    order: Array.isArray(parsed.order) ? parsed.order : [],
+                    hidden: (parsed.hidden && typeof parsed.hidden === 'object') ? parsed.hidden : {}
+                };
+            } catch (e) {
+                console.error('Error loading panel layout:', e);
+                return { order: [], hidden: {} };
+            }
+        }
+
+        function savePanelLayout(layout) {
+            localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
+        }
+
+        // The Settings panel holds the layout controls and so is never hidden; the layout rules are
+        // given a visibility map that says so, even if a hand-edited preference claims otherwise.
+        function panelVisibility(layout) {
+            const hidden = Object.assign({}, layout.hidden);
+            delete hidden[LAYOUT_LOCKED_PANEL_ID];
+            return hidden;
+        }
+
+        function getPanel(panelId) {
+            return document.querySelector(
+                '.collapsible-section[data-panel-id="' + panelId + '"]');
+        }
+
+        // Applies the remembered arrangement to the sidebar. Panels are moved in the DOM rather
+        // than reordered with CSS `order` so that keyboard tab order and screen-reader reading
+        // order match what is on screen.
+        function applyPanelLayout() {
+            const sidebar = document.querySelector('.game-sidebar');
+            if (!sidebar) return;
+            const layout = loadPanelLayout();
+            const hidden = panelVisibility(layout);
+            resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER).forEach(function(panelId) {
+                const panel = getPanel(panelId);
+                if (!panel) return;
+                sidebar.appendChild(panel);
+                panel.hidden = isPanelHidden(panelId, hidden);
+            });
+        }
+
+        // Builds the Settings-panel list of sidebar panels — a show/hide checkbox and move
+        // up/down buttons per panel — from whatever panels are on the page.
+        function renderLayoutControls() {
+            const container = document.getElementById('layoutControls');
+            if (!container) return;
+            const layout = loadPanelLayout();
+            const hidden = panelVisibility(layout);
+            const order = resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER);
+            container.innerHTML = '';
+            order.forEach(function(panelId) {
+                const panel = getPanel(panelId);
+                if (!panel) return;
+                const summary = panel.querySelector('summary');
+                const name = summary ? summary.textContent.trim() : panelId;
+
+                const row = document.createElement('div');
+                row.className = 'layout-row';
+
+                const label = document.createElement('label');
+                label.className = 'layout-row-name';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.dataset.panel = panelId;
+                checkbox.checked = !panel.hidden;
+                if (panelId === LAYOUT_LOCKED_PANEL_ID) {
+                    checkbox.disabled = true;
+                    label.title = 'The Settings panel holds these controls, so it cannot be hidden.';
+                }
+                checkbox.addEventListener('change', function() {
+                    setPanelHidden(panelId, !checkbox.checked);
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + name));
+                row.appendChild(label);
+
+                row.appendChild(makeMoveButton(panelId, name, 'up',
+                    !canMovePanel(order, hidden, panelId, -1)));
+                row.appendChild(makeMoveButton(panelId, name, 'down',
+                    !canMovePanel(order, hidden, panelId, 1)));
+                container.appendChild(row);
+            });
+        }
+
+        function makeMoveButton(panelId, name, direction, disabled) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'layout-move-button';
+            button.dataset.move = direction;
+            button.dataset.panel = panelId;
+            button.textContent = direction === 'up' ? '▲' : '▼';
+            button.setAttribute('aria-label', 'Move ' + name + ' ' + direction);
+            button.disabled = disabled;
+            button.addEventListener('click', function() {
+                movePanel(panelId, direction === 'up' ? -1 : 1);
+            });
+            return button;
+        }
+
+        function movePanel(panelId, delta) {
+            const layout = loadPanelLayout();
+            const order = movePanelAmongVisible(
+                resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER),
+                panelVisibility(layout), panelId, delta);
+            savePanelLayout({ order: order, hidden: layout.hidden });
+            applyPanelLayout();
+            renderLayoutControls();
+            // Re-rendering the rows throws away the button that was just clicked, so put focus
+            // back on it — or on its counterpart when the panel has reached an end and the
+            // button the player was using is now disabled.
+            const moved = document.querySelector('.layout-move-button[data-panel="' + panelId +
+                '"][data-move="' + (delta < 0 ? 'up' : 'down') + '"]');
+            const counterpart = document.querySelector('.layout-move-button[data-panel="' +
+                panelId + '"][data-move="' + (delta < 0 ? 'down' : 'up') + '"]');
+            const target = (moved && !moved.disabled) ? moved : counterpart;
+            if (target) target.focus();
+        }
+
+        function setPanelHidden(panelId, hidden) {
+            if (panelId === LAYOUT_LOCKED_PANEL_ID) return;
+            const layout = loadPanelLayout();
+            layout.hidden[panelId] = hidden;
+            savePanelLayout({
+                order: resolvePanelOrder(layout.order, DEFAULT_PANEL_ORDER),
+                hidden: layout.hidden
+            });
+            applyPanelLayout();
+            renderLayoutControls();
+            // Same re-render, same lost focus as in movePanel(): return it to the rebuilt checkbox.
+            const rebuilt = document.querySelector(
+                '.layout-row-name input[data-panel="' + panelId + '"]');
+            if (rebuilt) rebuilt.focus();
+        }
+
+        function resetPanelLayout() {
+            savePanelLayout({ order: DEFAULT_PANEL_ORDER.slice(), hidden: {} });
+            applyPanelLayout();
+            renderLayoutControls();
+            showToast('Panel layout reset to the default arrangement.', 'info');
+        }
+
         // ========================
         // Settings Management
         // ========================
@@ -330,12 +598,7 @@
         // ========================
         // Stat Color Coding
         // ========================
-        function getStatClass(value) {
-            if (value >= 90) return 'stat--good';
-            if (value >= 70) return 'stat--warn';
-            return 'stat--danger';
-        }
-        
+        // getStatClass is defined in game-logic.js (loaded above) and exposed as a global.
         function colorCodeStat(elementId, value) {
             const el = document.getElementById(elementId);
             if (!el) return;
@@ -347,21 +610,43 @@
         // Session Management
         // ========================
         function checkSession() {
-            sessionId = localStorage.getItem('sessionId');
+            // The auth token lives in an HttpOnly cookie the browser sends automatically; JS can't
+            // read it. We keep only the username (for display) in localStorage. The real gate is the
+            // server: any per-player request without a valid cookie returns 401 -> sessionExpired().
             username = localStorage.getItem('username');
-            
-            if (!sessionId || !username) {
+
+            if (!username) {
                 window.location.href = '/login';
                 return false;
             }
-            
+
             document.getElementById('currentUsername').textContent = username;
             return true;
         }
-        
-        function logout() {
-            localStorage.removeItem('sessionId');
+
+        function clearAuth() {
             localStorage.removeItem('username');
+            // Clean up keys from the old localStorage-token scheme, if present.
+            localStorage.removeItem('token');
+            localStorage.removeItem('tokenExpiresAt');
+        }
+
+        function logout() {
+            // The auth cookie is sent automatically; the server revokes the token and clears the
+            // cookie. Clear the local username and redirect with a confirmation either way.
+            const done = function() {
+                clearAuth();
+                sessionStorage.setItem('authNotice', 'You have been logged out.');
+                window.location.href = '/login';
+            };
+            fetch('/api/auth/logout', { method: 'POST' }).then(done).catch(done);
+        }
+
+        // Involuntary sign-out (cookie rejected by the server: missing/expired/revoked).
+        // Clear local state and tell the player why they're back at the login screen.
+        function sessionExpired() {
+            clearAuth();
+            sessionStorage.setItem('authNotice', 'Your session expired — please log in again.');
             window.location.href = '/login';
         }
         
@@ -376,8 +661,8 @@
         }
         
         function getSessionHeaders() {
+            // The auth cookie rides along automatically on same-origin requests; no token header.
             return {
-                'X-Session-Id': sessionId,
                 'Content-Type': 'application/json'
             };
         }
@@ -386,17 +671,18 @@
         // UI Update
         // ========================
         function updateUI(data) {
+            const previous = lastGameState;
             lastGameState = data;
             document.getElementById('tickCount').textContent = data.tickCount;
             document.getElementById('gameOver').textContent = data.gameOver;
-            
+
             // Update winner display
             const winnerLine = document.getElementById('winnerLine');
             const banner = document.getElementById('gameOverBanner');
             if (data.gameOver && data.winnerId !== null) {
                 document.getElementById('winnerId').textContent = data.winnerId;
                 winnerLine.style.display = '';
-                
+
                 // Show game over banner
                 const title = document.getElementById('gameOverTitle');
                 const msg = document.getElementById('gameOverMessage');
@@ -408,7 +694,14 @@
                     msg.textContent = 'Player ' + data.winnerId + ' has captured your castles.';
                 }
                 banner.style.display = 'flex';
-                
+                updateRunSummary(data);
+
+                // The backend records this run's history as a side effect of the tick that just
+                // ended it, so refresh the panel exactly once, on the transition into game-over.
+                if (!previous || !previous.gameOver) {
+                    loadRunHistory();
+                }
+
                 // Stop auto-play when game is over
                 if (autoPlayInterval !== null) {
                     stopAutoPlay();
@@ -417,12 +710,80 @@
                 winnerLine.style.display = 'none';
                 banner.style.display = 'none';
             }
-            
+
             drawMap(data);
             updateArmiesList(data.armies);
+            updateSelectedArmyPanel();
             updateRulerStats();
+            updateCastleProgress(data);
+            announceMilestones(previous, data);
         }
-        
+
+        // summarizeHoldings and diffCastleMilestones are defined in game-logic.js (loaded
+        // above) and exposed as globals; tested independently under web-client/src/test/js/.
+
+        // Objective progress: how many castles each side controls.
+        function updateCastleProgress(gameState) {
+            const holdings = summarizeHoldings(gameState);
+            document.getElementById('castlesYou').textContent = holdings.castlesYours;
+            document.getElementById('castlesEnemy').textContent = holdings.castlesEnemy;
+            document.getElementById('castlesNeutral').textContent = holdings.castlesNeutral;
+            document.getElementById('castlesTotal').textContent = holdings.castlesTotal;
+        }
+
+        // End-of-game summary: what the run amounted to, rather than just win/lose.
+        function updateRunSummary(gameState) {
+            const holdings = summarizeHoldings(gameState);
+            const yourArmies = (gameState.armies || []).filter(army => army.playerId === 1);
+            const soldiers = yourArmies.reduce((total, army) => total + army.soldiers, 0);
+            document.getElementById('summaryTurns').textContent = gameState.tickCount;
+            document.getElementById('summaryCastles').textContent =
+                holdings.castlesYours + ' of ' + holdings.castlesTotal;
+            document.getElementById('summaryVillages').textContent =
+                holdings.villagesYours + ' of ' + holdings.villagesTotal;
+            document.getElementById('summaryArmies').textContent = yourArmies.length;
+            document.getElementById('summarySoldiers').textContent = soldiers;
+        }
+
+        // Milestone beats: castles changing hands, and a siege on the last castle of
+        // either side. Compares consecutive states, so nothing is announced on the
+        // first load or after a reset (which rewinds the turn counter).
+        function announceMilestones(previous, current) {
+            const diff = diffCastleMilestones(previous, current);
+            if (!diff) return;
+
+            if (diff.captured > 0) {
+                showToast('Castle captured! ' + diff.holdings.castlesEnemy +
+                    ' enemy castle(s) left to take.', 'success');
+            }
+            if (diff.lost > 0) {
+                showToast('Castle lost! You hold ' + diff.holdings.castlesYours +
+                    ' of ' + diff.holdings.castlesTotal + ' castles.', 'danger');
+            }
+            announceFinalCastleSiege(previous, current, diff.holdings);
+        }
+
+        // The tension beat: someone's last castle is being occupied. Announced on each
+        // turn the occupation advances, so the player can see the countdown to capture.
+        function announceFinalCastleSiege(previous, current, holdings) {
+            for (let x = 0; x < current.width; x++) {
+                for (let y = 0; y < current.height; y++) {
+                    const now = current.grid[x][y];
+                    const before = previous.grid[x][y];
+                    if (now.type !== 'CASTLE') continue;
+                    if (now.occupationTicks <= 0 || now.occupationTicks <= before.occupationTicks) continue;
+                    const turnsLeft = CASTLE_CAPTURE_TURNS - now.occupationTicks;
+                    if (now.ownerId === 2 && holdings.castlesEnemy === 1) {
+                        showToast('Final enemy castle under siege — hold it ' + turnsLeft +
+                            ' more turn(s) to win.', 'warning');
+                    } else if (now.ownerId === 1 && holdings.castlesYours === 1) {
+                        showToast('Your last castle is under siege — break it within ' +
+                            turnsLeft + ' turn(s) or lose.', 'danger');
+                    }
+                }
+            }
+        }
+
         // ========================
         // Game Actions
         // ========================
@@ -433,7 +794,7 @@
             })
                 .then(response => {
                     if (response.status === 401) {
-                        logout();
+                        sessionExpired();
                         return;
                     }
                     if (!response.ok) {
@@ -552,7 +913,7 @@
             })
                 .then(response => {
                     if (response.status === 401) {
-                        logout();
+                        sessionExpired();
                         return;
                     }
                     return response.json();
@@ -692,6 +1053,62 @@
         }
         
         // ========================
+        // Run History
+        // ========================
+        // Fetches the player's win/loss tally and recent finished runs (recorded server-side
+        // when a run ends) and renders them into the Run History panel.
+        function loadRunHistory() {
+            fetch('/api/session/runs', { headers: getSessionHeaders() })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load run history: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(history => renderRunHistory(history))
+                .catch(error => {
+                    console.error('Error loading run history:', error);
+                });
+        }
+
+        function renderRunHistory(history) {
+            document.getElementById('runHistoryWins').textContent = history.wins;
+            document.getElementById('runHistoryLosses').textContent = history.losses;
+
+            const list = document.getElementById('runHistoryList');
+            list.innerHTML = '';
+
+            const runs = history.runs || [];
+            if (runs.length === 0) {
+                const empty = document.createElement('li');
+                empty.className = 'run-history-empty';
+                empty.id = 'runHistoryEmpty';
+                empty.textContent = 'No finished runs yet.';
+                list.appendChild(empty);
+                return;
+            }
+
+            runs.forEach(run => {
+                const item = document.createElement('li');
+                item.className = 'run-history-item run-history-item--' + run.result.toLowerCase();
+
+                const result = document.createElement('span');
+                result.className = 'run-history-result';
+                result.textContent = run.result === 'WIN' ? 'Victory' : 'Defeat';
+                item.appendChild(result);
+
+                const details = document.createElement('span');
+                details.className = 'run-history-details';
+                details.textContent = 'Turn ' + run.turnsPlayed + ' — ' +
+                    run.castlesHeld + '/' + run.castlesTotal + ' castles, ' +
+                    run.villagesHeld + '/' + run.villagesTotal + ' villages';
+                item.appendChild(details);
+
+                list.appendChild(item);
+            });
+        }
+
+        // ========================
         // Armies List
         // ========================
         function updateArmiesList(armies) {
@@ -766,44 +1183,82 @@
             });
         }
         
+        // Reflect the currently selected army (resolved fresh from game state) into the panel
+        // under the map: show its stats and a split control, or a hint when nothing is selected.
+        function updateSelectedArmyPanel() {
+            const actions = document.getElementById('selectedArmyActions');
+            const empty = document.getElementById('selectedArmyEmpty');
+            let army = null;
+            if (selectedArmy && lastGameState && lastGameState.armies) {
+                army = lastGameState.armies.find(a => a.id === selectedArmy.id && a.playerId === 1);
+            }
+            if (!army) {
+                selectedArmy = null;
+                actions.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            actions.style.display = 'block';
+            document.getElementById('selectedArmyTitle').textContent =
+                'Army #' + army.id + ' — ' + army.soldiers + ' soldiers at (' + army.x + ', ' + army.y + ')';
+
+            const input = document.getElementById('panelSplitAmount');
+            const maxSplit = Math.max(1, army.soldiers - 1);
+            const canSplit = army.soldiers > 1;
+            input.max = String(maxSplit);
+            const current = parseInt(input.value);
+            if (isNaN(current) || current < 1 || current > maxSplit) {
+                input.value = '1';
+            }
+            input.disabled = !canSplit;
+            document.getElementById('panelSplitBtn').disabled = !canSplit;
+            document.getElementById('panelSplitHint').textContent =
+                canSplit ? ('1–' + maxSplit) : 'Needs 2+ soldiers to split';
+            document.getElementById('panelSplitMsg').style.display = 'none';
+        }
+
+        // Clear the selected army (mirrors right-click deselect); shared by the
+        // canvas contextmenu handler and the Escape keyboard shortcut.
+        function deselectArmy() {
+            if (!selectedArmy) return;
+            selectedArmy = null;
+            if (lastGameState) drawMap(lastGameState);
+            updateSelectedArmyPanel();
+            showToast('Army deselected', 'info');
+        }
+
         function splitArmy(armyId) {
             const splitAmountInput = document.getElementById('splitAmount-' + armyId);
             const validationMsg = document.getElementById('splitMsg-' + armyId);
             const splitAmount = parseInt(splitAmountInput.value);
             const maxSplit = parseInt(splitAmountInput.max);
-            
-            if (isNaN(splitAmount) || splitAmount < 1) {
-                splitAmountInput.setCustomValidity('Enter a valid amount (at least 1)');
+
+            const result = validateSplitAmount(splitAmount, maxSplit);
+            if (!result.valid) {
+                splitAmountInput.setCustomValidity(result.message);
                 if (validationMsg) {
-                    validationMsg.textContent = 'Enter a valid amount (at least 1)';
+                    validationMsg.textContent = result.message;
                     validationMsg.style.display = 'block';
                 }
                 return;
             }
-            
-            if (splitAmount > maxSplit) {
-                splitAmountInput.setCustomValidity('Cannot exceed ' + maxSplit + ' soldiers');
-                if (validationMsg) {
-                    validationMsg.textContent = 'Cannot exceed ' + maxSplit + ' soldiers';
-                    validationMsg.style.display = 'block';
-                }
-                return;
-            }
-            
+
+            sendSplitCommand(armyId, splitAmount, validationMsg);
+        }
+
+        // Shared SPLIT command, used by both the bottom Armies list and the under-map panel.
+        function sendSplitCommand(armyId, splitAmount, msgEl) {
             fetch('/api/session/command', {
                 method: 'POST',
                 headers: getSessionHeaders(),
-                body: JSON.stringify({
-                    type: 'SPLIT',
-                    armyId: armyId,
-                    splitAmount: splitAmount
-                })
+                body: JSON.stringify({ type: 'SPLIT', armyId: armyId, splitAmount: splitAmount })
             })
             .then(response => {
+                if (response.status === 401) { sessionExpired(); return null; }
                 if (!response.ok) {
                     return response.json().then(err => {
-                        const message = (err && err.message) ? err.message : 'Failed to split army';
-                        throw new Error(message);
+                        throw new Error((err && err.message) ? err.message : 'Failed to split army');
                     }).catch(() => {
                         throw new Error('Failed to split army');
                     });
@@ -811,14 +1266,36 @@
                 return response.json();
             })
             .then(data => {
+                if (!data) return;
                 updateUI(data);
                 showToast('Army split successfully', 'success');
             })
             .catch(error => {
                 const errorMsg = error.message || 'Network error occurred';
+                if (msgEl) {
+                    msgEl.textContent = errorMsg;
+                    msgEl.style.display = 'block';
+                }
                 showToast('Error splitting army: ' + errorMsg, 'danger');
                 console.error('Error:', error);
             });
+        }
+
+        // Split the army currently selected on the map, from the under-map panel.
+        function panelSplit() {
+            if (!selectedArmy) return;
+            const input = document.getElementById('panelSplitAmount');
+            const msgEl = document.getElementById('panelSplitMsg');
+            const amount = parseInt(input.value);
+            const maxSplit = parseInt(input.max);
+            const result = validateSplitAmount(amount, maxSplit);
+            if (!result.valid) {
+                msgEl.textContent = result.message;
+                msgEl.style.display = 'block';
+                return;
+            }
+            msgEl.style.display = 'none';
+            sendSplitCommand(selectedArmy.id, amount, msgEl);
         }
         
         // ========================
@@ -841,12 +1318,12 @@
             const tile = gameState.grid[gridX][gridY];
             if (tile.type === 'CASTLE') {
                 if (tile.ownerId === 0) {
-                    return 'Castle \u2014 neutral. Occupy for 3 consecutive turns to capture.';
+                    return 'Castle \u2014 neutral. Occupy for ' + CASTLE_CAPTURE_TURNS + ' consecutive turns to capture.';
                 }
                 if (tile.occupationTicks > 0) {
-                    return 'Castle \u2014 Player ' + tile.ownerId + '. Capture progress: ' + tile.occupationTicks + '/3';
+                    return 'Castle \u2014 Player ' + tile.ownerId + '. Capture progress: ' + tile.occupationTicks + '/' + CASTLE_CAPTURE_TURNS;
                 }
-                return 'Castle \u2014 Player ' + tile.ownerId + '. Hold for 3 consecutive turns to capture.';
+                return 'Castle \u2014 Player ' + tile.ownerId + '. Hold for ' + CASTLE_CAPTURE_TURNS + ' consecutive turns to capture.';
             }
             
             if (tile.type === 'VILLAGE') {
@@ -868,13 +1345,14 @@
             }
             
             loadSettings();
-            
+            loadRunHistory();
+
             fetch('/api/session/state', {
                 headers: getSessionHeaders()
             })
                 .then(response => {
                     if (response.status === 401) {
-                        logout();
+                        sessionExpired();
                         return;
                     }
                     if (!response.ok) {
@@ -923,6 +1401,7 @@
                         selectedArmy = army;
                         showToast('Army #' + army.id + ' selected. Click a tile to move.', 'info');
                         drawMap(lastGameState);
+                        updateSelectedArmyPanel();
                     }
                 } else {
                     // Check if clicking on an empty area (no player 1 army) to deselect
@@ -932,6 +1411,7 @@
                         selectedArmy = clickedArmy;
                         showToast('Army #' + clickedArmy.id + ' selected. Click a tile to move.', 'info');
                         drawMap(lastGameState);
+                        updateSelectedArmyPanel();
                         return;
                     }
                     
@@ -955,6 +1435,7 @@
                     .then(data => {
                         updateUI(data);
                         selectedArmy = null;
+                        updateSelectedArmyPanel();
                     })
                     .catch(error => {
                         console.error('Error:', error);
@@ -966,11 +1447,7 @@
             // Right-click to deselect
             canvas.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
-                if (selectedArmy) {
-                    selectedArmy = null;
-                    if (lastGameState) drawMap(lastGameState);
-                    showToast('Army deselected', 'info');
-                }
+                deselectArmy();
             });
             
             // Hover tooltip (throttled via requestAnimationFrame)
@@ -1057,6 +1534,45 @@
                 resizeTimer = setTimeout(function() {
                     if (lastGameState) drawMap(lastGameState);
                 }, 150);
+            });
+
+            // Keyboard shortcuts (Space=tick, R=reset, S=focus split amount,
+            // A=toggle auto play, Escape=deselect). Ignored while typing in a
+            // form field, or with a modifier held (so Cmd/Ctrl+R refresh etc.
+            // still work), so as not to fight normal browser/input behavior.
+            document.addEventListener('keydown', function(e) {
+                const tag = e.target && e.target.tagName;
+                if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+                if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+                switch (e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        tick();
+                        break;
+                    case 'r':
+                    case 'R':
+                        reset();
+                        break;
+                    case 's':
+                    case 'S':
+                        if (selectedArmy) {
+                            const input = document.getElementById('panelSplitAmount');
+                            if (input && !input.disabled) {
+                                e.preventDefault();
+                                input.focus();
+                                input.select();
+                            }
+                        }
+                        break;
+                    case 'a':
+                    case 'A':
+                        toggleAutoPlay();
+                        break;
+                    case 'Escape':
+                        deselectArmy();
+                        break;
+                }
             });
         });
     </script>

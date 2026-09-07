@@ -1072,7 +1072,31 @@ class GameServiceTest {
         assertEquals(originalY, newArmy.getY());
         assertEquals(updatedOriginal.getPlayerId(), newArmy.getPlayerId());
     }
-    
+
+    @Test
+    void splitArmyInheritsMoraleAndLoyaltyFromTheParent() {
+        GameState internalState = gameService.getInternalStateForTest();
+        Army parent = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 1)
+            .findFirst()
+            .get();
+        parent.setSoldiers(20);
+        parent.setMorale(115);
+        parent.setLoyalty(70);
+
+        gameService.splitArmy(parent.getId(), 8);
+
+        Army splitOff = gameService.getState().getArmies().stream()
+            .filter(a -> a.getPlayerId() == 1 && a.getId() != parent.getId())
+            .findFirst()
+            .get();
+
+        // Fresh 100/100 here would make splitting a free way to shed low loyalty and its desertion.
+        assertEquals(8, splitOff.getSoldiers());
+        assertEquals(115, splitOff.getMorale());
+        assertEquals(70, splitOff.getLoyalty());
+    }
+
     @Test
     void splitArmyValidatesMinimumSoldiers() {
         GameState state = gameService.getState();
@@ -2601,7 +2625,7 @@ class GameServiceTest {
             .findFirst()
             .get();
         
-        // Change to AGGRESSIVE_TRAINING (target morale = 100 + 10 = 110, target loyalty = 100 - 5 = 95)
+        // Change to AGGRESSIVE_TRAINING (target morale = 100 + 10 = 110, target loyalty = 100 - 25 = 75)
         gameService.changePolicy(RulerDecision.PolicyCategory.MILITARY, "AGGRESSIVE_TRAINING");
         
         // Tick several times to allow morale/loyalty to drift toward target
@@ -2617,7 +2641,7 @@ class GameServiceTest {
         
         // Should have drifted toward targets
         assertTrue(updatedArmy.getMorale() >= 105, "Morale should drift toward 110, got: " + updatedArmy.getMorale());
-        assertTrue(updatedArmy.getLoyalty() <= 95, "Loyalty should drift toward 95, got: " + updatedArmy.getLoyalty());
+        assertTrue(updatedArmy.getLoyalty() <= 75, "Loyalty should drift toward 75, got: " + updatedArmy.getLoyalty());
     }
     
     @Test

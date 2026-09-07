@@ -6,8 +6,12 @@
 #
 # Prerequisites:
 #   - gcc (Linux) or clang (macOS)
-#   - asn1c submodule initialized and built:
-#       cd ../asn1c && test -f configure || autoreconf -iv && ./configure && make
+#   - asn1c submodule initialized, built AND installed into ../asn1c/install,
+#     which is where ASN1C and ASN1C_SHARE below expect to find it:
+#       cd ../asn1c
+#       test -f configure || autoreconf -iv
+#       ./configure && make
+#       make install prefix="$(pwd)/install"
 #
 # Usage:
 #   make          - compile protocol.asn and build converter binaries
@@ -16,7 +20,8 @@
 # ============================================================================
 
 ASN1C       := ../asn1c/install/bin/asn1c
-ASN1C_FLAGS := -fcompound-names -fincludes-quoted
+ASN1C_SHARE := ../asn1c/install/share/asn1c
+ASN1C_FLAGS := -fcompound-names -fincludes-quoted -S $(abspath $(ASN1C_SHARE))
 PROTOCOL    := ../protocol.asn
 GEN_DIR     := generated
 LIB_DIR     := lib

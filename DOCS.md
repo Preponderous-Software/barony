@@ -29,6 +29,7 @@ Includes:
 - Command examples (curl)
 - Response structure
 - Technical architecture
+- Authentication flow (player accounts via the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service)
 
 ## I Want to Develop or Contribute
 

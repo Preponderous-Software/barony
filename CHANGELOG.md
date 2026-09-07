@@ -2,6 +2,109 @@
 
 All notable changes to the Barony Prototype MVP are documented in this file.
 
+## [Unreleased]
+
+### Web Client
+
+- ✅ **The Run History panel is filled in again** (#82): the game page's request for the player's
+  win/loss tally and recent runs was made against the web client, which had no route for it, so it
+  was answered with a 404 and the panel stayed empty wherever `/api/*` is not routed straight to
+  the backend — including the documented `docker-compose` / `localhost:3000` setup. `GET
+  /api/session/runs` is now proxied like every other per-player endpoint, forwarding the auth
+  cookie and passing the backend's status back so a 401 still triggers the re-login flow. A new
+  `ProxyRouteCoverageTest` reads the API calls out of every rendered page and fails if any of them
+  has no route on the web client, so the same gap cannot reopen for the next endpoint either.
+- ✅ **Sidebar moves always move something on screen** (#80): the ▲/▼ buttons now move a shown
+  panel past the next panel the player can see, instead of swapping it with a hidden panel and
+  looking like nothing happened. Hidden panels travel with the shown panel they sit under, so
+  showing one again puts it back where it was rather than at the bottom of the sidebar, and a
+  ▲/▼ is disabled once the panel reaches the top or bottom of what is shown. A hidden panel still
+  moves one place at a time in the layout list, so it can be positioned before being shown. The
+  rules are pure functions (`movePanelAmongVisible`, `canMovePanel` in `game-logic.js`) covered by
+  the Node test suite.
+- ✅ **The sidebar can be rearranged** (progress on #55): a **Panels** block in the Settings panel
+  lets each sidebar panel be shown or hidden with a checkbox and moved with ▲/▼ buttons, plus a
+  **Reset Panel Layout** button that restores the default arrangement. The chosen order and
+  visibility are remembered per browser (`barony_panel_layout`) and applied before first paint.
+  Panels are moved in the DOM rather than restyled with CSS `order`, so keyboard tab order follows
+  what is on screen; as a side effect the Run History panel now sits under Game Status as
+  documented, instead of above it. The Settings panel cannot be hidden, as it holds these
+  controls. The order/visibility rules are pure functions (`resolvePanelOrder`,
+  `movePanelInOrder`, `isPanelHidden` in `game-logic.js`) covered by the Node test suite.
+  Persisting the layout server-side per account is still open (see #55).
+- ✅ **Sidebar panels remember their open/closed state** (progress on #55): each collapsible
+  panel (Game Status, Run History, Change Policy, Settings, Armies) now persists whether the
+  player left it open or collapsed, per browser, instead of resetting to the defaults on every
+  reload. The open/closed decision is a pure function (`resolvePanelOpenState` in
+  `game-logic.js`) covered by the Node test suite.
+- ✅ **Run history across games** (#70): finishing a run now writes a durable record (result, turns
+  played, castles/villages held, armies and soldiers remaining) that survives a reset and a backend
+  restart, via a new `GET /api/session/runs` endpoint. The sidebar's new Run History panel shows the
+  player's win/loss tally and their recent runs.
+- ✅ **Keyboard shortcuts** for the most common actions (#63): `Space` advances a turn, `R` resets
+  the game, `S` jumps focus to the split-amount box for the selected army, `A` toggles Auto Play,
+  and `Escape` deselects the current army (same as right-click). Ignored while typing in a form
+  field or with a modifier key held, so browser/input shortcuts still work.
+- ✅ **Castle objective progress** in the Game Status panel (progress toward #53): shows how many
+  castles you control, how many the enemy controls, and how many are neutral, derived from the
+  game state already sent to the client (no extra request).
+- ✅ **End-of-game run summary** (#53): the game-over banner now reports turns played, castles and
+  villages held out of the map total, and the armies and soldiers you finished with, instead of a
+  bare win/lose line. Every figure is derived from the final game state, so it costs no extra
+  request.
+- ✅ **Milestone notifications** (#53): capturing or losing a castle raises a toast with the
+  updated castle count, and a siege on the last castle of either side counts down the turns until
+  it flips. Nothing is announced on first load or after a reset. Its castle-diffing logic is now
+  covered by an automated test (see below, #71) rather than by a rendered-markup test plus manual
+  play alone.
+- ✅ **Game page logic now has automated tests** (#71): the holdings/castle-count arithmetic, the
+  stat-class thresholds, the castle-capture diffing behind milestone toasts, and the army
+  split-amount validation are extracted from the inline `<script>` into
+  `web-client/src/main/resources/static/js/game-logic.js` and exercised by a Node test suite
+  (`web-client/src/test/js/game-logic.test.js`), run in CI. This is a refactor only — the game
+  page's behaviour is unchanged; option 2 from #71 (a headless-browser test of the click/render
+  paths) is still open.
+
+### Gameplay
+
+- ✅ **Army desertion actually happens now** (#60) — it was inert in every reachable game state: the only policy that lowered loyalty targeted 95%, and `(100 - 95) / 20` truncated to a 0% desertion rate for any army size
+- ✅ Desertion is tracked in basis points with the fraction under one soldier carried between turns, so the documented `(100 - loyalty) / 20`% rate bites on the few-dozen-soldier armies the game actually produces instead of rounding to nothing
+- ✅ Restoring an army to 100% loyalty clears whatever desertion was still pending
+- ✅ **Aggressive Training is now a real trade-off**: loyalty modifier changed from -5% to -25%, putting its target at 75% — inside the "armies may lose soldiers" band the player guide has always described
+- ✅ A totally disloyal army can finally shrink to nothing and be removed; previously that path was unreachable
+- ✅ **Split armies now inherit the parent's morale and loyalty** instead of arriving as fresh recruits at 100/100 — otherwise splitting would be a free one-click reset of a disloyal army's desertion
+
+### Documentation
+
+- ✅ `PLAYER_GUIDE.md` now documents the controls the web client actually has (Advance Turn / Reset Game / Auto Play buttons, the split panel under the map, the policy dropdowns) instead of keyboard shortcuts that were never implemented
+- ✅ "Reading the Interface" rewritten to match the real layout (sidebar panels, selected-army panel) — the old top bar, side panel, and event log it described don't exist
+- ✅ Removed the `[Unreleased]` bullet that said the auth token is stored client-side; it contradicted the **Security** entries above it (#61)
+- ✅ `MVP.md`'s "Out of Scope" list no longer flatly says save/load doesn't exist (#53) — games *are* saved per account and restored across restarts; what's still missing is player-managed save slots
+- ✅ `MVP.md`'s toast-notification and game-over descriptions now match what the web client actually reports
+
+### Persistence
+
+- ✅ Each player's game is now **saved per account and restored after backend restarts/redeploys** instead of being held only in memory (and lost on every restart)
+- ✅ Storage is an embedded **H2** database persisted to `./data` (mount as a volume in production); `DB_URL` switches it to Postgres
+- ✅ Game state is serialized as JSON; a fresh game is persisted on creation and re-saved after every turn, command, reset, and policy change
+- ✅ Army id counter advances past restored armies on load, so a split after reload can't reuse an existing id
+
+### Security
+
+- ✅ Auth token moved from `localStorage` into an **HttpOnly, Secure, SameSite=Lax cookie** (`barony_token`), so browser JavaScript can no longer read it and an XSS can't exfiltrate the session (#46)
+- ✅ Login sets the cookie and no longer returns the JWT in the response body; logout revokes the token and clears the cookie
+- ✅ Backend reads the token from the cookie (with a `Bearer` header fallback for CLI/API clients); the web client transparently forwards the cookie and relays `Set-Cookie`
+
+### Authentication (UserAuth integration)
+
+- ✅ Player accounts via the standalone [UserAuth](https://github.com/Preponderous-Software/UserAuth) service (registration, login, logout)
+- ✅ Register and login screens in the web client; logout revokes the token server-side
+- ✅ Login issues a signed JWT via UserAuth, which the backend validates on every authenticated game request (see **Security** above for how the token is carried)
+- ✅ Backend proxies `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` to UserAuth and validates the token on every authenticated request
+- ✅ Per-player game endpoints (`/api/session/*`) reject missing, invalid, expired, or revoked tokens with `401`
+- ✅ Game state is keyed by the authenticated username instead of an anonymous session id
+- ✅ `docker-compose` now starts UserAuth and its Postgres alongside Barony (configurable via `JWT_SECRET`, `USERAUTH_PATH`, `ALLOWED_ORIGINS`)
+
 ## [MVP v1.0.0] - 2026-02-11
 
 ### Core Game Features

@@ -15,7 +15,7 @@ All 7 major features have been successfully implemented and tested. See [CHANGEL
 3. ✅ **Territory Control & Village Mechanics** - Ownership system with persistent villages
 4. ✅ **Castle Capture & Win Conditions** - 3-tick capture timer with game over state
 5. ✅ **Basic AI Opponent** - Rule-based AI with priority decision-making
-6. ✅ **Enhanced UI & User Experience** - Mouse controls, tooltips, HUD panels, game log
+6. ✅ **Enhanced UI & User Experience** - Mouse controls, canvas tooltips, sidebar panels, toast notifications
 7. ✅ **Ruler Decision System (CK-Lite)** - Policy-based strategic layer with stat mechanics
 
 ### Success Metrics Achievement
@@ -92,7 +92,8 @@ The prototype initially supported:
 
 #### Features
 - **Army Display:** Show soldier count directly on army visualization
-- **Army Splitting:** Split an army into two armies at the same location
+- **Army Splitting:** Split an army into two armies at the same location; the new army inherits the
+  parent's morale and loyalty, so a split can't launder away accumulated desertion
 - **Army Merging:** Automatically merge friendly armies at the same location
 - **Minimum Army Size:** Require at least 1 soldier per army (can't split to 0)
 
@@ -242,39 +243,51 @@ The prototype initially supported:
 **Current:** Minimal rendering with keyboard-only controls  
 **MVP:** Improved visualization and mouse-based interaction
 
+**Note:** this section originally specified a native/desktop UI (GLFW mouse callbacks, a
+top/bottom HUD bar, a scrolling game log). The web client was instead built as a
+Thymeleaf + HTML5 Canvas browser app, so those items were superseded by the browser-native
+equivalents below. See [PLAYER_GUIDE.md](PLAYER_GUIDE.md)'s "Reading the Interface" section
+for the player-facing description of the real UI.
+
 #### Features
 - **Mouse Controls:**
   - Click army to select it
   - Click destination to move selected army
   - Right-click to deselect
 - **Visual Feedback:**
-  - Highlight selected army (glowing effect or border)
-  - Show movement range/destination preview
-  - Display hover tooltips (tile type, army size, ownership)
-- **HUD Elements:**
-  - Top bar: Tick count, player income, army count
-  - Side panel: Selected army details
-  - Bottom bar: Game status messages
-- **Game Log:** Recent events (army moved, village captured, combat occurred)
+  - Highlight selected army (gold ring around the selected army)
+  - Display hover tooltips (tile type, ownership, army stats, castle capture progress,
+    village generation info)
+- **Sidebar Panels:** Collapsible Game Status & Stats, Run History, Armies, Change Policy, and
+  Settings panels alongside the canvas and controls, which the player can show/hide and reorder
+  from the Settings panel
+- **Game-Over Banner:** Overlays the canvas with the result plus a summary of the run — turns
+  played, castles and villages held out of the map total, and armies and soldiers remaining
+- **Toast Notifications:** Non-blocking, auto-dismissing toasts (info/success/warning/danger)
+  report events such as army selection, castles changing hands, a siege on either side's last
+  castle, and rejected commands, replacing the originally-planned scrolling game log
+- **Keyboard Shortcuts:** Shortcuts for advancing the turn, resetting the game, and other
+  common actions (see PLAYER_GUIDE.md)
 
 #### Web Client Changes
-- Implement mouse input handling (GLFW mouse callbacks)
+- Implement mouse input handling (canvas click/hover listeners)
 - Add army selection state and rendering
-- Implement tooltip system with position tracking
-- Add HUD rendering using text rendering or simple shapes
-- Add game log with scrolling message list
+- Implement canvas tooltip system with position tracking
+- Add collapsible sidebar panel rendering
+- Add toast notification system
+- Add keyboard shortcut handling
 
 #### Backend Changes
 - No changes required (all UI-side)
 
 #### Tasks
-- [ ] Web Client: Add mouse input handling
-- [ ] Web Client: Implement army selection
-- [ ] Web Client: Add tooltip system
-- [ ] Web Client: Create HUD panel rendering
-- [ ] Web Client: Implement game log
+- [x] Web Client: Add mouse input handling
+- [x] Web Client: Implement army selection
+- [x] Web Client: Add tooltip system
+- [x] Web Client: Create sidebar panel rendering
+- [x] Web Client: Implement toast notifications
 - [ ] Web Client: Add unit tests for UI interactions
-- [ ] Documentation: Update README with controls and UI
+- [x] Documentation: Update README with controls and UI
 
 ---
 
@@ -308,7 +321,7 @@ The prototype initially supported:
    - Infrastructure Investment: -10% income, +10% stability
 
 2. **Military Policies** (affects army morale and loyalty)
-   - Aggressive Training: +10% morale, -5% loyalty
+   - Aggressive Training: +10% morale, -25% loyalty
    - Standard Service: No change to morale or loyalty
    - Veteran Benefits: -10% morale, +10% loyalty
 
@@ -345,7 +358,12 @@ The prototype initially supported:
 - Base desertion: 0% per tick
 - Modified desertion: `(100 - loyalty) / 20`% per tick
 - Example: 80% loyalty = 1% desertion per tick
+- Fractions of a soldier are carried between ticks (`Army.desertionCarryBasisPoints`) rather than
+  truncated away, so the rate applies to the few-dozen-soldier armies the game actually produces
+- Reaching 100% loyalty clears any carried fraction
 - Loyalty recovers slowly over time toward 100% (2% per tick)
+- Aggressive Training targets 75% loyalty so this band is reachable; the other military policies
+  target 100% or above, i.e. no desertion at all
 
 *Population Growth:*
 - Affects maximum soldiers that can be generated at villages
@@ -365,7 +383,7 @@ The prototype initially supported:
 
 #### Web Client Changes
 - Add policy selection UI (radio buttons or dropdown for each category)
-- Display current policies in HUD (top-right corner)
+- Display current policies in a sidebar panel
 - Show realm statistics panel (stability, morale, loyalty, population)
 - Add visual indicators for villages/armies affected by low stats:
   - Unstable villages: yellow tint
@@ -548,7 +566,9 @@ These features are explicitly **NOT** in MVP:
 - ❌ Resource system beyond soldier generation
 - ❌ Technology/research tree
 - ❌ Multiplayer or networked gameplay
-- ❌ Save/load game functionality
+- ❌ Player-managed save/load (named slots, save-to-file, a save/load menu). Each player's game
+  *is* saved automatically per account and restored after a backend restart — see the Persistence
+  entries in CHANGELOG.md — but there is no way to keep or choose between multiple saves.
 - ❌ Advanced AI with multiple difficulty levels
 - ❌ Sound effects and music
 - ❌ Animations and particle effects
