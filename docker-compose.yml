@@ -77,6 +77,8 @@ services:
       - "3000:3000"
     environment:
       - BACKEND_URL=http://backend:8080
+      # Usage reporting to trace (one startup event + page views, path only; see README) is on by default.
+      # - USAGE_REPORTING_ENABLED=false
     depends_on:
       backend:
         condition: service_healthy

@@ -19,3 +19,19 @@ spring:
           content:
             enabled: true
             paths: /**
+
+# The web client's own version, baked in from pom.xml by Maven resource filtering.
+barony:
+  version: "@project.version@"
+
+# Usage reporting (https://github.com/Stephenson-Software/trace), under the same program name and
+# key as the backend. Once ready the web client sends one "startup" event (program name, version,
+# service=true), and then one "page-view" event per HTML page it serves, carrying only the request
+# path and the version: no IP address, user agent, cookie, session, account or referrer -- a count
+# of page loads, not of visitors. API calls, static assets, redirects, error pages and crawlers are
+# not counted. Sends run on the client's own daemon thread and never slow a request or startup.
+# Turn it all off with USAGE_REPORTING_ENABLED=false.
+usage-reporting:
+  enabled: ${USAGE_REPORTING_ENABLED:true}
+  endpoint: ${USAGE_REPORTING_ENDPOINT:https://trace.danielstephenson.dev}
+  key: ${USAGE_REPORTING_KEY:DLVkvsCqk5OjQ3lrWu9fv8Q0Ik_3g36X7eFXdc1Dzb0}
