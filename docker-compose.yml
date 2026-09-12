@@ -51,6 +51,8 @@ services:
       - "8080:8080"
     environment:
       - USERAUTH_URL=http://userauth:9998
+      # Usage reporting to trace (one startup event; see README) is on by default.
+      # - USAGE_REPORTING_ENABLED=false
     depends_on:
       userauth:
         condition: service_started

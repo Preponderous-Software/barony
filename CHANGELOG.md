@@ -139,6 +139,10 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ Army id counter advances past restored armies on load, so a split after reload can't reuse an existing id
 - ✅ Each player's **interface preferences are saved per account** (#55) in a new `user_preferences` table, alongside their saved game; the payload is stored as opaque JSON so a preference added to the game page needs no backend change, capped at 8192 characters so an account can't be used as unbounded storage
 
+### Usage reporting
+
+- ✅ The backend reports **one `startup` event** to the [trace](https://github.com/Stephenson-Software/trace) usage service once it is ready, carrying only the program name (`barony`), the backend version and the tag `service=true` — nothing per request, and nothing about players, accounts, saved games or the host. The send runs on the client's own daemon thread, never throws, and a trace server that is down costs nothing beyond a dropped report. Configured through `usage-reporting.enabled` / `usage-reporting.endpoint` / `usage-reporting.key` in `backend/src/main/resources/application.properties`, each overridable by environment variable; `USAGE_REPORTING_ENABLED=false` turns it off. The client is [trace-client-java](https://github.com/Stephenson-Software/trace-client-java) vendored as one file under `com.barony.backend.trace`.
+
 ### Security
 
 - ✅ Auth token moved from `localStorage` into an **HttpOnly, Secure, SameSite=Lax cookie** (`barony_token`), so browser JavaScript can no longer read it and an XSS can't exfiltrate the session (#46)
