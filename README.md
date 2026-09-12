@@ -240,6 +240,19 @@ GitHub Actions runs on all PRs:
 - Pages are served from the web client's own origin, so every `/api/*` call they make is answered
   by the web client and proxied to the backend with the auth cookie forwarded — a backend endpoint
   a page calls needs a matching proxy route here (guarded by `ProxyRouteCoverageTest`)
+- **Usage reporting → page views:** the web client reports to the same
+  [trace](https://github.com/Stephenson-Software/trace) service, under the same program name and
+  key as the backend: one `startup` event when it is ready (version, `service=true`), and then one
+  `page-view` event per HTML page it serves. A page view records the **request path only**
+  (`/login`, `/register`, `/game` — no query string, capped at 200 characters) plus the version;
+  it never records an IP address, user agent, cookie, session, account or referrer, so the result
+  is a count of page loads, not of visitors. API calls, static assets, redirects, error pages and
+  requests from crawlers, monitors and scripted clients are not counted. Reports are sent off the
+  request thread and never slow a page. Settings live in
+  `web-client/src/main/resources/application.yml` under `usage-reporting.*` (`enabled`,
+  `endpoint`, `key`), each with an environment-variable override — set
+  `USAGE_REPORTING_ENABLED=false` on the web client to turn page views and its startup event off
+  together. Tests always run with it off.
 
 ## Troubleshooting
 
