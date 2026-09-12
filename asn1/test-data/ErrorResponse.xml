@@ -1,0 +1,5 @@
+<ErrorResponse>
+    <status>404</status>
+    <error>Not Found</error>
+    <message>Session not found</message>
+</ErrorResponse>

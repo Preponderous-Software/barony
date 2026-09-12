@@ -1,0 +1,7 @@
+<Tile>
+    <type><village/></type>
+    <ownerId>1</ownerId>
+    <occupationTicks>0</occupationTicks>
+    <stability>100</stability>
+    <population>150</population>
+</Tile>
