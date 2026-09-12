@@ -223,6 +223,15 @@ GitHub Actions runs on all PRs:
 - Storage: embedded **H2** saved to `./data` by default (mount it as a volume in production); set `DB_URL` (+ `DB_USERNAME`/`DB_PASSWORD`) to use Postgres instead
 - Unique army IDs (not list indices)
 - CORS: localhost only
+- **Usage reporting:** once the backend is ready it sends a single `startup` event to the
+  [trace](https://github.com/Stephenson-Software/trace) usage service at
+  `https://trace.danielstephenson.dev`, carrying only the program name (`barony`), the backend
+  version and the tag `service=true` — nothing per request, and nothing about players, accounts,
+  saved games or the host. The send happens on its own daemon thread, never throws and never
+  blocks startup; an unreachable trace server is a dropped report, not an error. Settings live in
+  `backend/src/main/resources/application.properties` under `usage-reporting.*` (`enabled`,
+  `endpoint`, `key`), each with an environment-variable override — set
+  `USAGE_REPORTING_ENABLED=false` to turn it off. Tests always run with it off.
 
 ### Web Client
 - Spring Boot + Thymeleaf
