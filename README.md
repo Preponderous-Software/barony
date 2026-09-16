@@ -231,7 +231,8 @@ GitHub Actions runs on all PRs:
   blocks startup; an unreachable trace server is a dropped report, not an error. Settings live in
   `backend/src/main/resources/application.properties` under `usage-reporting.*` (`enabled`,
   `endpoint`, `key`), each with an environment-variable override — set
-  `USAGE_REPORTING_ENABLED=false` to turn it off. Tests always run with it off.
+  `USAGE_REPORTING_ENABLED=false` to turn it off. Tests always run with it off. Every opt-out is
+  listed under [Usage reporting](#usage-reporting).
 
 ### Web Client
 - Spring Boot + Thymeleaf
@@ -252,7 +253,8 @@ GitHub Actions runs on all PRs:
   `web-client/src/main/resources/application.yml` under `usage-reporting.*` (`enabled`,
   `endpoint`, `key`), each with an environment-variable override — set
   `USAGE_REPORTING_ENABLED=false` on the web client to turn page views and its startup event off
-  together. Tests always run with it off.
+  together. Tests always run with it off. Every opt-out is listed under
+  [Usage reporting](#usage-reporting).
 
 ## Troubleshooting
 
@@ -280,6 +282,29 @@ For detailed troubleshooting, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md).
 - **Technical issues?** Check the Troubleshooting section above
 - **Can't find what you need?** See [DOCS.md](DOCS.md) for documentation index
 - **Found a bug?** Open an issue on GitHub
+
+## Usage reporting
+
+Usage reporting is on by default: the backend and the web client each send one `startup` event
+(program name `barony`, version, tag `service=true`) to the trace service at
+`https://trace.danielstephenson.dev` when they are ready, and the web client sends one
+`page-view` event per HTML page it serves (request path and version only). Nothing about
+players, accounts, saved games, visitors (no IP address, user agent, cookie, session or
+referrer) or the host is sent, and nothing per API call.
+
+Turn it off any of these ways (the backend and the web client are separate processes, so
+apply it to each one that should stop):
+
+- `USAGE_REPORTING_ENABLED=false` in the process's environment (`usage-reporting.enabled` in
+  `backend/src/main/resources/application.properties` and
+  `web-client/src/main/resources/application.yml`)
+- `TRACE_USAGE_REPORTING=off` in the environment (also `false`, `0`, `no`; shared by every
+  program that reports to trace, and it wins over the setting above)
+- `DO_NOT_TRACK=1` in the environment (also `true`, `yes`; see
+  [consoledonottrack.com](https://consoledonottrack.com))
+
+Each process logs one line at startup saying whether reporting is on and, if it is off, which
+switch turned it off. Details: https://github.com/Stephenson-Software/trace#usage-reporting
 
 ## License
 This project is licensed under the **Stephenson Software Non-Commercial License (Stephenson-NC)**.  
