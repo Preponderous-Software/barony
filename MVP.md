@@ -164,8 +164,8 @@ ticked where either document covers the mechanic.
 - [x] Backend: Add unit tests for ownership and capture (6-8 tests)
 - [x] Web Client: Update tile rendering for ownership colors
 - [ ] Web Client: Display territory statistics panel — the Game Status panel shows castles held,
-  but not villages owned or income per tick during play (villages held appear only in the
-  game-over run summary)
+  but not villages owned or income per tick during play (villages held are reported only once a
+  run ends, in the game-over summary and Run History)
 - [ ] Web Client: Add unit tests for rendering
 - [x] Documentation: Update README with territory mechanics
 
