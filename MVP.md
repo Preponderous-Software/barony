@@ -51,6 +51,12 @@ The prototype initially supported:
 
 ## MVP Feature Set
 
+**Note on the task lists:** each box is ticked only where the source shows the work landed; tasks
+not built, or not verifiable from the source tree (such as balancing through playtesting), are left
+unticked as a record of what remains. The gameplay detail the *Documentation* tasks asked for landed
+in [PLAYER_GUIDE.md](PLAYER_GUIDE.md), which the README's Game Overview links to, so those tasks are
+ticked where either document covers the mechanic.
+
 ### 1. Army Movement & Pathfinding
 
 **Current:** Armies teleport instantly to any position via REST command  
@@ -74,14 +80,15 @@ The prototype initially supported:
 - Visual indicator showing army destination (selection box or path preview)
 
 #### Tasks
-- [ ] Backend: Add destination fields to Army model
-- [ ] Backend: Implement pathfinding algorithm (Manhattan distance for MVP)
-- [ ] Backend: Add movement processing in tick() method
-- [ ] Backend: Update command validation for movement
-- [ ] Backend: Add unit tests for movement mechanics (8-10 tests)
-- [ ] Web Client: Add visual feedback for army destination
+- [x] Backend: Add destination fields to Army model
+- [x] Backend: Implement pathfinding algorithm (Manhattan distance for MVP)
+- [x] Backend: Add movement processing in tick() method
+- [x] Backend: Update command validation for movement
+- [x] Backend: Add unit tests for movement mechanics (8-10 tests)
+- [ ] Web Client: Add visual feedback for army destination — the destination is only reported by
+  the army's tooltip; drawing it on the canvas is tracked on #89
 - [ ] Web Client: Test movement commands and rendering
-- [ ] Documentation: Update README with movement mechanics
+- [x] Documentation: Update README with movement mechanics
 
 ---
 
@@ -111,15 +118,18 @@ The prototype initially supported:
 - Show multiple armies at same location (offset circles or stack indicator)
 
 #### Tasks
-- [ ] Backend: Add SPLIT command type to Command enum
-- [ ] Backend: Implement splitArmy() in GameService
-- [ ] Backend: Implement automatic army merging
-- [ ] Backend: Add unit tests for splitting/merging (6-8 tests)
-- [ ] Web Client: Display soldier count on armies
-- [ ] Web Client: Add split command input handling
+- [x] Backend: Add SPLIT command type to Command enum — `Command.type` is a string rather than an
+  enum; `GameService.executeCommand` dispatches `"SPLIT"` alongside `"MOVE"`
+- [x] Backend: Implement splitArmy() in GameService
+- [x] Backend: Implement automatic army merging — `CombatService.mergeFriendlyArmies`, called from
+  `GameService.tick()`
+- [x] Backend: Add unit tests for splitting/merging (6-8 tests)
+- [x] Web Client: Display soldier count on armies
+- [x] Web Client: Add split command input handling
 - [x] Web Client: Render multiple armies at same location
-- [ ] Web Client: Add unit tests for army display
-- [ ] Documentation: Update README with army management
+- [x] Web Client: Add unit tests for army display — `layoutArmiesOnTiles` and `findArmyAtPoint` in
+  the Node suite
+- [x] Documentation: Update README with army management
 
 ---
 
@@ -138,7 +148,8 @@ The prototype initially supported:
 - Add `Tile.ownerId` field (0=neutral, 1=player1, 2=player2)
 - Modify village soldier generation to check tile ownership
 - Add village capture logic when enemy army occupies village
-- Add `GameState.getPlayerIncome(playerId)` method
+- Add `GameState.getPlayerIncome(playerId)` method — landed as `GameService.getPlayerIncome`,
+  which delegates to `PolicyService.getPlayerIncome`
 
 #### Web Client Changes
 - Color villages based on ownership (blue/red tint on brown base)
@@ -146,15 +157,17 @@ The prototype initially supported:
 - Add visual feedback when capturing a village
 
 #### Tasks
-- [ ] Backend: Add ownerId to Tile model
-- [ ] Backend: Implement village capture logic in tick()
-- [ ] Backend: Update soldier generation to respect ownership
-- [ ] Backend: Add getPlayerIncome() calculation
-- [ ] Backend: Add unit tests for ownership and capture (6-8 tests)
-- [ ] Web Client: Update tile rendering for ownership colors
-- [ ] Web Client: Display territory statistics panel
+- [x] Backend: Add ownerId to Tile model
+- [x] Backend: Implement village capture logic in tick()
+- [x] Backend: Update soldier generation to respect ownership
+- [x] Backend: Add getPlayerIncome() calculation
+- [x] Backend: Add unit tests for ownership and capture (6-8 tests)
+- [x] Web Client: Update tile rendering for ownership colors
+- [ ] Web Client: Display territory statistics panel — the Game Status panel shows castles held,
+  but not villages owned or income per tick during play (villages held appear only in the
+  game-over run summary)
 - [ ] Web Client: Add unit tests for rendering
-- [ ] Documentation: Update README with territory mechanics
+- [x] Documentation: Update README with territory mechanics
 
 ---
 
@@ -173,7 +186,8 @@ The prototype initially supported:
 #### Backend Changes
 - Add `Tile.ownerId` for castles (extend from village ownership)
 - Add `Tile.occupationTicks` counter for capture progress
-- Add `GameState.checkWinCondition()` method
+- Add `GameState.checkWinCondition()` method — landed as `GameService.checkWinCondition`, run at
+  the end of each tick
 - Add `GameState.gameOver` and `GameState.winnerId` fields
 - Prevent commands when game is over
 
@@ -186,18 +200,21 @@ The prototype initially supported:
 - Add sound effects for capture/victory (optional)
 
 #### Tasks
-- [ ] Backend: Add ownerId to castle tiles (initialization in GameService)
-- [ ] Backend: Add occupationTicks to Tile model
-- [ ] Backend: Implement castle capture logic in tick()
-- [ ] Backend: Add checkWinCondition() and game over state
-- [ ] Backend: Add POST /reset endpoint to restart game
-- [ ] Backend: Add unit tests for castle capture and win conditions (8-10 tests)
-- [ ] Web Client: Render castle ownership colors
+- [x] Backend: Add ownerId to castle tiles (initialization in GameService) — set by `MapGenerator`,
+  which `GameService` uses to build the map
+- [x] Backend: Add occupationTicks to Tile model
+- [x] Backend: Implement castle capture logic in tick()
+- [x] Backend: Add checkWinCondition() and game over state
+- [x] Backend: Add POST /reset endpoint to restart game — `POST /api/reset`, with
+  `POST /api/session/reset` for a signed-in player
+- [x] Backend: Add unit tests for castle capture and win conditions (8-10 tests)
+- [x] Web Client: Render castle ownership colors
 - [x] Web Client: Display capture progress
-- [ ] Web Client: Show win/loss overlay
-- [ ] Web Client: Add reset functionality
-- [ ] Web Client: Add unit tests
-- [ ] Documentation: Update README with victory conditions
+- [x] Web Client: Show win/loss overlay
+- [x] Web Client: Add reset functionality
+- [x] Web Client: Add unit tests — `summarizeHoldings`, `diffCastleMilestones` and the capture
+  progress cases of `getTooltipText` in the Node suite
+- [x] Documentation: Update README with victory conditions
 
 ---
 
@@ -230,13 +247,17 @@ The prototype initially supported:
 - Distinguish AI actions in game log (optional, can defer)
 
 #### Tasks
-- [ ] Backend: Implement executeAI() in GameService
-- [ ] Backend: Add target evaluation logic
-- [ ] Backend: Add AI command generation
-- [ ] Backend: Add AI army spawning/management
-- [ ] Backend: Add unit tests for AI decision-making (8-10 tests)
+- [x] Backend: Implement executeAI() in GameService — landed as `AiService.executeAiTurn`, called
+  from `GameService.tick()` while AI is enabled
+- [x] Backend: Add target evaluation logic
+- [x] Backend: Add AI command generation
+- [x] Backend: Add AI army spawning/management — the AI splits off garrisons to hold captured
+  villages; it has no periodic spawn, and a fresh army appears at its castle only when it has none
+  left, the same respawn player 1 gets
+- [x] Backend: Add unit tests for AI decision-making (8-10 tests)
 - [ ] Backend: Balance AI difficulty through testing
-- [ ] Documentation: Update README with AI description
+- [ ] Documentation: Update README with AI description — neither the README nor the player guide
+  describes how the AI chooses its targets
 
 ---
 
@@ -395,18 +416,20 @@ for the player-facing description of the real UI.
 - Show tick countdown until next policy decision is available
 
 #### Tasks
-- [ ] Backend: Create RulerDecision model and policy types
-- [ ] Backend: Add stability/morale/loyalty/population fields to models
-- [ ] Backend: Implement policy effect calculations in tick()
-- [ ] Backend: Add decision and stats endpoints
-- [ ] Backend: Add unit tests for policy effects (10-12 tests)
+- [x] Backend: Create RulerDecision model and policy types
+- [x] Backend: Add stability/morale/loyalty/population fields to models — stability and population
+  sit on `Tile`, as there is no separate `Village` model
+- [x] Backend: Implement policy effect calculations in tick()
+- [x] Backend: Add decision and stats endpoints
+- [x] Backend: Add unit tests for policy effects (10-12 tests)
 - [ ] Backend: Balance policy effects through playtesting
-- [ ] Web Client: Create policy selection UI
-- [ ] Web Client: Display realm statistics panel
-- [ ] Web Client: Add visual indicators for affected entities
+- [x] Web Client: Create policy selection UI
+- [x] Web Client: Display realm statistics panel
+- [ ] Web Client: Add visual indicators for affected entities — the canvas draws no tint, dimming
+  or outline for low stability, morale or loyalty
 - [ ] Web Client: Test policy changes and effect visualization
-- [ ] Documentation: Update README with ruler decision mechanics
-- [ ] Documentation: Document policy types and effects
+- [x] Documentation: Update README with ruler decision mechanics
+- [x] Documentation: Document policy types and effects
 
 ---
 
