@@ -1279,3 +1279,16 @@ input[type="password"]:focus {
         font-size: var(--font-size-base, 13px);
     }
 }
+
+/* Small, muted cross-site backlink shown at the bottom of every page. */
+.site-footer {
+    text-align: center;
+    margin: 16px 0 0;
+    padding-bottom: 12px;
+    font-size: 12px;
+    color: var(--text-secondary, #8a8278);
+}
+
+.site-footer a {
+    color: var(--accent, #c9a96e);
+}
