@@ -4,6 +4,10 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ## [Unreleased]
 
+### Web Client
+
+- ✅ **Site footer backlink**: every page (login, register and the game) now ends with a small, muted "More by Daniel Stephenson → danielstephenson.dev" line, served from one shared Thymeleaf fragment (`templates/fragments/footer.html`) and covered by `SiteFooterTest`.
+
 ### Usage reporting
 
 - ✅ The **web client reports page views** to the [trace](https://github.com/Stephenson-Software/trace) usage service: one `page-view` event per HTML page served, carrying only the request path (`/login`, `/register`, `/game` — no query string, capped at 200 characters) and the web client's version. Nothing about the visitor is recorded — no IP address, user agent, cookie, session, account or referrer — so the result is a count of page loads, not of visitors. API calls, static assets, redirects, error pages and requests from crawlers, monitors and scripted clients are not counted. The web client also now sends the same one `startup` event the backend does (program name `barony`, version, `service=true`). Reports are queued to the client's own daemon thread and never slow a request; a trace server that is down costs nothing beyond a dropped report. Configured through `usage-reporting.enabled` / `usage-reporting.endpoint` / `usage-reporting.key` in `web-client/src/main/resources/application.yml` (the same key the backend uses), each overridable by environment variable; `USAGE_REPORTING_ENABLED=false` turns page views and the startup event off together. The client is [trace-client-java](https://github.com/Stephenson-Software/trace-client-java) vendored as one file under `com.barony.webclient.trace`; which requests count is decided by `PageViewPolicy` and covered by unit tests plus an end-to-end test against a loopback stub.

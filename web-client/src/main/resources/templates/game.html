@@ -212,6 +212,8 @@
 
     <div id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
+    <div th:replace="~{fragments/footer :: site-footer}"></div>
+
     <!-- Pure game-state calculations, tested independently under web-client/src/test/js/. -->
     <script th:src="@{/js/game-logic.js}"></script>
     <script>
