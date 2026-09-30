@@ -60,7 +60,7 @@ public class UsageReportingService {
             @Value("${usage-reporting.key:}") String key,
             @Value("${barony.version:unknown}") String version) {
         this.version = version == null || version.isBlank() ? "unknown" : version;
-        this.client = buildClient(enabled, endpoint, key);
+        this.client = buildClient(enabled, endpoint, key, this.version);
         if (client.isEnabled()) {
             log.info("Usage reporting is on: barony sends a startup event (program name, version and"
                     + " service=true only) and one page-view event per HTML page served (path and"
@@ -80,18 +80,23 @@ public class UsageReportingService {
         return TraceClient.REASON_CONFIG.equals(reason) ? "usage-reporting.enabled" : reason;
     }
 
-    private static TraceClient buildClient(boolean enabled, String endpoint, String key) {
+    private static TraceClient buildClient(boolean enabled, String endpoint, String key, String version) {
         if (endpoint == null || endpoint.isBlank()) {
             return TraceClient.disabled();
         }
         // The program's own switch goes to the builder rather than short-circuiting here, so
         // the client applies its precedence (environment first) and disabledReason() names
         // the switch that actually turned reporting off.
-        return TraceClient.builder(endpoint, APPLICATION)
+        return TraceClient.builder(endpoint, APPLICATION, version)
                 .key(key)
                 .enabled(enabled)
                 .logger(java.util.logging.Logger.getLogger(UsageReportingService.class.getName()))
                 .build();
+    }
+
+    /** The version sent on every event: the configured one, or {@code unknown} when it is blank. */
+    String version() {
+        return version;
     }
 
     /** Whether reports will actually be sent (false when disabled or without a key). */
@@ -99,19 +104,23 @@ public class UsageReportingService {
         return client.isEnabled();
     }
 
-    /** The tags attached to the startup event: the web client's version and {@code service=true}. */
+    /**
+     * The tags attached to the startup event: {@code service=true}. The client adds the web
+     * client's version itself, as the tag {@code version}, to every event.
+     */
     Map<String, String> startupTags() {
         Map<String, String> tags = new LinkedHashMap<>();
-        tags.put("version", version);
         tags.put("service", "true");
         return tags;
     }
 
-    /** The tags attached to a page view: the normalised request path and the web client's version. */
+    /**
+     * The tags attached to a page view: the normalised request path. The client adds the web
+     * client's version itself, as the tag {@code version}.
+     */
     Map<String, String> pageViewTags(String page) {
         Map<String, String> tags = new LinkedHashMap<>();
         tags.put("page", page);
-        tags.put("version", version);
         return tags;
     }
 

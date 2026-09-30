@@ -58,23 +58,23 @@ class UsageReportingServiceTest {
         assertTrue(arrived.await(5, TimeUnit.SECONDS), "startup event was not delivered");
         assertEquals(1, bodies.size());
         assertEquals("{\"application\":\"barony\",\"name\":\"startup\","
-                + "\"tags\":{\"version\":\"9.9.9-TEST\",\"service\":\"true\"}}", bodies.get(0));
+                + "\"tags\":{\"service\":\"true\",\"version\":\"9.9.9-TEST\"}}", bodies.get(0));
         assertEquals("Bearer test-key", authorizations.get(0));
         service.close();
     }
 
     @Test
-    void startupTagsAreOnlyVersionAndService() {
+    void startupTagsAreOnlyService() {
         UsageReportingService service = new UsageReportingService(false, endpoint, "k", "1.2.3");
         Map<String, String> tags = service.startupTags();
-        assertEquals(Map.of("version", "1.2.3", "service", "true"), tags);
+        assertEquals(Map.of("service", "true"), tags, "the client adds version to every event itself");
         service.close();
     }
 
     @Test
     void blankVersionIsReportedAsUnknown() {
         UsageReportingService service = new UsageReportingService(false, endpoint, "k", " ");
-        assertEquals("unknown", service.startupTags().get("version"));
+        assertEquals("unknown", service.version());
         service.close();
     }
 
