@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -129,5 +131,50 @@ class SessionServiceTest {
         assertEquals(1, history.getWins());
         assertEquals(1, history.getLosses());
         assertEquals(2, history.getRuns().size());
+    }
+
+    @Test
+    void getRunHistoryCapsTheRunListButTalliesEveryRun() {
+        // 25 runs, newest first: 15 wins then 10 losses. The list is capped at 20, but the tally
+        // must still count the 5 losses that fall past the cap.
+        List<RunRecord> runs = new ArrayList<>();
+        for (int i = 0; i < 25; i++) {
+            RunRecord run = new RunRecord();
+            run.setResult(i < 15 ? "WIN" : "LOSS");
+            run.setTurnsPlayed(i);
+            runs.add(run);
+        }
+        when(runRecordRepository.findByUsernameOrderByFinishedAtDesc("erin")).thenReturn(runs);
+
+        RunHistory history = sessionService.getRunHistory("erin");
+
+        assertEquals(15, history.getWins());
+        assertEquals(10, history.getLosses());
+        assertEquals(20, history.getRuns().size());
+        assertEquals(0, history.getRuns().get(0).getTurnsPlayed(), "the newest run should come first");
+        assertEquals(19, history.getRuns().get(19).getTurnsPlayed(), "the oldest runs should be dropped");
+    }
+
+    @Test
+    void idleSessionIsEvictedAndTheNextRequestStillGetsAUsableSession() {
+        Session idle = sessionService.getOrCreateSession("frank");
+        idle.setLastAccessed(LocalDateTime.now().minusMinutes(61));
+
+        assertEquals(0, sessionService.getActiveSessionCount(), "an hour-idle session should be evicted");
+
+        Session next = sessionService.getOrCreateSession("frank");
+        assertNotSame(idle, next);
+        assertEquals("frank", next.getUsername());
+        assertFalse(next.getGameState().getArmies().isEmpty(), "the replacement session should hold a playable game");
+        assertEquals(1, sessionService.getActiveSessionCount());
+    }
+
+    @Test
+    void sessionIdleForLessThanTheTimeoutIsKept() {
+        Session session = sessionService.getOrCreateSession("gina");
+        session.setLastAccessed(LocalDateTime.now().minusMinutes(59));
+
+        assertEquals(1, sessionService.getActiveSessionCount());
+        assertSame(session, sessionService.getOrCreateSession("gina"));
     }
 }

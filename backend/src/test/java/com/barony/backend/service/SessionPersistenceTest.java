@@ -1,11 +1,15 @@
 package com.barony.backend.service;
 
+import com.barony.backend.model.Army;
+import com.barony.backend.model.SavedGame;
 import com.barony.backend.model.Session;
 import com.barony.backend.repository.RunRecordRepository;
 import com.barony.backend.repository.SavedGameRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -47,5 +51,46 @@ class SessionPersistenceTest {
         assertEquals(42, reloaded.getGameState().getTickCount(), "tick count should be restored");
         assertEquals("HEAVY_TAXATION", reloaded.getGameState().getEconomicPolicy());
         assertFalse(reloaded.getGameState().getArmies().isEmpty(), "armies should be restored");
+    }
+
+    @Test
+    void corruptSavedGameFallsBackToAFreshGame() {
+        SavedGame corrupt = new SavedGame("persist-corrupt-user");
+        corrupt.setState("{ this is not a game state");
+        corrupt.setUpdatedAt(Instant.now());
+        repository.save(corrupt);
+
+        SessionService service = new SessionService(repository, runRecordRepository);
+        Session session = service.getOrCreateSession("persist-corrupt-user");
+
+        assertEquals("persist-corrupt-user", session.getUsername());
+        assertEquals(0, session.getGameState().getTickCount(), "an unreadable save should start a fresh game");
+        assertFalse(session.getGameState().getArmies().isEmpty(), "the fresh game should be playable");
+
+        // The fresh game overwrites the unreadable row, so the next restart restores it.
+        session.getGameState().setTickCount(7);
+        service.save(session);
+        SessionService afterRestart = new SessionService(repository, runRecordRepository);
+        assertEquals(7, afterRestart.getOrCreateSession("persist-corrupt-user").getGameState().getTickCount());
+    }
+
+    @Test
+    void restoredGameAdvancesArmyIdsPastTheRestoredArmies() {
+        SessionService before = new SessionService(repository, runRecordRepository);
+        Session session = before.getOrCreateSession("persist-army-id-user");
+        // A sentinel id well past anything the static counter has handed out in this JVM, so a new
+        // army can only exceed it if the restore advanced the counter.
+        int restoredId = new Army(0, 0, 1, 1).getId() + 1_000_000;
+        session.getGameState().getArmiesInternal().get(0).setId(restoredId);
+        before.save(session);
+
+        SessionService after = new SessionService(repository, runRecordRepository);
+        Session reloaded = after.getOrCreateSession("persist-army-id-user");
+        assertTrue(reloaded.getGameState().getArmies().stream().anyMatch(a -> a.getId() == restoredId),
+                "the sentinel army should be restored");
+
+        Army split = new Army(0, 0, 1, 1);
+        assertTrue(split.getId() > restoredId,
+                "a new army should get an id past the restored max, was " + split.getId());
     }
 }
