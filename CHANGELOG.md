@@ -6,6 +6,15 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Army destinations and castle capture progress are drawn on the map** (#89): both were only
+  reachable by hovering. The tile each of your moving armies is headed for is now marked with a
+  faint fill and a dashed outline in your army colour, until an army arrives there; the enemy's
+  destinations are not shown. A castle part-way through being captured gets a progress bar along
+  the bottom of its tile, filled a third per turn of occupation in the capturing side's colour, so
+  the enemy's sieges on your castles are as visible as yours on theirs. Both follow the colourblind
+  palette. Which tiles are marked and how full each bar is come from `listArmyDestinations` and
+  `listCaptureProgress` in `game-logic.js`, covered by the Node test suite; the canvas drawing
+  itself has no automated coverage.
 - ✅ **Site footer backlink**: every page (login, register and the game) now ends with a small, muted "More by Daniel Stephenson → danielstephenson.dev" line, served from one shared Thymeleaf fragment (`templates/fragments/footer.html`) and covered by `SiteFooterTest`.
 
 ### Usage reporting

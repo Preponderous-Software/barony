@@ -156,6 +156,7 @@ Then open http://localhost:3000
 - Toast notifications replace all in-game blocking alerts
 - Canvas hover tooltips (tile info, army stats, castle capture progress)
 - Army selection highlight ring on canvas
+- Destination markers for your moving armies, and capture progress bars on contested castles
 - Right-click to deselect armies
 - Auto Play toggle button (single button, active-state indication)
 - Color-coded stats (green ≥ 90, amber 70–89, red < 70)
