@@ -82,6 +82,18 @@ class GamePageArmyRenderingTest {
                         + "pointer, not the first one the backend listed on that tile");
     }
 
+    @Test
+    void destinationsAndCaptureProgressAreDrawnFromTheSharedPureFunctions() throws Exception {
+        String html = renderGamePage();
+
+        assertTrue(html.contains("listArmyDestinations(gameState.armies, 1)"),
+                "drawMap must mark only the player's own armies' destinations, through the tested "
+                        + "listArmyDestinations");
+        assertTrue(html.contains("listCaptureProgress(gameState, CASTLE_CAPTURE_TURNS)"),
+                "drawMap must draw castle capture bars from the tested listCaptureProgress, against "
+                        + "the capture requirement the page owns");
+    }
+
     private String renderGamePage() throws Exception {
         return mockMvc.perform(get("/game"))
                 .andExpect(status().isOk())

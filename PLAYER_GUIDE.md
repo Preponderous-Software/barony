@@ -85,7 +85,9 @@ the one you want rather than getting whichever the game listed first.
    - Selected army will have a glowing highlight
 2. **Left-click any tile** to move your selected army there
    - Army will move 1 tile per turn toward the destination
-   - Hover the army to read where it is headed off its tooltip (**Moving to: (x, y)**)
+   - The destination tile is marked on the map with a dashed outline in your army colour until an
+     army arrives there; hover the army to read the coordinates off its tooltip
+     (**Moving to: (x, y)**). Only your own armies' destinations are marked.
 3. **Right-click** to deselect the army
 
 **Buttons (above the map):**
@@ -162,8 +164,10 @@ Castles are harder to capture:
 3. **Progress resets** if enemy army arrives or you leave
 4. **Capture complete** after 3 turns → castle is yours!
 
-The running count isn't drawn on the map, but it is on the tooltip. Since a capture under way
-always has an army standing on the castle, hover that army: its tooltip ends with
+A castle being captured shows a progress bar along the bottom of its tile, filled a third per
+turn of occupation in the colour of the side doing the capturing — so you can see both your own
+sieges and the enemy's at a glance. The exact count is on the tooltip: since a capture under way
+always has an army standing on the castle, hover that army and its tooltip ends with
 **Capturing castle: 2/3**. A castle nobody is standing on states the hold requirement instead,
 because the count resets the moment the tile is left, contested, or held by its own owner. On top
 of that, a castle that is the last one its side holds gets a toast every turn the siege on it

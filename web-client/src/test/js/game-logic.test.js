@@ -12,6 +12,8 @@ const {
     layoutArmiesOnTiles,
     findArmyAtPoint,
     getTooltipText,
+    listArmyDestinations,
+    listCaptureProgress,
     resolvePanelOpenState,
     resolvePanelOrder,
     movePanelInOrder,
@@ -539,6 +541,114 @@ test('getTooltipText describes villages and empty ground', () => {
         'Village \u2014 Player 1. Generating +1 soldier/turn for stationed armies.');
     assert.equal(getTooltipText(1, 1, state, CAPTURE_TURNS),
         'Empty \u2014 move an army here to occupy.');
+});
+
+// ---------------------------------------------------------------------------
+// On-canvas destination and capture indicators
+// ---------------------------------------------------------------------------
+
+test('listArmyDestinations lists where the player\'s moving armies are headed', () => {
+    const armies = [
+        army(1, 0, 0, { destinationX: 3, destinationY: 2 }),
+        army(2, 1, 1, { destinationX: 0, destinationY: 4 })
+    ];
+
+    assert.deepEqual(listArmyDestinations(armies, 1), [{ x: 3, y: 2 }, { x: 0, y: 4 }]);
+});
+
+test('listArmyDestinations leaves out armies with no destination', () => {
+    const armies = [
+        army(1, 0, 0),
+        army(2, 1, 1, { destinationX: null, destinationY: null }),
+        army(3, 2, 2, { destinationX: 5, destinationY: 5 })
+    ];
+
+    assert.deepEqual(listArmyDestinations(armies, 1), [{ x: 5, y: 5 }]);
+});
+
+test('listArmyDestinations does not reveal where the opponent\'s armies are headed', () => {
+    const armies = [
+        army(1, 0, 0, { playerId: 2, destinationX: 3, destinationY: 3 }),
+        army(2, 1, 1, { destinationX: 4, destinationY: 4 })
+    ];
+
+    assert.deepEqual(listArmyDestinations(armies, 1), [{ x: 4, y: 4 }]);
+});
+
+test('listArmyDestinations lists a tile several armies are headed for once', () => {
+    const armies = [
+        army(1, 0, 0, { destinationX: 2, destinationY: 0 }),
+        army(2, 0, 1, { destinationX: 2, destinationY: 0 })
+    ];
+
+    assert.deepEqual(listArmyDestinations(armies, 1), [{ x: 2, y: 0 }]);
+});
+
+test('listArmyDestinations counts a destination on row or column zero', () => {
+    const armies = [army(1, 2, 2, { destinationX: 0, destinationY: 0 })];
+
+    assert.deepEqual(listArmyDestinations(armies, 1), [{ x: 0, y: 0 }]);
+});
+
+test('listArmyDestinations returns nothing without an army list', () => {
+    assert.deepEqual(listArmyDestinations(undefined, 1), []);
+    assert.deepEqual(listArmyDestinations([], 1), []);
+});
+
+test('listCaptureProgress reports a contested castle, how far along it is and who is taking it', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2, 2), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0, 1), tile('EMPTY', 0)]
+        ],
+        armies: [army(4, 0, 0), army(7, 1, 0, { playerId: 2 })]
+    });
+
+    assert.deepEqual(listCaptureProgress(state, CAPTURE_TURNS), [
+        { x: 0, y: 0, fraction: 2 / 3, playerId: 1 },
+        { x: 1, y: 0, fraction: 1 / 3, playerId: 2 }
+    ]);
+});
+
+test('listCaptureProgress leaves out castles nobody is taking, and tiles that are not castles', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2), tile('VILLAGE', 0, 2)],
+            [tile('CASTLE', 0), tile('EMPTY', 0, 1)]
+        ],
+        armies: [army(4, 0, 0)]
+    });
+
+    assert.deepEqual(listCaptureProgress(state, CAPTURE_TURNS), []);
+});
+
+test('listCaptureProgress keeps a castle whose capturer is not listed, with no player', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2, 1), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0), tile('EMPTY', 0)]
+        ]
+    });
+
+    assert.deepEqual(listCaptureProgress(state, CAPTURE_TURNS), [
+        { x: 0, y: 0, fraction: 1 / 3, playerId: null }
+    ]);
+});
+
+test('listCaptureProgress never fills a bar past full', () => {
+    const state = tooltipState({
+        grid: [
+            [tile('CASTLE', 2, 5), tile('VILLAGE', 0)],
+            [tile('CASTLE', 0), tile('EMPTY', 0)]
+        ],
+        armies: [army(4, 0, 0)]
+    });
+
+    assert.equal(listCaptureProgress(state, CAPTURE_TURNS)[0].fraction, 1);
+});
+
+test('listCaptureProgress returns nothing without a game state', () => {
+    assert.deepEqual(listCaptureProgress(null, CAPTURE_TURNS), []);
 });
 
 test('resolvePanelOpenState uses the saved preference when one exists, even against the HTML default', () => {

@@ -270,6 +270,7 @@
             selectionRing: '#FFD700',
             castle: '#888',
             castleBorder: '#aaa',
+            captureBarTrack: 'rgba(0, 0, 0, 0.6)',
             village: '#a0724a',
             villageBorder: '#c0926a',
             grid: '#3a3228',
@@ -1113,7 +1114,24 @@
                     ctx.strokeRect(px, py, cellWidth, cellHeight);
                 }
             }
-            
+
+            // Mark where the player's moving armies are headed: a faint fill and a dashed outline
+            // in the player's army colour, inset so it reads as separate from the tile's own tint.
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 3]);
+            listArmyDestinations(gameState.armies, 1).forEach(destination => {
+                const px = destination.x * cellWidth;
+                const py = destination.y * cellHeight;
+                ctx.globalAlpha = 0.2;
+                ctx.fillStyle = PALETTE.player1Army;
+                ctx.fillRect(px + 2, py + 2, cellWidth - 4, cellHeight - 4);
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = PALETTE.player1Army;
+                ctx.strokeRect(px + 2, py + 2, cellWidth - 4, cellHeight - 4);
+            });
+            ctx.setLineDash([]);
+            ctx.lineWidth = 1;
+
             // Draw armies. layoutArmiesOnTiles (game-logic.js) fans out armies sharing a tile so
             // none is hidden under another; it hands back offsets and radii as fractions of the
             // cell's smaller side, so one cell size scales both and the fan stays circular.
@@ -1153,6 +1171,23 @@
             
             // Reset lineWidth
             ctx.lineWidth = 1;
+
+            // Draw a capture progress bar along the bottom of each contested castle, filled in the
+            // capturing player's colour. Drawn after the armies, as the army doing the capturing
+            // always stands on the castle and a fanned-out group reaches into the cell's margin.
+            listCaptureProgress(gameState, CASTLE_CAPTURE_TURNS).forEach(progress => {
+                const barX = progress.x * cellWidth + cellWidth * 0.1;
+                const barY = progress.y * cellHeight + cellHeight * 0.84;
+                const barWidth = cellWidth * 0.8;
+                const barHeight = Math.max(3, cellHeight * 0.1);
+                ctx.fillStyle = PALETTE.captureBarTrack;
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                ctx.fillStyle = progress.playerId === 1 ? PALETTE.player1Army
+                    : progress.playerId === 2 ? PALETTE.player2Army : PALETTE.castleBorder;
+                ctx.fillRect(barX, barY, barWidth * progress.fraction, barHeight);
+                ctx.strokeStyle = PALETTE.castleBorder;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+            });
         }
         
         // ========================

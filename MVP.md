@@ -85,8 +85,8 @@ ticked where either document covers the mechanic.
 - [x] Backend: Add movement processing in tick() method
 - [x] Backend: Update command validation for movement
 - [x] Backend: Add unit tests for movement mechanics (8-10 tests)
-- [ ] Web Client: Add visual feedback for army destination — the destination is only reported by
-  the army's tooltip; drawing it on the canvas is tracked on #89
+- [x] Web Client: Add visual feedback for army destination — a dashed, tinted outline on the
+  destination tile of each of the player's moving armies, alongside the tooltip's **Moving to**
 - [ ] Web Client: Test movement commands and rendering
 - [x] Documentation: Update README with movement mechanics
 
@@ -193,9 +193,9 @@ ticked where either document covers the mechanic.
 
 #### Web Client Changes
 - Color castles based on ownership (gray with blue/red outline)
-- Show capture progress bar over contested castles — landed as tooltip text on the army doing the
-  capturing (`Capturing castle: N/3`) rather than a bar on the canvas; drawing it on the canvas is
-  tracked on #89
+- Show capture progress bar over contested castles — drawn along the bottom of the castle tile in
+  the capturing side's colour, with the exact count (`Capturing castle: N/3`) on the tooltip of the
+  army doing the capturing
 - Display win/loss overlay with "Play Again" option (restart via new /reset endpoint)
 - Add sound effects for capture/victory (optional)
 

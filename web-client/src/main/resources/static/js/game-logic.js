@@ -346,6 +346,50 @@
         return 'Empty \u2014 move an army here to occupy.';
     }
 
+    // The tiles one player's armies are marching towards, for the map to mark. Only that player's
+    // own armies are read \u2014 the opponent's orders are not something the player should be shown \u2014 and
+    // a tile several armies are headed for is listed once, so it is not painted over itself. The
+    // backend clears an army's destination on arrival, so a listed tile is always still ahead.
+    function listArmyDestinations(armies, playerId) {
+        var destinations = [];
+        var seen = {};
+        (armies || []).forEach(function (army) {
+            if (army.playerId !== playerId) return;
+            if (army.destinationX === undefined || army.destinationX === null) return;
+            if (army.destinationY === undefined || army.destinationY === null) return;
+            var key = army.destinationX + ',' + army.destinationY;
+            if (seen[key]) return;
+            seen[key] = true;
+            destinations.push({ x: army.destinationX, y: army.destinationY });
+        });
+        return destinations;
+    }
+
+    // The castles part-way through being captured, each with how far along it is (a fraction of
+    // the consecutive turns a capture takes) and which player is doing the capturing. The backend
+    // only counts a castle's occupation while a single player's armies stand on it, so the
+    // capturer is read from the armies on that tile; playerId is null if none is listed there.
+    function listCaptureProgress(gameState, captureTurns) {
+        var progress = [];
+        if (!gameState || !gameState.grid) return progress;
+        for (var x = 0; x < gameState.width; x++) {
+            for (var y = 0; y < gameState.height; y++) {
+                var tile = gameState.grid[x][y];
+                if (tile.type !== 'CASTLE' || !(tile.occupationTicks > 0)) continue;
+                var occupier = (gameState.armies || []).find(function (army) {
+                    return army.x === x && army.y === y;
+                });
+                progress.push({
+                    x: x,
+                    y: y,
+                    fraction: Math.min(1, tile.occupationTicks / captureTurns),
+                    playerId: occupier ? occupier.playerId : null
+                });
+            }
+        }
+        return progress;
+    }
+
     // The interface preferences the game page keeps, and the localStorage key each is kept under.
     // The same names are what a signed-in player's preferences are stored against their account
     // as, so the page can move a preference between the two without a second naming scheme.
@@ -473,6 +517,8 @@
         layoutArmiesOnTiles: layoutArmiesOnTiles,
         findArmyAtPoint: findArmyAtPoint,
         getTooltipText: getTooltipText,
+        listArmyDestinations: listArmyDestinations,
+        listCaptureProgress: listCaptureProgress,
         resolvePanelOpenState: resolvePanelOpenState,
         resolvePanelOrder: resolvePanelOrder,
         movePanelInOrder: movePanelInOrder,
