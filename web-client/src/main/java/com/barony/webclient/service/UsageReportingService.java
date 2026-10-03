@@ -1,6 +1,7 @@
 package com.barony.webclient.service;
 
 import com.barony.webclient.trace.TraceClient;
+import com.barony.webclient.trace.TraceInstallId;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,6 +91,8 @@ public class UsageReportingService {
         return TraceClient.builder(endpoint, APPLICATION, version)
                 .key(key)
                 .enabled(enabled)
+                .installId(TraceInstallId.fromEnvironment())
+                .installIdFile(TraceInstallId.file(APPLICATION))
                 .logger(java.util.logging.Logger.getLogger(UsageReportingService.class.getName()))
                 .build();
     }
@@ -102,6 +105,11 @@ public class UsageReportingService {
     /** Whether reports will actually be sent (false when disabled or without a key). */
     public boolean isEnabled() {
         return client.isEnabled();
+    }
+
+    /** The random installation ID sent as the tag {@code install}, or null while reporting is off. */
+    public String installId() {
+        return client.installId();
     }
 
     /**

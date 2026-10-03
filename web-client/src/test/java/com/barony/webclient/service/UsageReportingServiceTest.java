@@ -49,6 +49,17 @@ class UsageReportingServiceTest {
     }
 
     @Test
+    void carriesARandomInstallationIdOnlyWhileReportingIsOn() {
+        UsageReportingService on = new UsageReportingService(true, endpoint, "test-key", "9.9.9-TEST");
+        UsageReportingService off = new UsageReportingService(false, endpoint, "test-key", "9.9.9-TEST");
+
+        assertNotNull(on.installId());
+        assertNull(off.installId(), "a disabled client never makes up an ID");
+        on.close();
+        off.close();
+    }
+
+    @Test
     void startupEventCarriesProgramNameVersionAndServiceTag() throws Exception {
         UsageReportingService service = new UsageReportingService(true, endpoint, "test-key", "9.9.9-TEST");
         assertTrue(service.isEnabled());
@@ -58,7 +69,7 @@ class UsageReportingServiceTest {
         assertTrue(arrived.await(5, TimeUnit.SECONDS), "startup event was not delivered");
         assertEquals(1, bodies.size());
         assertEquals("{\"application\":\"barony\",\"name\":\"startup\","
-                + "\"tags\":{\"service\":\"true\",\"version\":\"9.9.9-TEST\"}}", bodies.get(0));
+                + "\"tags\":{\"service\":\"true\",\"version\":\"9.9.9-TEST\",\"install\":\"" + service.installId() + "\"}}", bodies.get(0));
         assertEquals("Bearer test-key", authorizations.get(0));
         service.close();
     }
@@ -72,7 +83,7 @@ class UsageReportingServiceTest {
         assertTrue(arrived.await(5, TimeUnit.SECONDS), "page-view event was not delivered");
         assertEquals(1, bodies.size());
         assertEquals("{\"application\":\"barony\",\"name\":\"page-view\","
-                + "\"tags\":{\"page\":\"/game\",\"version\":\"9.9.9-TEST\"}}", bodies.get(0));
+                + "\"tags\":{\"page\":\"/game\",\"version\":\"9.9.9-TEST\",\"install\":\"" + service.installId() + "\"}}", bodies.get(0));
         assertEquals("Bearer test-key", authorizations.get(0));
         service.close();
     }
