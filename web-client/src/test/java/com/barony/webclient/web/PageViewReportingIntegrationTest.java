@@ -1,6 +1,7 @@
 package com.barony.webclient.web;
 
 import com.barony.webclient.service.BackendService;
+import com.barony.webclient.service.UsageReportingService;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,6 +55,9 @@ class PageViewReportingIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private UsageReportingService usageReportingService;
+
     /** The game page itself makes no backend call while rendering; this only keeps the context off the network. */
     @MockBean
     private BackendService backendService;
@@ -96,7 +100,7 @@ class PageViewReportingIntegrationTest {
         List<String> pageViews = awaitPageViews(1);
         assertEquals(1, pageViews.size(), "expected exactly one page-view, got: " + bodies);
         assertEquals("{\"application\":\"barony\",\"name\":\"page-view\","
-                + "\"tags\":{\"page\":\"/login\",\"version\":\"9.9.9-TEST\"}}", pageViews.get(0));
+                + "\"tags\":{\"page\":\"/login\",\"version\":\"9.9.9-TEST\",\"install\":\"" + usageReportingService.installId() + "\"}}", pageViews.get(0));
     }
 
     @Test
