@@ -6,6 +6,10 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **"Exit guest game" names the right button**: the notice shown on the login page after leaving a
+  guest game said to choose "Play as guest", but with a guest game saved that button reads "Continue
+  guest game". The notice now names that label, and `GuestExitWordingTest` reads both pages to keep
+  the two in step.
 - ✅ **Army destinations and castle capture progress are drawn on the map** (#89): both were only
   reachable by hovering. The tile each of your moving armies is headed for is now marked with a
   faint fill and a dashed outline in your army colour, until an army arrives there; the enemy's
