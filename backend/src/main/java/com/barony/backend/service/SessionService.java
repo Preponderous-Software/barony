@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -101,6 +102,49 @@ public class SessionService {
     }
 
     /**
+     * Move a guest's game into an account that has no game yet ("keep your progress" on sign-up).
+     *
+     * Insert-only: if the account already has a saved game (in the database or in this cache) it is
+     * left exactly as it is and this returns false. Otherwise a saved game is inserted for the
+     * account and the guest's finished runs are inserted as new run records; no existing row is
+     * updated or deleted. Synchronized with {@link #getOrCreateSession} so a concurrent first load
+     * cannot create the account's game between the check and the insert.
+     */
+    @Transactional
+    public synchronized boolean claimGuestGame(String username, GameState guestState, List<RunRecord> guestRuns) {
+        if (username == null || username.trim().isEmpty()) {
+            throw new IllegalArgumentException("Username cannot be empty");
+        }
+        boolean cached = sessions.values().stream().anyMatch(s -> s.getUsername().equals(username));
+        if (cached || savedGameRepository.existsById(username)) {
+            return false;
+        }
+        try {
+            SavedGame saved = new SavedGame(username);
+            saved.setState(objectMapper.writeValueAsString(guestState));
+            saved.setUpdatedAt(Instant.now());
+            savedGameRepository.save(saved);
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not copy the guest game", e);
+        }
+        for (RunRecord guestRun : guestRuns) {
+            RunRecord copy = new RunRecord();
+            copy.setUsername(username);
+            copy.setResult(guestRun.getResult());
+            copy.setTurnsPlayed(guestRun.getTurnsPlayed());
+            copy.setCastlesHeld(guestRun.getCastlesHeld());
+            copy.setCastlesTotal(guestRun.getCastlesTotal());
+            copy.setVillagesHeld(guestRun.getVillagesHeld());
+            copy.setVillagesTotal(guestRun.getVillagesTotal());
+            copy.setArmiesRemaining(guestRun.getArmiesRemaining());
+            copy.setSoldiersRemaining(guestRun.getSoldiersRemaining());
+            copy.setFinishedAt(guestRun.getFinishedAt());
+            runRecordRepository.save(copy);
+        }
+        return true;
+    }
+
+    /**
      * Return the player's win/loss tally and most recent finished runs, newest first.
      */
     public RunHistory getRunHistory(String username) {
@@ -123,7 +167,8 @@ public class SessionService {
         state.setRunRecorded(true);
     }
 
-    private RunRecord buildRunRecord(String username, GameState state) {
+    // Package-private and static so GuestSessionService builds a guest's run summary the same way.
+    static RunRecord buildRunRecord(String username, GameState state) {
         RunRecord run = new RunRecord();
         run.setUsername(username);
         run.setResult(Integer.valueOf(PLAYER_ID).equals(state.getWinnerId()) ? "WIN" : "LOSS");

@@ -8,6 +8,8 @@ import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GameService;
+import com.barony.backend.service.GuestCookies;
+import com.barony.backend.service.GuestSessionService;
 import com.barony.backend.service.PreferencesService;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
@@ -30,6 +32,18 @@ public class GameController {
     private final UserAuthClient userAuthClient;
     private final AuthCookies authCookies;
     private final PreferencesService preferencesService;
+    private final GuestSessionService guestSessionService;
+    private final GuestCookies guestCookies;
+
+    /**
+     * Optional request header naming which identity the page is playing as: "account" or "guest".
+     * An account page sends "account", so if its account cookie has expired it gets a 401 (and is
+     * sent to log in) rather than silently being shown a guest game from the same browser.
+     */
+    static final String PLAYER_MODE_HEADER = "X-Barony-Player";
+
+    /** Who a request plays as: an account's session or a guest's, never both. */
+    private record Player(Session session, boolean guest) { }
 
     @GetMapping("/state")
     public GameState getState() {
@@ -89,8 +103,7 @@ public class GameController {
     // synchronize on `gameService` (not on the per-session state object) across each block.
 
     private Session authenticate(HttpServletRequest request) {
-        String token = authCookies.read(request)
-                .orElseGet(() -> bearerToken(request.getHeader(HttpHeaders.AUTHORIZATION)));
+        String token = accountToken(request);
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "Authentication required. Please log in.");
@@ -99,6 +112,41 @@ public class GameController {
             new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "Invalid, expired, or revoked token. Please log in again."));
         return sessionService.getOrCreateSession(username);
+    }
+
+    private String accountToken(HttpServletRequest request) {
+        return authCookies.read(request)
+                .orElseGet(() -> bearerToken(request.getHeader(HttpHeaders.AUTHORIZATION)));
+    }
+
+    /**
+     * Resolve the request to an account or a guest. An account token, when present, always wins and
+     * is validated with UserAuth exactly as before (an invalid one is a 401, never a fall-back to
+     * guest). Only a request with no account token, or one that names guest mode, is served from the
+     * guest cookie; guest sessions come from {@link GuestSessionService} and never from
+     * {@link SessionService}.
+     */
+    private Player resolvePlayer(HttpServletRequest request) {
+        String mode = request.getHeader(PLAYER_MODE_HEADER);
+        boolean wantsGuest = "guest".equalsIgnoreCase(mode);
+        boolean wantsAccount = "account".equalsIgnoreCase(mode);
+        if (!wantsGuest && (wantsAccount || accountToken(request) != null)) {
+            return new Player(authenticate(request), false);
+        }
+        Session guest = guestCookies.read(request)
+                .flatMap(guestSessionService::find)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Authentication required. Please log in or play as a guest."));
+        return new Player(guest, true);
+    }
+
+    /** Persist after a change, to the store the player belongs to. */
+    private void save(Player player) {
+        if (player.guest()) {
+            guestSessionService.save(player.session());
+        } else {
+            sessionService.save(player.session());
+        }
     }
 
     private String bearerToken(String authorization) {
@@ -111,7 +159,8 @@ public class GameController {
 
     @GetMapping("/api/session/state")
     public GameState getSessionState(HttpServletRequest request) {
-        Session session = authenticate(request);
+        Player player = resolvePlayer(request);
+        Session session = player.session();
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             return gameService.getState();
@@ -120,11 +169,12 @@ public class GameController {
 
     @PostMapping("/api/session/tick")
     public GameState sessionTick(HttpServletRequest request) {
-        Session session = authenticate(request);
+        Player player = resolvePlayer(request);
+        Session session = player.session();
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.tick();
-            sessionService.save(session);
+            save(player);
             return gameService.getState();
         }
     }
@@ -133,22 +183,24 @@ public class GameController {
     public GameState sessionCommand(
             HttpServletRequest request,
             @RequestBody Command command) {
-        Session session = authenticate(request);
+        Player player = resolvePlayer(request);
+        Session session = player.session();
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             gameService.executeCommand(command);
-            sessionService.save(session);
+            save(player);
             return gameService.getState();
         }
     }
 
     @PostMapping("/api/session/reset")
     public GameState sessionReset(HttpServletRequest request) {
-        Session session = authenticate(request);
+        Player player = resolvePlayer(request);
+        Session session = player.session();
         synchronized (gameService) {
             gameService.resetGame();
             session.setGameState(gameService.getGameStateInternal());
-            sessionService.save(session);
+            save(player);
             return gameService.getState();
         }
     }
@@ -157,13 +209,14 @@ public class GameController {
     public GameState sessionDecision(
             HttpServletRequest request,
             @RequestBody RulerDecision decision) {
-        Session session = authenticate(request);
+        Player player = resolvePlayer(request);
+        Session session = player.session();
         validateDecision(decision);
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             try {
                 gameService.changePolicy(decision.getCategory(), decision.getChoice());
-                sessionService.save(session);
+                save(player);
                 return gameService.getState();
             } catch (IllegalStateException e) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -177,7 +230,8 @@ public class GameController {
 
     @GetMapping("/api/session/ruler-stats")
     public RulerStats sessionRulerStats(HttpServletRequest request) {
-        Session session = authenticate(request);
+        Player player = resolvePlayer(request);
+        Session session = player.session();
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
             return gameService.getRulerStats();
@@ -188,8 +242,11 @@ public class GameController {
     // is a plain read with no need to touch the shared GameService/gameState.
     @GetMapping("/api/session/runs")
     public RunHistory sessionRuns(HttpServletRequest request) {
-        Session session = authenticate(request);
-        return sessionService.getRunHistory(session.getUsername());
+        Player player = resolvePlayer(request);
+        Session session = player.session();
+        return player.guest()
+                ? guestSessionService.getRunHistory(session)
+                : sessionService.getRunHistory(session.getUsername());
     }
 
     // Interface preferences are stored per account so a player's sidebar arrangement and display
@@ -197,7 +254,7 @@ public class GameController {
     // GameService/gameState, so unlike the endpoints above these need no synchronization.
     @GetMapping("/api/session/preferences")
     public Map<String, Object> sessionPreferences(HttpServletRequest request) {
-        Session session = authenticate(request);
+        Session session = accountOnly(request);
         return preferencesService.load(session.getUsername());
     }
 
@@ -205,12 +262,21 @@ public class GameController {
     public Map<String, Object> saveSessionPreferences(
             HttpServletRequest request,
             @RequestBody Map<String, Object> preferences) {
-        Session session = authenticate(request);
+        Session session = accountOnly(request);
         try {
             return preferencesService.save(session.getUsername(), preferences);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+    }
+
+    private Session accountOnly(HttpServletRequest request) {
+        Player player = resolvePlayer(request);
+        if (player.guest()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Guests' preferences stay in this browser. Create an account to keep them.");
+        }
+        return player.session();
     }
 
     private void validateDecision(RulerDecision decision) {

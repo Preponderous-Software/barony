@@ -55,8 +55,19 @@
                 <small class="caps-warning" id="capsWarning" role="alert" style="display: none;">⚠ Caps Lock is on.</small>
             </div>
 
+            <div class="form-group keep-guest" id="keepGuestGroup" style="display: none;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="keepGuest">
+                    Move my guest game into this account (only if the account has no game yet)
+                </label>
+            </div>
+
             <button type="submit">Log In</button>
         </form>
+
+        <div class="guest-divider"><span>or</span></div>
+        <button type="button" class="guest-button" id="guestButton" onclick="playAsGuest()">Play as guest</button>
+        <p class="guest-hint">No account needed. A guest game is kept in this browser and is deleted after 30 days without play.</p>
 
         <div class="info">
             <p>Don't have an account? <a th:href="@{/register}">Create one</a>.</p>
@@ -128,6 +139,10 @@
                 // The token is set by the server in an HttpOnly cookie (JS never sees it); we keep
                 // only the username for display on the game screen.
                 localStorage.setItem('username', username);
+                localStorage.removeItem('barony_mode');
+                return claimGuestGameIfAsked();
+            })
+            .then(() => {
                 window.location.href = '/game';
             })
             .catch(error => {
@@ -137,6 +152,49 @@
             });
 
             return false;
+        }
+
+        // "Keep your progress": move this browser's guest game into the account just logged in to.
+        // The server only does this for an account with no game yet; otherwise it keeps both as
+        // they are (409) and the guest game stays in this browser.
+        function claimGuestGameIfAsked() {
+            const box = document.getElementById('keepGuest');
+            if (!box || !box.checked || localStorage.getItem('barony_has_guest') !== '1') {
+                return Promise.resolve();
+            }
+            return fetch('/api/guest/claim', { method: 'POST' })
+                .then(response => {
+                    if (response.ok) {
+                        localStorage.removeItem('barony_has_guest');
+                    } else if (response.status === 409) {
+                        sessionStorage.setItem('gameNotice',
+                            'This account already had a game, so it was kept. Your guest game is still in this browser.');
+                    }
+                })
+                .catch(error => console.warn('Guest game was not moved:', error));
+        }
+
+        function playAsGuest() {
+            clearFormError();
+            const button = document.getElementById('guestButton');
+            const restore = setButtonBusy(button, 'Starting…');
+            fetch('/api/guest', { method: 'POST' })
+                .then(response => response.json().then(data => ({ ok: response.ok, data: data })))
+                .then(result => {
+                    if (!result.ok) {
+                        const msg = (result.data && (result.data.message || result.data.error))
+                            || 'Could not start a guest game.';
+                        throw new Error(msg);
+                    }
+                    // The guest token is in an HttpOnly cookie; the page only remembers the mode.
+                    localStorage.setItem('barony_mode', 'guest');
+                    localStorage.setItem('barony_has_guest', '1');
+                    window.location.href = '/game';
+                })
+                .catch(error => {
+                    showFormError(error.message || 'Could not start a guest game. Please try again.');
+                    restore();
+                });
         }
 
         // Disable a submit button and show a pending label so the player gets
@@ -161,6 +219,14 @@
                 box.textContent = notice;
                 box.style.display = 'block';
                 sessionStorage.removeItem('authNotice');
+            }
+            if (localStorage.getItem('barony_has_guest') === '1') {
+                document.getElementById('keepGuestGroup').style.display = 'block';
+                document.getElementById('guestButton').textContent = 'Continue guest game';
+                // Coming straight from creating an account: offer to keep the guest game by default.
+                document.getElementById('keepGuest').checked =
+                    sessionStorage.getItem('offerGuestClaim') === '1';
+                sessionStorage.removeItem('offerGuestClaim');
             }
             const prefill = sessionStorage.getItem('prefillUsername');
             if (prefill) {

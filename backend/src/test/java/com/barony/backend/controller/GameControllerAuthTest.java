@@ -4,6 +4,8 @@ import com.barony.backend.model.GameState;
 import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
+import com.barony.backend.service.GuestCookies;
+import com.barony.backend.service.GuestSessionService;
 import com.barony.backend.service.GameService;
 import com.barony.backend.service.PreferencesService;
 import com.barony.backend.service.SessionService;
@@ -30,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@link UserAuthClient}, mocked here; a returned-empty Optional means invalid/expired/revoked.
  */
 @WebMvcTest(GameController.class)
-@Import(AuthCookies.class)
+@Import({AuthCookies.class, GuestCookies.class})
 class GameControllerAuthTest {
 
     @Autowired
@@ -47,6 +49,9 @@ class GameControllerAuthTest {
 
     @MockBean
     private PreferencesService preferencesService;
+
+    @MockBean
+    private GuestSessionService guestSessionService;
 
     @Test
     void rejectsRequestWithoutCookieOrHeader() throws Exception {

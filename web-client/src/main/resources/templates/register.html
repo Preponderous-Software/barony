@@ -142,7 +142,13 @@
                 // Registration succeeded; hand off to the login screen with a
                 // success notice and the username pre-filled so the player can
                 // log in without retyping it.
-                sessionStorage.setItem('authNotice', 'Account created — please log in.');
+                if (localStorage.getItem('barony_has_guest') === '1') {
+                    sessionStorage.setItem('offerGuestClaim', '1');
+                    sessionStorage.setItem('authNotice',
+                        'Account created — log in to move your guest game into it.');
+                } else {
+                    sessionStorage.setItem('authNotice', 'Account created — please log in.');
+                }
                 sessionStorage.setItem('prefillUsername', username);
                 window.location.href = '/login';
             })

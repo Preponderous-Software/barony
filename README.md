@@ -81,6 +81,12 @@ These endpoints validate the token against UserAuth on every request, so missing
 invalid, expired, or revoked (logged-out) tokens are rejected with `401`. Game state is keyed
 by the authenticated username.
 
+**Guest play (no account):**
+- `POST /api/guest` - Start a guest game, or resume this browser's one. Sets an **HttpOnly** `barony_guest` cookie holding a random server-issued token (a different cookie from `barony_token`). New guests are rate limited per client address and globally (`429`), and capped in total (`503`).
+- `POST /api/guest/claim` - "Keep your progress": with both a valid account cookie and a guest cookie, move the guest game (and its finished runs) into the account, **only if the account has no game yet** (`409` otherwise; nothing is changed).
+
+A guest plays through the same `/api/session/*` endpoints using the guest cookie (except preferences, which answer `403` for guests and stay in the browser). Guest games live only in the `guest_game` table, keyed by the SHA-256 of the cookie token, and are never written to the account tables. Guests idle for 30 days (`guest.idle-days`) are deleted by a scheduled prune that touches only `guest_game`. Pages send `X-Barony-Player: account|guest`, so an account page whose login has lapsed is sent to log in instead of being served a guest game.
+
 **Authentication (proxied to the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service):**
 - `POST /api/auth/register` - Create an account (`{username, password}`)
 - `POST /api/auth/login` - Log in; sets the JWT in an **HttpOnly** `barony_token` cookie (returns `{username, expiresAt}`, never the token)
