@@ -3,6 +3,8 @@ package com.barony.backend.controller;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.RulerStats;
 import com.barony.backend.service.AuthCookies;
+import com.barony.backend.service.GuestCookies;
+import com.barony.backend.service.GuestSessionService;
 import com.barony.backend.service.GameService;
 import com.barony.backend.service.PreferencesService;
 import com.barony.backend.service.SessionService;
@@ -31,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * which has no other test coverage at the controller layer.
  */
 @WebMvcTest(GameController.class)
-@Import(AuthCookies.class)
+@Import({AuthCookies.class, GuestCookies.class})
 class GameControllerTest {
 
     @Autowired
@@ -48,6 +50,9 @@ class GameControllerTest {
 
     @MockBean
     private PreferencesService preferencesService;
+
+    @MockBean
+    private GuestSessionService guestSessionService;
 
     @Test
     void getStateReturnsCurrentGameServiceState() throws Exception {

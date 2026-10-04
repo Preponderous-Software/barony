@@ -11,7 +11,11 @@
         
         <div class="user-info">
             <p><strong>Player:</strong> <span id="currentUsername">Loading...</span></p>
-            <button onclick="logout()" class="logout-button">Logout</button>
+            <button onclick="logout()" class="logout-button" id="logoutButton">Logout</button>
+            <p class="guest-note" id="guestNote" style="display: none;">
+                You are playing as a guest. This game is kept in this browser and is deleted after
+                30 days without play. <a href="/register">Create a free account</a> to keep it for good.
+            </p>
         </div>
         
         <div id="error" class="error" style="display: none;">
@@ -221,6 +225,8 @@
         let isAutoPlaying = false;
         let selectedArmy = null;
         let username = null;
+        // 'guest' when playing without an account (see login.html's Play as guest); else account mode.
+        let playerMode = 'account';
         let lastGameState = null;
         
         // Sidebar layout preferences (see "Panel Layout Management" below). The default order is
@@ -662,6 +668,8 @@
             writeLocal: writeLocalPreferences,
             applyPreferences: applyStoredPreferences,
             fetchRemote: function() {
+                // A guest has no account copy; their preferences stay in this browser only.
+                if (playerMode === 'guest') return Promise.resolve(null);
                 return fetch('/api/session/preferences', { headers: getSessionHeaders() })
                     .then(function(response) {
                         // A rejected cookie is handled by the game-state request in the same load;
@@ -670,6 +678,7 @@
                     });
             },
             sendRemote: function(preferences) {
+                if (playerMode === 'guest') return Promise.resolve();
                 return fetch('/api/session/preferences', {
                     method: 'PUT',
                     headers: getSessionHeaders(),
@@ -680,7 +689,7 @@
                     console.error('Error saving preferences:', e);
                 });
             },
-            isSignedIn: function() { return !!username; },
+            isSignedIn: function() { return !!username && playerMode !== 'guest'; },
             onError: function(e) { console.error('Error loading preferences:', e); },
             uploadDelayMs: PREFERENCE_UPLOAD_DELAY_MS
         });
@@ -711,6 +720,17 @@
             // The auth token lives in an HttpOnly cookie the browser sends automatically; JS can't
             // read it. We keep only the username (for display) in localStorage. The real gate is the
             // server: any per-player request without a valid cookie returns 401 -> sessionExpired().
+            // A guest has an HttpOnly guest cookie instead and no username; localStorage only
+            // remembers that this page is in guest mode.
+            playerMode = localStorage.getItem('barony_mode') === 'guest' ? 'guest' : 'account';
+            if (playerMode === 'guest') {
+                username = null;
+                document.getElementById('currentUsername').textContent = 'Guest';
+                document.getElementById('guestNote').style.display = 'block';
+                document.getElementById('logoutButton').textContent = 'Exit guest game';
+                return true;
+            }
+
             username = localStorage.getItem('username');
 
             if (!username) {
@@ -719,17 +739,31 @@
             }
 
             document.getElementById('currentUsername').textContent = username;
+            const notice = sessionStorage.getItem('gameNotice');
+            if (notice) {
+                sessionStorage.removeItem('gameNotice');
+                showError(notice);
+            }
             return true;
         }
 
         function clearAuth() {
             localStorage.removeItem('username');
+            localStorage.removeItem('barony_mode');
             // Clean up keys from the old localStorage-token scheme, if present.
             localStorage.removeItem('token');
             localStorage.removeItem('tokenExpiresAt');
         }
 
         function logout() {
+            if (playerMode === 'guest') {
+                // Leaving guest mode keeps the guest cookie, so "Play as guest" resumes this game.
+                localStorage.removeItem('barony_mode');
+                sessionStorage.setItem('authNotice',
+                    'Your guest game is saved in this browser. Choose "Play as guest" to carry on.');
+                window.location.href = '/login';
+                return;
+            }
             // The auth cookie is sent automatically; the server revokes the token and clears the
             // cookie. Clear the local username and redirect with a confirmation either way.
             const done = function() {
@@ -743,8 +777,14 @@
         // Involuntary sign-out (cookie rejected by the server: missing/expired/revoked).
         // Clear local state and tell the player why they're back at the login screen.
         function sessionExpired() {
+            const wasGuest = playerMode === 'guest';
             clearAuth();
-            sessionStorage.setItem('authNotice', 'Your session expired — please log in again.');
+            if (wasGuest) {
+                localStorage.removeItem('barony_has_guest');
+            }
+            sessionStorage.setItem('authNotice', wasGuest
+                ? 'That guest game has ended (guest games are deleted after 30 days without play). Start a new one or log in.'
+                : 'Your session expired — please log in again.');
             window.location.href = '/login';
         }
         
@@ -760,8 +800,11 @@
         
         function getSessionHeaders() {
             // The auth cookie rides along automatically on same-origin requests; no token header.
+            // X-Barony-Player tells the server which identity this page plays as, so an account page
+            // whose login has lapsed is sent to log in instead of being served a guest game.
             return {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Barony-Player': playerMode
             };
         }
         

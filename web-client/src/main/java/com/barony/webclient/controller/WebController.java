@@ -89,6 +89,32 @@ public class WebController {
         }
     }
 
+    // Guest play (no account). The backend sets/clears the HttpOnly guest cookie; relay it.
+    @PostMapping("/api/guest")
+    @ResponseBody
+    public ResponseEntity<?> proxyGuest(HttpServletRequest request, HttpServletResponse response) {
+        return proxyWithCookies(() -> backendService.guest(cookie(request)), response);
+    }
+
+    @PostMapping("/api/guest/claim")
+    @ResponseBody
+    public ResponseEntity<?> proxyGuestClaim(HttpServletRequest request, HttpServletResponse response) {
+        return proxyWithCookies(() -> backendService.claimGuest(cookie(request)), response);
+    }
+
+    private ResponseEntity<?> proxyWithCookies(java.util.function.Supplier<ResponseEntity<Map>> call,
+                                               HttpServletResponse response) {
+        try {
+            ResponseEntity<Map> backend = call.get();
+            relaySetCookie(backend, response);
+            return ResponseEntity.status(backend.getStatusCode()).body(backend.getBody());
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            return passthrough(e);
+        } catch (RestClientException e) {
+            return unavailable(e);
+        }
+    }
+
     @PostMapping("/api/tick")
     @ResponseBody
     public GameState tick() {

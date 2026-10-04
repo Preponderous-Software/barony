@@ -137,4 +137,20 @@ class WebControllerTest {
                 .andExpect(jsonPath("$.username").value("alice"))
                 .andExpect(header().string("Set-Cookie", containsString("barony_token=jwt-abc")));
     }
+
+    @Test
+    void guestStartRelaysTheGuestCookieAndClaimConflictPassesThrough() throws Exception {
+        HttpHeaders backendHeaders = new HttpHeaders();
+        backendHeaders.add(HttpHeaders.SET_COOKIE, "barony_guest=tok; HttpOnly; Path=/");
+        when(backendService.guest(any()))
+                .thenReturn(new ResponseEntity<>(Map.of("guest", true), backendHeaders, HttpStatus.OK));
+        mockMvc.perform(post("/api/guest"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", containsString("barony_guest=tok")));
+
+        when(backendService.claimGuest(any())).thenThrow(
+                org.springframework.web.client.HttpClientErrorException.create(HttpStatus.CONFLICT,
+                        "Conflict", new HttpHeaders(), new byte[0], null));
+        mockMvc.perform(post("/api/guest/claim")).andExpect(status().isConflict());
+    }
 }

@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -28,6 +30,8 @@ public class BackendService {
 
     @Value("${backend.url:http://localhost:8080}")
     private String backendUrl;
+
+    static final String PLAYER_MODE_HEADER = "X-Barony-Player";
 
     private final RestTemplate restTemplate;
 
@@ -55,6 +59,18 @@ public class BackendService {
     public ResponseEntity<Map> logout(String cookie) {
         HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
         return restTemplate.exchange(backendUrl + "/api/auth/logout", HttpMethod.POST, entity, Map.class);
+    }
+
+    /** Start or resume a guest game; the response carries the guest cookie to relay. */
+    public ResponseEntity<Map> guest(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/guest", HttpMethod.POST, entity, Map.class);
+    }
+
+    /** Move this browser's guest game into the signed-in account (if it has no game yet). */
+    public ResponseEntity<Map> claimGuest(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.exchange(backendUrl + "/api/guest/claim", HttpMethod.POST, entity, Map.class);
     }
 
     public GameState getState() {
@@ -135,6 +151,14 @@ public class BackendService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         if (cookie != null && !cookie.isBlank()) {
             headers.add(HttpHeaders.COOKIE, cookie);
+        }
+        // Pass on which identity the page plays as (account or guest), so the backend resolves
+        // the request the same way as when it is reached directly behind the gateway.
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
+            String mode = attrs.getRequest().getHeader(PLAYER_MODE_HEADER);
+            if (mode != null && !mode.isBlank()) {
+                headers.add(PLAYER_MODE_HEADER, mode);
+            }
         }
         return headers;
     }
