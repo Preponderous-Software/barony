@@ -757,10 +757,12 @@
 
         function logout() {
             if (playerMode === 'guest') {
-                // Leaving guest mode keeps the guest cookie, so "Play as guest" resumes this game.
+                // Leaving guest mode keeps the guest cookie (and barony_has_guest), so the login
+                // page's guest button, which then reads "Continue guest game", resumes this game.
+                // Name that label here; GuestExitWordingTest keeps the two in step.
                 localStorage.removeItem('barony_mode');
                 sessionStorage.setItem('authNotice',
-                    'Your guest game is saved in this browser. Choose "Play as guest" to carry on.');
+                    'Your guest game is saved in this browser. Choose "Continue guest game" to carry on.');
                 window.location.href = '/login';
                 return;
             }
