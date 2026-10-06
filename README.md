@@ -231,7 +231,7 @@ GitHub Actions runs on all PRs:
 - Unique army IDs (not list indices)
 - CORS: localhost only
 - **Usage reporting:** once the backend is ready it sends a single `startup` event to the
-  [trace](https://github.com/Stephenson-Software/trace) usage service at
+  [trace](https://danielstephenson.dev/usage-reporting) usage service at
   `https://trace.danielstephenson.dev`, carrying only the program name (`barony`), the backend
   version and the tag `service=true` — nothing per request, and nothing about players, accounts,
   saved games or the host. The send happens on its own daemon thread, never throws and never
@@ -249,7 +249,7 @@ GitHub Actions runs on all PRs:
   by the web client and proxied to the backend with the auth cookie forwarded — a backend endpoint
   a page calls needs a matching proxy route here (guarded by `ProxyRouteCoverageTest`)
 - **Usage reporting → page views:** the web client reports to the same
-  [trace](https://github.com/Stephenson-Software/trace) service, under the same program name and
+  [trace](https://danielstephenson.dev/usage-reporting) service, under the same program name and
   key as the backend: one `startup` event when it is ready (version, `service=true`), and then one
   `page-view` event per HTML page it serves. A page view records the **request path only**
   (`/login`, `/register`, `/game` — no query string, capped at 200 characters) plus the version;
@@ -323,7 +323,7 @@ apply it to each one that should stop):
   [consoledonottrack.com](https://consoledonottrack.com))
 
 Each process logs one line at startup saying whether reporting is on and, if it is off, which
-switch turned it off. Details: https://github.com/Stephenson-Software/trace#usage-reporting
+switch turned it off. Details: https://danielstephenson.dev/usage-reporting
 
 ## License
 This project is licensed under the **Stephenson Software Non-Commercial License (Stephenson-NC)**.  
