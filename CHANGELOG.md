@@ -10,9 +10,14 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   barony.preponderous.org lands on was titled "Barony Game - Login" and had no description or
   Open Graph tags. It is now titled "Barony" and carries a meta description, a canonical link,
   `og:type`/`og:title`/`og:description`/`og:url` and a summary Twitter card, all on the
-  production origin; the register page gets its own title, description and canonical link. No
-  image asset exists in the repository, so `og:image` is left out. `ShareMetadataTest` renders both
-  pages and checks the tags.
+  production origin; the register page gets its own title, description and canonical link.
+  `ShareMetadataTest` renders both pages and checks the tags.
+- ✅ **Link-preview image**: the landing page now carries `og:image` and `twitter:image`
+  (`https://barony.preponderous.org/images/og.png`) with its type, width (1200), height (630) and
+  alt text, and the Twitter card is `summary_large_image`. The image,
+  `web-client/src/main/resources/static/images/og.png`, is a 1200×630 PNG of the name, the existing
+  description and the domain in the site's colours. `ShareMetadataTest` checks the tags and that
+  `/images/og.png` is served as a 1200×630 PNG.
 - ✅ **"Exit guest game" names the right button**: the notice shown on the login page after leaving a
   guest game said to choose "Play as guest", but with a guest game saved that button reads "Continue
   guest game". The notice now names that label, and `GuestExitWordingTest` reads both pages to keep
