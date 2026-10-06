@@ -15,7 +15,7 @@ import java.util.Map;
 
 /**
  * Reports the web client's usage to the trace usage service
- * (https://github.com/Stephenson-Software/trace), so the operator can see which deployments of
+ * (https://danielstephenson.dev/usage-reporting), so the operator can see which deployments of
  * Barony are running, on what version, and how often its pages are opened.
  *
  * <p>Two kinds of event are sent, both under the program name {@code barony} (the same name the
@@ -49,7 +49,7 @@ public class UsageReportingService {
     static final String APPLICATION = "barony";
     static final String STARTUP_EVENT = "startup";
     /** Where what is and is not sent, and every way to turn it off, is written up. */
-    static final String DETAILS_URL = "https://github.com/Stephenson-Software/trace#usage-reporting";
+    static final String DETAILS_URL = "https://danielstephenson.dev/usage-reporting";
     static final String PAGE_VIEW_EVENT = "page-view";
 
     private final TraceClient client;
