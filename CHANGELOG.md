@@ -38,6 +38,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - The usage-reporting "Details" link (startup notice, docs and config comments) now points at https://danielstephenson.dev/usage-reporting, a public page, instead of a link into a private repository that answered 404. The vendored `TraceClient` is trace-client-java 0.6.1, whose server-wide switch file comment carries the same link.
 - ✅ The **web client reports page views** to the [trace](https://danielstephenson.dev/usage-reporting) usage service: one `page-view` event per HTML page served, carrying only the request path (`/login`, `/register`, `/game` — no query string, capped at 200 characters) and the web client's version. Nothing about the visitor is recorded — no IP address, user agent, cookie, session, account or referrer — so the result is a count of page loads, not of visitors. API calls, static assets, redirects, error pages and requests from crawlers, monitors and scripted clients are not counted. The web client also now sends the same one `startup` event the backend does (program name `barony`, version, `service=true`). Reports are queued to the client's own daemon thread and never slow a request; a trace server that is down costs nothing beyond a dropped report. Configured through `usage-reporting.enabled` / `usage-reporting.endpoint` / `usage-reporting.key` in `web-client/src/main/resources/application.yml` (the same key the backend uses), each overridable by environment variable; `USAGE_REPORTING_ENABLED=false` turns page views and the startup event off together. The client is [trace-client-java](https://github.com/Stephenson-Software/trace-client-java) vendored as one file under `com.barony.webclient.trace`; which requests count is decided by `PageViewPolicy` and covered by unit tests plus an end-to-end test against a loopback stub.
 
+### Documentation
+
+- ✅ `PLAYER_GUIDE.md` no longer describes the map as a fixed 10x10 grid with the enemy castle at
+  (9,9). `MapGenerator` picks each side at random between 10 and 20 tiles for every game, with the
+  castles at opposite corners, so the guide now says that, and its "Armies won't move"
+  troubleshooting tip no longer tells players to keep moves within a 10x10 grid.
+
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 
 ### Changed
