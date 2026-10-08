@@ -53,10 +53,13 @@ The first screen asks you to log in. New players click **Create one** to registe
 
 ### Understanding the Map
 
-The game board is a 10x10 grid with different tile types:
+The game board is a grid generated fresh for every game: each side is between 10 and 20 tiles
+long, chosen at random, so a map can be anything from 10x10 to 20x20 and need not be square. It
+holds different tile types:
 
 - **Castles (Gray)**: 
-  - Start at corners: Player 1 at (0,0), Player 2 at (9,9)
+  - Start at opposite corners: Player 1 at the top-left (0,0), Player 2 at the bottom-right
+    corner (which is (9,9) only on a 10x10 map)
   - Blue outline = Player 1 owned
   - Red outline = Player 2 owned
   - Must capture enemy castle to win!
@@ -433,7 +436,7 @@ A: You can only change policies every 15 turns to prevent rapid switching exploi
 
 **Armies won't move:**
 - Make sure you selected the army first (left-click)
-- Verify the destination is within the 10x10 grid
+- Verify the destination is on the map (a move to a tile outside the grid is ignored)
 - Check the backend is running (armies move when you click **Advance Turn**)
 
 **Can't split armies:**
