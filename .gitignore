@@ -30,3 +30,8 @@ Thumbs.db
 
 # Local embedded H2 game-save data (dev)
 backend/data/
+
+# ASN.1 generated files
+asn1/generated/
+asn1/lib/
+asn1/test-data/*.result.*

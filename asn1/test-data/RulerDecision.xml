@@ -1,0 +1,4 @@
+<RulerDecision>
+    <category><economic/></category>
+    <choice><economic><heavyTaxation/></economic></choice>
+</RulerDecision>

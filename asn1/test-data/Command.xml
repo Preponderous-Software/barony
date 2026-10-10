@@ -1,0 +1,7 @@
+<Command>
+    <type><move/></type>
+    <armyId>1</armyId>
+    <targetX>5</targetX>
+    <targetY>3</targetY>
+    <splitAmount>0</splitAmount>
+</Command>

@@ -1,0 +1,10 @@
+<RulerStats>
+    <averageStability>95</averageStability>
+    <averageMorale>100</averageMorale>
+    <averageLoyalty>105</averageLoyalty>
+    <totalPopulation>500</totalPopulation>
+    <economicPolicy><balancedBudget/></economicPolicy>
+    <militaryPolicy><standardService/></militaryPolicy>
+    <populationPolicy><stablePopulation/></populationPolicy>
+    <ticksUntilNextDecision>10</ticksUntilNextDecision>
+</RulerStats>

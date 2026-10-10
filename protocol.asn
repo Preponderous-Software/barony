@@ -1,0 +1,247 @@
+-- ============================================================================
+-- Barony Protocol ASN.1 Schema
+-- ============================================================================
+-- This module defines the wire format for all data types exchanged between
+-- the Barony web-client and backend over the REST API. The existing codebase
+-- uses Spring Boot with Jackson JSON serialization; this schema serves as a
+-- machine-readable contract documenting every message type.
+--
+-- Tier: A (Schema Only)
+-- Compiler: asn1c -fcompound-names -fincludes-quoted -pdu=all protocol.asn
+-- ============================================================================
+
+BaronyProtocol DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+-- ============================================================================
+-- Primitive constrained types
+-- ============================================================================
+
+-- Player IDs: 0=neutral, 1=player1, 2=player2
+PlayerId        ::= INTEGER (0..2)
+
+-- Grid coordinates (map size ranges from 10x10 to 20x20)
+Coordinate      ::= INTEGER (0..19)
+
+-- Army identifier (auto-incrementing positive integer)
+ArmyId          ::= INTEGER (1..MAX)
+
+-- Soldier count (non-negative)
+SoldierCount    ::= INTEGER (0..MAX)
+
+-- Tick counter (non-negative)
+TickCount       ::= INTEGER (0..MAX)
+
+-- Population count (non-negative)
+Population      ::= INTEGER (0..MAX)
+
+-- Percentage-like stats with bonus range
+-- Morale: 0-200 (default 100, affects combat effectiveness)
+Morale          ::= INTEGER (0..200)
+
+-- Loyalty: 0-110 (default 100, 100-110 is bonus range, affects desertion)
+Loyalty         ::= INTEGER (0..110)
+
+-- Stability: 0-110 (default 100, affects soldier generation efficiency)
+Stability       ::= INTEGER (0..110)
+
+-- Occupation ticks for castle capture progress (0-3 required to capture)
+OccupationTicks ::= INTEGER (0..MAX)
+
+-- Policy change cooldown tick reference
+PolicyTick      ::= INTEGER (-15..MAX)
+
+-- Username for login (1-64 characters)
+Username        ::= UTF8String (SIZE (1..64))
+
+-- Session identifier (UUID string, 36 characters with hyphens)
+SessionId       ::= UTF8String (SIZE (36))
+
+-- ============================================================================
+-- Enumerations
+-- ============================================================================
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/TileType.java
+-- Tile terrain types used in the game grid
+TileType ::= ENUMERATED {
+    castle  (0),
+    village (1),
+    empty   (2)
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/Command.java (type field)
+-- Command types that a player can issue to armies
+CommandType ::= ENUMERATED {
+    move  (0),
+    split (1)
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/RulerDecision.java (PolicyCategory enum)
+-- Categories of ruler policy decisions
+PolicyCategory ::= ENUMERATED {
+    economic   (0),
+    military   (1),
+    population (2)
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/RulerDecision.java (EconomicPolicy enum)
+-- Economic policy choices affecting taxation and infrastructure
+EconomicPolicy ::= ENUMERATED {
+    heavyTaxation            (0),
+    balancedBudget           (1),
+    infrastructureInvestment (2)
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/RulerDecision.java (MilitaryPolicy enum)
+-- Military policy choices affecting morale and loyalty
+MilitaryPolicy ::= ENUMERATED {
+    aggressiveTraining (0),
+    standardService    (1),
+    veteranBenefits    (2)
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/RulerDecision.java (PopulationPolicy enum)
+-- Population policy choices affecting growth and stability
+PopulationPolicy ::= ENUMERATED {
+    growthFocus          (0),
+    stablePopulation     (1),
+    qualityOverQuantity  (2)
+}
+
+-- ============================================================================
+-- Model types
+-- ============================================================================
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/Tile.java
+-- Represents a single cell in the game grid
+Tile ::= SEQUENCE {
+    type            TileType,
+    ownerId         PlayerId,
+    occupationTicks OccupationTicks,
+    stability       Stability,
+    population      Population
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/Army.java
+-- Represents a military unit on the game map
+Army ::= SEQUENCE {
+    id             ArmyId,
+    x              Coordinate,
+    y              Coordinate,
+    soldiers       SoldierCount,
+    playerId       PlayerId,
+    destinationX   Coordinate OPTIONAL,
+    destinationY   Coordinate OPTIONAL,
+    morale         Morale,
+    loyalty        Loyalty
+}
+
+-- Grid row: a sequence of tiles representing one column of the map
+GridColumn ::= SEQUENCE (SIZE (1..20)) OF Tile
+
+-- The full game grid: a sequence of columns
+Grid ::= SEQUENCE (SIZE (1..20)) OF GridColumn
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/GameState.java
+-- Complete game state returned by most API endpoints
+GameState ::= SEQUENCE {
+    grid                Grid,
+    armies              SEQUENCE OF Army,
+    tickCount           TickCount,
+    gameOver            BOOLEAN,
+    winnerId            PlayerId OPTIONAL,
+    aiEnabled           BOOLEAN,
+    economicPolicy      EconomicPolicy,
+    militaryPolicy      MilitaryPolicy,
+    populationPolicy    PopulationPolicy,
+    lastPolicyChangeTick PolicyTick
+}
+
+-- ============================================================================
+-- Request types
+-- ============================================================================
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/controller/AuthController.java
+-- POST /api/auth/login request body
+LoginRequest ::= SEQUENCE {
+    username  Username
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/Command.java
+-- POST /command and POST /api/session/command request body
+-- Used for MOVE and SPLIT army commands
+Command ::= SEQUENCE {
+    type        CommandType,
+    armyId      ArmyId,
+    targetX     Coordinate,
+    targetY     Coordinate,
+    splitAmount SoldierCount
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/RulerDecision.java
+-- POST /api/decision and POST /api/session/decision request body
+RulerDecision ::= SEQUENCE {
+    category  PolicyCategory,
+    choice    PolicyChoice
+}
+
+-- Union type for policy choices across all categories
+PolicyChoice ::= CHOICE {
+    economic   EconomicPolicy,
+    military   MilitaryPolicy,
+    population PopulationPolicy
+}
+
+-- ============================================================================
+-- Response types
+-- ============================================================================
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/Session.java
+-- POST /api/auth/login response body
+LoginResponse ::= SEQUENCE {
+    sessionId    SessionId,
+    username     Username
+}
+
+-- Corresponds to: backend/src/main/java/com/barony/backend/model/RulerStats.java
+-- GET /api/ruler-stats and GET /api/session/ruler-stats response body
+RulerStats ::= SEQUENCE {
+    averageStability      INTEGER (0..110),
+    averageMorale         INTEGER (0..200),
+    averageLoyalty        INTEGER (0..110),
+    totalPopulation       Population,
+    economicPolicy        EconomicPolicy,
+    militaryPolicy        MilitaryPolicy,
+    populationPolicy      PopulationPolicy,
+    ticksUntilNextDecision INTEGER (0..MAX)
+}
+
+-- Shared error response for HTTP 4xx/5xx errors
+-- Corresponds to: error JSON objects in controller exception handlers
+ErrorResponse ::= SEQUENCE {
+    status  INTEGER (400..599),
+    error   UTF8String (SIZE (1..256)),
+    message UTF8String (SIZE (1..1024))
+}
+
+-- ============================================================================
+-- Top-level dispatch unions
+-- ============================================================================
+
+-- All possible request message types in the protocol
+BaronyRequest ::= CHOICE {
+    login          LoginRequest,
+    command        Command,
+    rulerDecision  RulerDecision,
+    ...
+}
+
+-- All possible response message types in the protocol
+BaronyResponse ::= CHOICE {
+    loginResponse    LoginResponse,
+    gameState        GameState,
+    rulerStats       RulerStats,
+    errorResponse    ErrorResponse,
+    ...
+}
+
+END

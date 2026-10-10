@@ -1,0 +1,11 @@
+<Army>
+    <id>1</id>
+    <x>0</x>
+    <y>0</y>
+    <soldiers>10</soldiers>
+    <playerId>1</playerId>
+    <destinationX>5</destinationX>
+    <destinationY>3</destinationY>
+    <morale>100</morale>
+    <loyalty>100</loyalty>
+</Army>
