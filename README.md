@@ -138,6 +138,8 @@ curl -X POST http://localhost:8080/command \
   -d '{"type":"SPLIT","armyId":1,"splitAmount":5}'
 ```
 
+Both commands act only on player 1's armies; a `MOVE` or `SPLIT` naming one of the AI's armies is ignored.
+
 **Change Policy:**
 ```bash
 curl -X POST http://localhost:8080/api/decision \

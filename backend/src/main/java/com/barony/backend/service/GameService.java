@@ -137,7 +137,7 @@ public class GameService {
 
     private void executeMoveCommand(Command command) {
         Army targetArmy = findArmyById(command.getArmyId());
-        if (targetArmy == null) {
+        if (targetArmy == null || targetArmy.getPlayerId() != 1) {
             return;
         }
 

@@ -195,7 +195,7 @@ class GameServiceTest {
         move2.setArmyId(army2Id);
         move2.setTargetX(5);
         move2.setTargetY(5);
-        gameService.executeCommand(move2);
+        steerEnemyArmy(move2);
         
         // Execute ticks until combat occurs (armies meet at or before destination)
         for (int i = 0; i < 20; i++) {
@@ -257,7 +257,7 @@ class GameServiceTest {
         move2.setArmyId(army2Id);
         move2.setTargetX(5);
         move2.setTargetY(5);
-        gameService.executeCommand(move2);
+        steerEnemyArmy(move2);
         
         // Execute ticks to move armies to destination and trigger combat
         for (int i = 0; i < 11; i++) {
@@ -615,7 +615,7 @@ class GameServiceTest {
         command2.setArmyId(army2Id);
         command2.setTargetX(6);
         command2.setTargetY(9);
-        gameService.executeCommand(command2);
+        steerEnemyArmy(command2);
         
         // Execute one tick
         gameService.tick();
@@ -813,7 +813,7 @@ class GameServiceTest {
         move2.setArmyId(army2Id);
         move2.setTargetX(3);
         move2.setTargetY(3);
-        gameService.executeCommand(move2);
+        steerEnemyArmy(move2);
         
         // Wait for Player 2 to reach village (from 9,9 to 3,3 = 6+6 = 12 ticks)
         for (int i = 0; i < 12; i++) {
@@ -1000,7 +1000,7 @@ class GameServiceTest {
         move2.setArmyId(army2Id);
         move2.setTargetX(6);
         move2.setTargetY(6);
-        gameService.executeCommand(move2);
+        steerEnemyArmy(move2);
         
         for (int i = 0; i < 6; i++) {
             gameService.tick();
@@ -1263,7 +1263,7 @@ class GameServiceTest {
         moveP2.setArmyId(p2Army.getId());
         moveP2.setTargetX(5);
         moveP2.setTargetY(5);
-        gameService.executeCommand(moveP2);
+        steerEnemyArmy(moveP2);
         
         // Move armies to same location
         for (int i = 0; i < 10; i++) {
@@ -1386,7 +1386,7 @@ class GameServiceTest {
         move.setArmyId(army2Id);
         move.setTargetX(0);
         move.setTargetY(0);
-        gameService.executeCommand(move);
+        steerEnemyArmy(move);
         
         // Move Player 1 army away so it doesn't fight at the castle
         int army1Id = state.getArmies().get(0).getId();
@@ -1436,7 +1436,7 @@ class GameServiceTest {
         move.setArmyId(army2Id);
         move.setTargetX(0);
         move.setTargetY(0);
-        gameService.executeCommand(move);
+        steerEnemyArmy(move);
         
         // Move Player 1 army away
         int army1Id = state.getArmies().get(0).getId();
@@ -1466,7 +1466,7 @@ class GameServiceTest {
         moveAway2.setArmyId(army2Id);
         moveAway2.setTargetX(1);
         moveAway2.setTargetY(1);
-        gameService.executeCommand(moveAway2);
+        steerEnemyArmy(moveAway2);
         
         gameService.tick();
         
@@ -1495,7 +1495,7 @@ class GameServiceTest {
         move.setArmyId(army2Id);
         move.setTargetX(0);
         move.setTargetY(0);
-        gameService.executeCommand(move);
+        steerEnemyArmy(move);
         
         // Player 1 army stays at castle
         
@@ -1545,7 +1545,7 @@ class GameServiceTest {
         move.setArmyId(army2Id);
         move.setTargetX(0);
         move.setTargetY(0);
-        gameService.executeCommand(move);
+        steerEnemyArmy(move);
         
         // Move Player 1 army away
         int army1Id = state.getArmies().get(0).getId();
@@ -1595,7 +1595,7 @@ class GameServiceTest {
         moveAway.setArmyId(army2Id);
         moveAway.setTargetX(5);
         moveAway.setTargetY(5);
-        gameService.executeCommand(moveAway);
+        steerEnemyArmy(moveAway);
         
         // Wait for Player 1 to capture Player 2's castle (generous tick count for variable map sizes)
         for (int i = 0; i < 40; i++) {
@@ -1636,7 +1636,7 @@ class GameServiceTest {
         moveAway.setArmyId(army2Id);
         moveAway.setTargetX(5);
         moveAway.setTargetY(5);
-        gameService.executeCommand(moveAway);
+        steerEnemyArmy(moveAway);
         
         // Wait for game to end (generous tick count for variable map sizes)
         for (int i = 0; i < 40; i++) {
@@ -1804,7 +1804,7 @@ class GameServiceTest {
         move.setArmyId(army2Id);
         move.setTargetX(0);
         move.setTargetY(0);
-        gameService.executeCommand(move);
+        steerEnemyArmy(move);
         
         // Move Player 1 away
         int army1Id = state.getArmies().get(0).getId();
@@ -1866,7 +1866,7 @@ class GameServiceTest {
         move.setArmyId(army2Id);
         move.setTargetX(0);
         move.setTargetY(0);
-        gameService.executeCommand(move);
+        steerEnemyArmy(move);
         
         // Move Player 1 away
         int army1Id = state.getArmies().get(0).getId();
@@ -2937,6 +2937,36 @@ class GameServiceTest {
         Army enemyAfter = state.getArmies().stream()
             .filter(a -> a.getPlayerId() == 2).findFirst().get();
         assertEquals(enemySoldiersBefore, enemyAfter.getSoldiers());
+    }
+
+    @Test
+    void moveCommandCannotRedirectEnemyArmy() {
+        GameState internalState = gameService.getInternalStateForTest();
+        Army enemyArmy = internalState.getArmiesInternal().stream()
+            .filter(a -> a.getPlayerId() == 2).findFirst().get();
+        enemyArmy.setDestinationX(2);
+        enemyArmy.setDestinationY(3);
+
+        Command moveCmd = new Command();
+        moveCmd.setType("MOVE");
+        moveCmd.setArmyId(enemyArmy.getId());
+        moveCmd.setTargetX(0);
+        moveCmd.setTargetY(0);
+        gameService.executeCommand(moveCmd);
+
+        Army enemyAfter = gameService.getState().getArmies().stream()
+            .filter(a -> a.getId() == enemyArmy.getId()).findFirst().get();
+        assertEquals(2, enemyAfter.getDestinationX());
+        assertEquals(3, enemyAfter.getDestinationY());
+    }
+
+    // MOVE commands only steer player 1's armies; tests position the AI's army by applying
+    // the command's target to it directly, as AiService does.
+    private void steerEnemyArmy(Command command) {
+        Army army = gameService.getInternalStateForTest().getArmiesInternal().stream()
+            .filter(a -> a.getId() == command.getArmyId()).findFirst().get();
+        army.setDestinationX(command.getTargetX());
+        army.setDestinationY(command.getTargetY());
     }
 
     private int[] findPlayerCastle(GameState state, int playerId) {
