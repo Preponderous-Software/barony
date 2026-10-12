@@ -156,11 +156,6 @@ class GameServiceIntegrationTest {
             .findFirst()
             .get()
             .getId();
-        int player2ArmyId = state.getArmies().stream()
-            .filter(a -> a.getPlayerId() == 2)
-            .findFirst()
-            .get()
-            .getId();
         
         // Both move to village at (3,3)
         Command moveP1 = new Command();
