@@ -119,12 +119,9 @@ class GameServiceIntegrationTest {
         moveP1.setTargetY(5);
         gameService.executeCommand(moveP1);
 
-        Command moveP2 = new Command();
-        moveP2.setType("MOVE");
-        moveP2.setArmyId(p2Army.getId());
-        moveP2.setTargetX(5);
-        moveP2.setTargetY(5);
-        gameService.executeCommand(moveP2);
+        // MOVE commands only steer player 1's armies, so the AI army is given its destination directly
+        p2Army.setDestinationX(5);
+        p2Army.setDestinationY(5);
 
         // Move both armies to center (generous tick count)
         for (int i = 0; i < 15; i++) {
@@ -173,12 +170,9 @@ class GameServiceIntegrationTest {
         moveP1.setTargetY(3);
         gameService.executeCommand(moveP1);
         
-        Command moveP2 = new Command();
-        moveP2.setType("MOVE");
-        moveP2.setArmyId(player2ArmyId);
-        moveP2.setTargetX(3);
-        moveP2.setTargetY(3);
-        gameService.executeCommand(moveP2);
+        // MOVE commands only steer player 1's armies, so the AI army is given its destination directly
+        p2ArmySetup.setDestinationX(3);
+        p2ArmySetup.setDestinationY(3);
         
         // Wait for both to reach village (generous tick count for variable map sizes)
         for (int i = 0; i < 20; i++) {
