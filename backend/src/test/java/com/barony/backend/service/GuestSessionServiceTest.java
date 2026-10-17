@@ -168,6 +168,8 @@ class GuestSessionServiceTest {
         assertNotNull(session.getGameState());
         assertEquals(0, session.getGameState().getTickCount());
         assertNotEquals("not json", row.getState(), "the fresh game replaces the corrupt one");
+        // Written now only because lastSeenAt is null (the touch rule); a recently seen guest's
+        // replacement game is persisted by the next save instead.
         verify(repository).save(row);
     }
 
