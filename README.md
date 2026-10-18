@@ -5,6 +5,18 @@
 
 Barony is a browser-based turn-based strategy game where you command armies to capture villages and castles against an AI opponent. Build your forces, control territory, and use strategic policies to defeat your enemy.
 
+<p align="center">
+  <img src="docs/images/gameplay.gif" alt="A guest game: the player's blue army is ordered toward a village, then Auto Play advances the turns while the red AI rival splits its army and captures villages; the status panel's turn counter climbs alongside" width="620">
+  <img src="docs/images/game-mobile.png" alt="The game page at phone width: the turn buttons above the square map with both armies and the villages" width="150">
+</p>
+<p align="center"><em>A guest game in the web client: one move order, then Auto Play; and the same page at phone width.</em></p>
+
+<p align="center">
+  <img src="docs/images/login.png" alt="The sign-in card with Log In, Play as guest and Create one" width="480">
+</p>
+
+<sub>How these were captured: the backend and web client jars were built and run locally (in-memory H2, usage reporting off), a guest game was started with "Play as guest", and the page was driven and screenshotted with headless Chromium (Playwright) on 2026-10-18. Each guest game gets its own random map.</sub>
+
 ## Documentation
 
 ### Quick Links
