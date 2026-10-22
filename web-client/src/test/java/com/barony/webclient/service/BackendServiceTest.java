@@ -1,7 +1,11 @@
 package com.barony.webclient.service;
 
+import com.barony.webclient.model.GameState;
+import com.barony.webclient.model.RulerDecision;
+import com.barony.webclient.model.RulerStats;
 import com.barony.webclient.model.RunHistory;
 import com.barony.webclient.model.RunRecord;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -9,8 +13,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -23,7 +30,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * Verifies BackendService proxies auth requests and forwards the auth cookie (not a bearer token)
  * on per-user game requests, and surfaces the backend's Set-Cookie on login/logout so the web
- * controller can relay it to the browser.
+ * controller can relay it to the browser. Also verifies the page's {@code X-Barony-Player} mode is
+ * passed through, so the backend resolves account vs. guest the same way as behind the gateway.
  */
 class BackendServiceTest {
 
@@ -38,6 +46,11 @@ class BackendServiceTest {
         RestTemplate restTemplate = (RestTemplate) readField(service, "restTemplate");
         this.server = MockRestServiceServer.createServer(restTemplate);
         setField(service, "backendUrl", BACKEND);
+    }
+
+    @AfterEach
+    void clearRequestContext() {
+        RequestContextHolder.resetRequestAttributes();
     }
 
     @Test
@@ -164,6 +177,152 @@ class BackendServiceTest {
         service.saveSessionPreferences("barony_token=jwt-abc", Map.of(
                 "settings", Map.of("theme", "classic"),
                 "panelLayout", Map.of("order", java.util.List.of("armies", "status"))));
+
+        server.verify();
+    }
+
+    @Test
+    void guestForwardsCookieAndReturnsTheGuestSetCookie() {
+        server.expect(requestTo(BACKEND + "/api/guest"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_guest=guest-1"))
+                .andRespond(withSuccess("{\"guest\":true}", MediaType.APPLICATION_JSON)
+                        .headers(setCookie("barony_guest=guest-1; HttpOnly; Path=/")));
+
+        ResponseEntity<Map> result = service.guest("barony_guest=guest-1");
+
+        assertEquals(true, result.getBody().get("guest"));
+        assertTrue(result.getHeaders().getFirst(HttpHeaders.SET_COOKIE).contains("barony_guest=guest-1"));
+        server.verify();
+    }
+
+    @Test
+    void claimGuestForwardsBothCookies() {
+        server.expect(requestTo(BACKEND + "/api/guest/claim"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc; barony_guest=guest-1"))
+                .andRespond(withSuccess("{\"claimed\":true}", MediaType.APPLICATION_JSON));
+
+        ResponseEntity<Map> result = service.claimGuest("barony_token=jwt-abc; barony_guest=guest-1");
+
+        assertEquals(true, result.getBody().get("claimed"));
+        server.verify();
+    }
+
+    @Test
+    void sessionTickForwardsAuthCookie() {
+        server.expect(requestTo(BACKEND + "/api/session/tick"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andRespond(withSuccess("{\"tickCount\":8}", MediaType.APPLICATION_JSON));
+
+        assertEquals(8, service.sessionTick("barony_token=jwt-abc").getTickCount());
+        server.verify();
+    }
+
+    @Test
+    void sessionResetForwardsAuthCookie() {
+        server.expect(requestTo(BACKEND + "/api/session/reset"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andRespond(withSuccess("{\"tickCount\":0}", MediaType.APPLICATION_JSON));
+
+        assertEquals(0, service.sessionReset("barony_token=jwt-abc").getTickCount());
+        server.verify();
+    }
+
+    @Test
+    void sessionDecisionForwardsAuthCookieAndTheDecision() {
+        server.expect(requestTo(BACKEND + "/api/session/decision"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(jsonPath("$.category").value("ECONOMIC"))
+                .andExpect(jsonPath("$.choice").value("HEAVY_TAXATION"))
+                .andRespond(withSuccess("{\"economicPolicy\":\"HEAVY_TAXATION\"}",
+                        MediaType.APPLICATION_JSON));
+
+        RulerDecision decision = new RulerDecision();
+        decision.setCategory(RulerDecision.PolicyCategory.ECONOMIC);
+        decision.setChoice("HEAVY_TAXATION");
+
+        GameState state = service.sessionChangePolicy("barony_token=jwt-abc", decision);
+
+        assertEquals("HEAVY_TAXATION", state.getEconomicPolicy());
+        server.verify();
+    }
+
+    @Test
+    void sessionRulerStatsForwardsAuthCookieAndRelaysEveryField() {
+        server.expect(requestTo(BACKEND + "/api/session/ruler-stats"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andRespond(withSuccess("{\"averageStability\":61.5,\"averageMorale\":72.25,"
+                        + "\"averageLoyalty\":80.0,\"totalPopulation\":340,"
+                        + "\"economicPolicy\":\"BALANCED\",\"militaryPolicy\":\"DEFENSIVE\","
+                        + "\"populationPolicy\":\"GROWTH\",\"ticksUntilNextDecision\":3}",
+                        MediaType.APPLICATION_JSON));
+
+        RulerStats stats = service.sessionRulerStats("barony_token=jwt-abc");
+
+        assertEquals(61.5, stats.getAverageStability());
+        assertEquals(72.25, stats.getAverageMorale());
+        assertEquals(80.0, stats.getAverageLoyalty());
+        assertEquals(340, stats.getTotalPopulation());
+        assertEquals("BALANCED", stats.getEconomicPolicy());
+        assertEquals("DEFENSIVE", stats.getMilitaryPolicy());
+        assertEquals("GROWTH", stats.getPopulationPolicy());
+        assertEquals(3, stats.getTicksUntilNextDecision());
+        server.verify();
+    }
+
+    @Test
+    void blankCookieIsNotForwarded() {
+        server.expect(requestTo(BACKEND + "/api/session/state"))
+                .andExpect(headerDoesNotExist(HttpHeaders.COOKIE))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        service.getSessionState("  ");
+
+        server.verify();
+    }
+
+    @Test
+    void playerModeHeaderFromTheBrowserRequestIsForwarded() {
+        MockHttpServletRequest browserRequest = new MockHttpServletRequest();
+        browserRequest.addHeader(BackendService.PLAYER_MODE_HEADER, "guest");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(browserRequest));
+        server.expect(requestTo(BACKEND + "/api/session/command"))
+                .andExpect(header(BackendService.PLAYER_MODE_HEADER, "guest"))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_guest=guest-1"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        service.sessionCommand("barony_guest=guest-1", new com.barony.webclient.model.Command());
+
+        server.verify();
+    }
+
+    @Test
+    void playerModeHeaderIsOmittedWhenTheBrowserSentNone() {
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        server.expect(requestTo(BACKEND + "/api/session/state"))
+                .andExpect(headerDoesNotExist(BackendService.PLAYER_MODE_HEADER))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        service.getSessionState("barony_token=jwt-abc");
+
+        server.verify();
+    }
+
+    @Test
+    void blankPlayerModeHeaderIsNotForwarded() {
+        MockHttpServletRequest browserRequest = new MockHttpServletRequest();
+        browserRequest.addHeader(BackendService.PLAYER_MODE_HEADER, " ");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(browserRequest));
+        server.expect(requestTo(BACKEND + "/api/session/state"))
+                .andExpect(headerDoesNotExist(BackendService.PLAYER_MODE_HEADER))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        service.getSessionState("barony_token=jwt-abc");
 
         server.verify();
     }
