@@ -206,7 +206,7 @@ Then open http://localhost:3000
 1. **Goal:** Capture all enemy castles to win
 2. **Players:** You (blue) vs AI (red)
 3. **Movement:** Armies move 1 tile per turn
-4. **Villages:** Generate +1 soldier/turn for stationed armies
+4. **Villages:** Generate soldiers each turn for their owner's army stationed there — one per 100 population (1 at the start, more as your villages grow)
 5. **Combat:** Simultaneous damage (10 vs 7 → 3 vs 0)
 6. **Castle Capture:** Occupy for 3 consecutive turns
 

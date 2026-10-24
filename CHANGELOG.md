@@ -51,6 +51,11 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   (9,9). `MapGenerator` picks each side at random between 10 and 20 tiles for every game, with the
   castles at opposite corners, so the guide now says that, and its "Armies won't move"
   troubleshooting tip no longer tells players to keep moves within a 10x10 grid.
+- ✅ `README.md`, `PLAYER_GUIDE.md` and `MVP.md` no longer say a village generates a flat +1
+  soldier per turn. `PolicyService` generates one soldier per 100 of the village's population
+  (scaled by stability for Player 1), and Player 1's villages grow about 1% a turn, so generation
+  rises over a game. The docs now say that, and `MVP.md` drops a population cap that does not
+  exist.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 

@@ -366,9 +366,11 @@ for the player-facing description of the real UI.
 **Mechanical Effects:**
 
 *Village Stability:*
-- Base soldier generation: 1 per tick at 100% stability
-- Modified generation: `base * (stability / 100)`
-- Example: 70% stability = 0.7 soldiers/tick (rounded)
+- Base soldier generation: `population / 100` per tick (integer division), so 1 for a starting
+  village of 100
+- Modified generation: `base * (stability / 100)`, rounded to the nearest whole soldier
+- Example: a village of 300 at 85% stability = 2.55 → 3 soldiers/tick
+- Only Player 1's generation is scaled by stability; Player 2 gets the base amount
 - Stability recovers slowly over time toward 100% (2% per tick)
 
 *Army Morale:*
@@ -389,10 +391,11 @@ for the player-facing description of the real UI.
   target 100% or above, i.e. no desertion at all
 
 *Population Growth:*
-- Affects maximum soldiers that can be generated at villages
-- Villages have population cap (e.g., 50 soldiers)
-- Growth policies modify this cap over time
-- Higher population = more soldier generation potential
+- Every village starts at a population of 100, with no cap
+- Player 1's villages grow by 1% per tick, scaled by the population policy's growth modifier
+  (Growth Focus +15%, Quality Over Quantity -10%) and rounded to the nearest whole person;
+  neutral and Player 2 villages do not grow
+- Higher population = more soldier generation (see *Village Stability* above)
 
 #### Backend Changes
 - Add `RulerDecision` model with policy types and effects
