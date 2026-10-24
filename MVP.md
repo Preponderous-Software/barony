@@ -371,7 +371,8 @@ for the player-facing description of the real UI.
 - Modified generation: `base * (stability / 100)`, rounded to the nearest whole soldier
 - Example: a village of 300 at 85% stability = 2.55 → 3 soldiers/tick
 - Only Player 1's generation is scaled by stability; Player 2 gets the base amount
-- Stability recovers slowly over time toward 100% (2% per tick)
+- Stability drifts 2 points per tick toward its policy target: 100 plus the economic and
+  population stability modifiers, capped at 110
 
 *Army Morale:*
 - Base combat strength: 1 soldier kills 1 enemy soldier
