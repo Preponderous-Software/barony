@@ -65,7 +65,9 @@ holds different tile types:
   - Must capture enemy castle to win!
 
 - **Villages (Brown)**:
-  - Generate +1 soldier per turn for armies stationed there
+  - Generate soldiers each turn for their owner's army stationed there: one per 100 population,
+    so 1 a turn at the start and more as your villages grow (see **Population** under
+    [Understanding Stats](#understanding-stats))
   - Can be captured by occupying with your army
   - Blue tint = Player 1 owned
   - Red tint = Player 2 owned
@@ -120,7 +122,8 @@ below the map, or use the split control next to any of your armies in the **Armi
 
 **2. Build Up Your Forces**
 - Park armies on villages you control
-- Each turn, armies gain +1 soldier per village
+- Each turn, an army on one of your villages gains one soldier per 100 of that village's population
+  — 1 at first, more once the village has grown
 - Don't attack with weak armies!
 
 **3. Split Your Armies**
@@ -264,8 +267,11 @@ Check the **Ruler Stats** panel (right side) to monitor:
   - Losses under one whole soldier carry over between turns rather than being ignored, so
     even a small army eventually feels a fractional rate
   
-- **Population**: Total population across all villages
-  - Higher population = more soldier generation
+- **Population**: Total population across your villages
+  - Every village starts at 100; yours grow by about 1% each turn (the Population policies nudge
+    the rate), whether or not an army is stationed there. Neutral and enemy-held villages do not grow.
+  - A village generates one soldier per turn for every full 100 of its population, so a village
+    of 200 generates 2 — before the stability scaling above
 
 Stability, morale and loyalty are all colour-coded the same way: **green at 90 and above**,
 **amber from 70 to 89**, and **red below 70**. Aggressive Training's 75% loyalty target therefore
