@@ -48,6 +48,7 @@ The first screen asks you to log in. New players click **Create one** to registe
 - **You Control:** Player 1 (Blue armies)
 - **Enemy:** Player 2 AI (Red armies)
 - **Turn-Based:** Click **Advance Turn** to advance one turn (tick)
+- **Starting Forces:** Each side begins with one army of 10 soldiers on its castle
 
 ## How to Play
 
@@ -89,7 +90,8 @@ the one you want rather than getting whichever the game listed first.
 1. **Left-click an army** (blue circle) to select it
    - Selected army will have a glowing highlight
 2. **Left-click any tile** to move your selected army there
-   - Army will move 1 tile per turn toward the destination
+   - Army will move 1 tile per turn toward the destination, covering the horizontal distance
+     first and then the vertical (it never moves diagonally)
    - The destination tile is marked on the map with a dashed outline in your army colour until an
      army arrives there; hover the army to read the coordinates off its tooltip
      (**Moving to: (x, y)**). Only your own armies' destinations are marked.
@@ -160,7 +162,9 @@ When armies of different players occupy the same tile:
 - **After combat**, if only your army remains on a village, you capture it
 - **Contested villages** (multiple players present) become neutral
 - Villages retain ownership when abandoned (no army present)
-- Captured villages immediately start generating soldiers for you
+- A captured village starts generating soldiers for you on the following turn: each turn,
+  soldiers are generated before villages change hands, so the turn you take a village doesn't
+  pay out
 
 ### Castle Capture
 
@@ -183,6 +187,8 @@ advances, counting down the turns remaining.
 
 - **Victory:** Capture all enemy castles
 - **Defeat:** Lose all your castles
+- Losing every army is not a defeat: at the end of any turn in which a side has no armies left, a
+  fresh 1-soldier army appears on one of that side's castles. This applies to the AI too
 - A banner appears over the map (**Victory!** or **Defeat**) with a summary of the run: turns
   played, how many castles and villages you finished holding out of the map total, and how many
   armies and soldiers you had left
