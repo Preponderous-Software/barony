@@ -56,6 +56,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   (scaled by stability for Player 1), and Player 1's villages grow about 1% a turn, so generation
   rises over a game. The docs now say that, and `MVP.md` drops a population cap that does not
   exist.
+- ✅ `PLAYER_GUIDE.md` no longer says a captured village "immediately" generates soldiers.
+  `GameService.tick` generates soldiers before it settles village ownership, so a village first
+  pays out on the turn after it is taken. The guide also now documents three rules it left out:
+  each side starts with one 10-soldier army on its castle (`MapGenerator`); armies walk the
+  horizontal distance first and then the vertical, never diagonally (`moveOneStep`); and a side
+  that ends a turn with no armies gets a fresh 1-soldier army on one of its castles
+  (`spawnArmyIfNoneRemaining`), so losing every army is not a defeat.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 
