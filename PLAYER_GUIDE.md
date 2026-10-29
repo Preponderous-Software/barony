@@ -210,6 +210,10 @@ As a ruler, you can enact policies that affect your realm. These provide strateg
 4. Wait 15 turns before changing policies again (cooldown — the **Next Decision In** bar in
    **Game Status & Stats** counts it down)
 
+The cooldown is shared by all three categories: changing your Economic policy also locks your
+Military and Population policies for the next 15 turns. Re-applying the policy already in force
+still counts as a change and restarts the cooldown. Your first change is available from turn 0.
+
 ### Economic Policies
 
 Affect village income and stability:

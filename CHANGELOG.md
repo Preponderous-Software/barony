@@ -63,6 +63,11 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   horizontal distance first and then the vertical, never diagonally (`moveOneStep`); and a side
   that ends a turn with no armies gets a fresh 1-soldier army on one of its castles
   (`spawnArmyIfNoneRemaining`), so losing every army is not a defeat.
+- ✅ `PLAYER_GUIDE.md` now says the 15-turn policy cooldown is shared by all three categories.
+  `GameState` keeps a single `lastPolicyChangeTick`, so a change in one category locks the other
+  two. Re-applying the policy already in force restarts the cooldown, and the first change is
+  available from turn 0. `README.md` now lists the valid `category`/`choice` values for
+  `POST /api/decision` and the `400`/`409` responses it returns.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 
