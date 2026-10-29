@@ -159,6 +159,15 @@ curl -X POST http://localhost:8080/api/decision \
   -d '{"category":"ECONOMIC","choice":"HEAVY_TAXATION"}'
 ```
 
+`category` is `ECONOMIC`, `MILITARY` or `POPULATION`; `choice` must name a policy in that category
+(`HEAVY_TAXATION`, `BALANCED_BUDGET`, `INFRASTRUCTURE_INVESTMENT` / `AGGRESSIVE_TRAINING`,
+`STANDARD_SERVICE`, `VETERAN_BENEFITS` / `GROWTH_FOCUS`, `STABLE_POPULATION`,
+`QUALITY_OVER_QUANTITY`). A missing field or a choice from the wrong category is rejected with
+`400`. One 15-turn cooldown covers all three categories; a change made before it has run out is
+rejected with `409`. The cooldown is checked before the choice, so a wrong choice sent during
+the cooldown also gets `409`. The same rules apply to
+`POST /api/session/decision`.
+
 For detailed API documentation, see technical sections below.
 
 
