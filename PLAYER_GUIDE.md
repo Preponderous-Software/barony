@@ -137,7 +137,12 @@ below the map, or use the split control next to any of your armies in the **Armi
 - Can garrison villages while your main force attacks
 
 **4. Friendly Armies Merge**
-- Armies at the same location automatically combine
+- Armies at the same location automatically combine, each turn right after armies move
+- A split you don't move away rejoins its parent on the next turn, so give the new army a
+  destination before you click **Advance Turn**
+- The combined army keeps the ID, morale and loyalty of the oldest (lowest-numbered) army; the
+  others' morale and loyalty are not averaged in
+- If the oldest army had no orders, the combined army takes the destination of one that did
 - Use this to consolidate forces before a big battle
 
 **5. Capture the Enemy Castle**
@@ -427,7 +432,10 @@ below the map, and click **Split Army** — or use the same control beside that 
 at least 2 soldiers to split.
 
 **Q: Can I undo a move?**
-A: No, all commands are final. Plan carefully!
+A: You can change it at any point before the army arrives. Select the army and click a different
+tile to send it there instead, or click the tile it is standing on to cancel the order and keep it
+where it is. Steps it has already taken are not undone, and a split can't be reversed except by
+bringing the two armies back onto one tile, where they merge.
 
 **Q: The AI seems too hard/easy. Can I adjust difficulty?**
 A: Currently there's only one AI difficulty level. Try different policy strategies to make it easier or harder on yourself.
