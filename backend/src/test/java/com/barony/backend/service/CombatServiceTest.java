@@ -169,6 +169,29 @@ class CombatServiceTest {
     }
 
     @Test
+    void mergeKeepsSurvivingArmysMoraleAndLoyalty() {
+        GameState gameState = newGameState();
+        Army surviving = new Army(0, 0, 10, PLAYER_1);
+        surviving.setMorale(115);
+        surviving.setLoyalty(95);
+        Army absorbed = new Army(0, 0, 20, PLAYER_1);
+        absorbed.setMorale(60);
+        absorbed.setLoyalty(40);
+
+        gameState.getArmiesInternal().add(surviving);
+        gameState.getArmiesInternal().add(absorbed);
+
+        combatService.mergeFriendlyArmies(gameState);
+
+        // The absorbed army's stats are dropped, not averaged in, even though it brings more soldiers.
+        List<Army> remaining = gameState.getArmiesInternal();
+        assertEquals(1, remaining.size());
+        assertEquals(30, remaining.get(0).getSoldiers());
+        assertEquals(115, remaining.get(0).getMorale());
+        assertEquals(95, remaining.get(0).getLoyalty());
+    }
+
+    @Test
     void armiesAtDifferentLocationsDoNotMerge() {
         GameState gameState = newGameState();
         Army first = new Army(0, 0, 10, PLAYER_1);

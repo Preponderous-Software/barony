@@ -68,6 +68,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   two. Re-applying the policy already in force restarts the cooldown, and the first change is
   available from turn 0. `README.md` now lists the valid `category`/`choice` values for
   `POST /api/decision` and the `400`/`409` responses it returns.
+- ✅ `PLAYER_GUIDE.md` no longer says a move can't be undone. A new `MOVE` replaces the army's
+  destination, and a `MOVE` to the tile the army stands on clears it (`executeMoveCommand`); in the
+  web client that is selecting the army and clicking another tile or its own. The "Friendly Armies
+  Merge" tips now also say when merging happens (each turn, right after movement, so an unmoved
+  split rejoins its parent) and what the combined army keeps (`CombatService.mergeFriendlyArmies`):
+  the lowest-numbered army's ID, morale and loyalty, and its destination, or failing that one from
+  an absorbed army. `CombatServiceTest` now pins the morale and loyalty part.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 
