@@ -1,9 +1,13 @@
 package com.barony.webclient.controller;
 
+import com.barony.webclient.model.Command;
+import com.barony.webclient.model.GameState;
+import com.barony.webclient.model.RulerStats;
 import com.barony.webclient.model.RunHistory;
 import com.barony.webclient.model.RunRecord;
 import com.barony.webclient.service.BackendService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,11 +17,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -152,5 +159,130 @@ class WebControllerTest {
                 org.springframework.web.client.HttpClientErrorException.create(HttpStatus.CONFLICT,
                         "Conflict", new HttpHeaders(), new byte[0], null));
         mockMvc.perform(post("/api/guest/claim")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void registerReturns201WithTheBackendBody() throws Exception {
+        when(backendService.register(any())).thenReturn(Map.of("username", "alice"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("alice"));
+
+        verify(backendService).register(Map.of("username", "alice", "password", "password123"));
+    }
+
+    @Test
+    void registerPassesBackend409ThroughWithAnErrorBody() throws Exception {
+        when(backendService.register(any()))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT, "Conflict", HttpHeaders.EMPTY,
+                        "Username already taken".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("Username already taken"))
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void loginReturns503WithAnErrorBodyWhenBackendUnreachable() throws Exception {
+        when(backendService.login(any()))
+                .thenThrow(new ResourceAccessException("connection refused"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("Could not connect to backend"))
+                .andExpect(jsonPath("$.message").value("connection refused"));
+    }
+
+    @Test
+    void logoutForwardsTheCookieAndRelaysTheClearingSetCookie() throws Exception {
+        HttpHeaders backendHeaders = new HttpHeaders();
+        backendHeaders.add(HttpHeaders.SET_COOKIE, "barony_token=; Max-Age=0; HttpOnly; Path=/");
+        when(backendService.logout(any()))
+                .thenReturn(new ResponseEntity<>(Map.of("message", "Logged out"), backendHeaders, HttpStatus.OK));
+
+        mockMvc.perform(post("/api/auth/logout").header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Logged out"))
+                .andExpect(header().string("Set-Cookie", containsString("Max-Age=0")));
+
+        verify(backendService).logout("barony_token=jwt-abc");
+    }
+
+    @Test
+    void sessionCommandForwardsTheCookieAndTheCommand() throws Exception {
+        GameState state = new GameState();
+        state.setTickCount(7);
+        when(backendService.sessionCommand(any(), any())).thenReturn(state);
+
+        mockMvc.perform(post("/api/session/command")
+                        .header(HttpHeaders.COOKIE, "barony_token=jwt-abc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"MOVE\",\"armyId\":3,\"targetX\":4,\"targetY\":5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tickCount").value(7));
+
+        ArgumentCaptor<Command> captor = ArgumentCaptor.forClass(Command.class);
+        verify(backendService).sessionCommand(eq("barony_token=jwt-abc"), captor.capture());
+        assertEquals("MOVE", captor.getValue().getType());
+        assertEquals(3, captor.getValue().getArmyId());
+        assertEquals(4, captor.getValue().getTargetX());
+        assertEquals(5, captor.getValue().getTargetY());
+    }
+
+    @Test
+    void sessionResetForwardsTheCookieAndReturnsTheFreshGame() throws Exception {
+        when(backendService.sessionReset(any())).thenReturn(new GameState());
+
+        mockMvc.perform(post("/api/session/reset").header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tickCount").value(0));
+
+        verify(backendService).sessionReset("barony_token=jwt-abc");
+    }
+
+    @Test
+    void sessionDecisionOnCooldownPassesBackend409Through() throws Exception {
+        when(backendService.sessionChangePolicy(any(), any()))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT,
+                        "Conflict", HttpHeaders.EMPTY, new byte[0], null));
+
+        mockMvc.perform(post("/api/session/decision")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"ECONOMIC\",\"choice\":\"HEAVY_TAXATION\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void sessionRulerStatsReturnsTheBackendStatsToBrowser() throws Exception {
+        RulerStats stats = new RulerStats();
+        stats.setAverageStability(72.5);
+        stats.setEconomicPolicy("HEAVY_TAXATION");
+        stats.setTicksUntilNextDecision(4);
+        when(backendService.sessionRulerStats(any())).thenReturn(stats);
+
+        mockMvc.perform(get("/api/session/ruler-stats").header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.averageStability").value(72.5))
+                .andExpect(jsonPath("$.economicPolicy").value("HEAVY_TAXATION"))
+                .andExpect(jsonPath("$.ticksUntilNextDecision").value(4));
+
+        verify(backendService).sessionRulerStats("barony_token=jwt-abc");
+    }
+
+    @Test
+    void rootRedirectsToTheLoginPage() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
     }
 }
