@@ -36,11 +36,33 @@ Then open http://localhost:3000 in your browser.
 
 ### Creating an Account & Logging In
 
-The first screen asks you to log in. New players click **Create one** to register a username
-(3–50 characters) and password (at least 8 characters), then log in.
+The first screen offers two ways in: log in to an account, or [play as a guest](#playing-as-a-guest)
+without one. New players click **Create one** to register a username (3–50 characters) and password
+(at least 8 characters), then log in.
 
 - Your game progress is saved to your account, so you can return to it later.
 - Click **Logout** in the game to sign out — this revokes your session immediately.
+
+### Playing as a Guest
+
+Click **Play as guest** on the first screen to start a game with no account. A guest plays the same
+game as an account, with these differences:
+
+- **Your game stays in this browser.** It can't be reached from another browser or device, and it
+  is deleted after 30 days without play.
+- **Your settings stay in this browser too.** Display settings and the sidebar arrangement aren't
+  saved to an account, so they don't follow you anywhere.
+
+The game page shows **Guest** as the player, and **Exit guest game** in place of **Logout**. Exiting
+keeps your game: the button on the first screen then reads **Continue guest game** and picks up where
+you left off.
+
+**Keeping your progress:** a guest game, along with its Run History, can be moved into an account
+that has no game yet, which includes any newly created account. Choose **Create a free account** on
+the game page (or **Create one** on the first screen), then log in with **Move my guest game into
+this account** ticked. The box is ticked for you when you come straight from creating an account.
+If the account already has a game, that game is kept, nothing is moved, and your guest game stays in
+this browser.
 
 ### Game Overview
 
@@ -267,7 +289,7 @@ Affect village growth and stability:
 
 ### Understanding Stats
 
-Check the **Ruler Stats** panel (right side) to monitor:
+Check **Ruler Stats** in the **Game Status & Stats** panel (in the sidebar) to monitor:
 
 - **Stability** (villages): Affects soldier generation efficiency
   - Generation scales with it — at 100% a village generates its full amount, at 50% half of it
@@ -443,7 +465,12 @@ A: Currently there's only one AI difficulty level. Try different policy strategi
 **Q: What happens if I close the game?**
 A: Your game is saved to your account automatically. Log back in and you'll pick up
 where you left off — it survives closing the browser and server restarts. Use **Reset
-Game** if you'd rather start over.
+Game** if you'd rather start over. A guest game is saved too, but only for this browser: choose
+**Continue guest game** on the first screen, within 30 days of your last play.
+
+**Q: Do I need an account to play?**
+A: No. Click **Play as guest** on the first screen. You can move the game into an account later
+(see [Playing as a Guest](#playing-as-a-guest)).
 
 **Q: Can I play with friends?**
 A: Not yet - it's single-player only right now. Multiplayer is planned for future versions.
@@ -467,6 +494,13 @@ A: You can only change policies every 15 turns to prevent rapid switching exploi
 - You need at least 2 soldiers to split — the control is disabled below that
 - You can't split off more than one fewer soldier than the army has
 - Split from the panel below the map (after selecting the army) or from the **Armies** panel
+
+**Can't start a guest game:**
+- New guest games are limited, so a burst of them gets "Too many new guest games from here":
+  wait a while and try again
+- "Guest play is full right now" means the server has reached its limit on guest games: try again
+  later
+- Either way, a free account still works, and a guest game you already have can still be continued
 
 ## Next Steps
 

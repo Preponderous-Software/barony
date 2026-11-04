@@ -52,6 +52,9 @@ create an account, and log in.
 > If UserAuth lives elsewhere, point `USERAUTH_PATH` at it (e.g. `USERAUTH_PATH=../sibling/UserAuth`).
 
 ### Manual Start
+
+Accounts also need UserAuth running on port 9998 (see its README).
+
 ```bash
 # Backend
 cd backend && ./mvnw spring-boot:run
@@ -301,7 +304,7 @@ GitHub Actions runs on all PRs:
 
 **Policy changes not working:**
 - Wait for 15-turn cooldown
-- Check Ruler Stats panel for timer
+- Check the **Next Decision In** bar in the Game Status & Stats panel for the timer
 - Effects are gradual (several turns)
 
 For detailed troubleshooting, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md).
