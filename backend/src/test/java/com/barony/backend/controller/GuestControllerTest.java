@@ -7,6 +7,7 @@ import com.barony.backend.service.AuthCookies;
 import com.barony.backend.service.GuestCookies;
 import com.barony.backend.service.GuestRateLimiter;
 import com.barony.backend.service.GuestSessionService;
+import com.barony.backend.service.RefreshSessions;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
 import jakarta.servlet.http.Cookie;
@@ -38,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@code GuestClaimTest}; these pin the controller's own branching and status codes.
  */
 @WebMvcTest(GuestController.class)
-@Import({AuthCookies.class, GuestCookies.class})
+@Import({AuthCookies.class, RefreshSessions.class, GuestCookies.class})
 class GuestControllerTest {
 
     /** A well-formed guest token: 43 base64url characters. */

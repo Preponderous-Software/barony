@@ -129,4 +129,41 @@ class UserAuthClientTest {
 
         server.verify();
     }
+
+    @Test
+    void refreshPostsTheTokenAndReturnsTheRotatedPair() {
+        server.expect(requestTo(BASE + "/token/refresh"))
+                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andExpect(jsonPath("$.refreshToken").value("old"))
+                .andRespond(withSuccess(
+                        "{\"token\":\"jwt\",\"tokenType\":\"Bearer\",\"expiresAt\":\"2030-01-01T00:00:00Z\",\"refreshToken\":\"new\"}",
+                        MediaType.APPLICATION_JSON));
+
+        assertEquals(new UserAuthClient.RefreshedTokens("jwt", "2030-01-01T00:00:00Z", "new"),
+                client.refresh("old").orElseThrow());
+        server.verify();
+    }
+
+    @Test
+    void refreshRejectedWith401IsEmpty() {
+        server.expect(requestTo(BASE + "/token/refresh")).andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+
+        assertTrue(client.refresh("spent").isEmpty());
+    }
+
+    @Test
+    void refreshRateLimitedIsUnavailableNotRejected() {
+        server.expect(requestTo(BASE + "/token/refresh")).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> client.refresh("live"));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.getStatusCode());
+    }
+
+    @Test
+    void refreshServerErrorIsUnavailableNotRejected() {
+        server.expect(requestTo(BASE + "/token/refresh")).andRespond(withServerError());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> client.refresh("live"));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.getStatusCode());
+    }
 }

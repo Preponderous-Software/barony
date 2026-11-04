@@ -1,25 +1,31 @@
 package com.barony.backend.controller;
 
 import com.barony.backend.service.AuthCookies;
+import com.barony.backend.service.RefreshSessions;
 import com.barony.backend.service.UserAuthClient;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
-@Import(AuthCookies.class)
+@Import({AuthCookies.class, RefreshSessions.class, RefreshSessions.class})
 class AuthControllerTest {
 
     @Autowired
@@ -105,5 +111,64 @@ class AuthControllerTest {
                 .andExpect(status().isOk());
 
         verify(userAuthClient).logout("jwt-xyz");
+    }
+
+    @Test
+    void loginKeepsBothTokensInHttpOnlyCookiesAndOutOfTheBody() throws Exception {
+        when(userAuthClient.login("alice", "password123"))
+                .thenReturn(Map.of("token", "jwt-abc", "refreshToken", "refresh-abc"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"alice\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(cookie().value("barony_refresh", "refresh-abc"))
+                .andExpect(cookie().httpOnly("barony_refresh", true))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist());
+    }
+
+    @Test
+    void logoutClearsTheRefreshCookieToo() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .cookie(new Cookie("barony_token", "jwt-abc"), new Cookie("barony_refresh", "refresh-abc")))
+                .andExpect(status().isOk())
+                .andExpect(cookie().maxAge("barony_token", 0))
+                .andExpect(cookie().maxAge("barony_refresh", 0));
+
+        verify(userAuthClient).logout("jwt-abc");
+        verify(userAuthClient, never()).refresh(anyString());
+    }
+
+    @Test
+    void logoutWithOnlyARefreshCookieExchangesItSoTheSessionIsRevoked() throws Exception {
+        when(userAuthClient.refresh("refresh-abc"))
+                .thenReturn(Optional.of(new UserAuthClient.RefreshedTokens("renewed", null, "refresh-def")));
+
+        mockMvc.perform(post("/api/auth/logout").cookie(new Cookie("barony_refresh", "refresh-abc")))
+                .andExpect(status().isOk())
+                .andExpect(cookie().maxAge("barony_refresh", 0));
+
+        verify(userAuthClient).logout("renewed");
+    }
+
+    @Test
+    void logoutWithARejectedRefreshTokenStillClearsTheCookies() throws Exception {
+        when(userAuthClient.refresh("spent")).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/api/auth/logout").cookie(new Cookie("barony_refresh", "spent")))
+                .andExpect(status().isOk())
+                .andExpect(cookie().maxAge("barony_refresh", 0));
+
+        verify(userAuthClient, never()).logout(anyString());
+    }
+
+    @Test
+    void logoutDuringAnOutageKeepsTheCookiesRatherThanLeavingASessionAlive() throws Exception {
+        when(userAuthClient.refresh("refresh-during-outage"))
+                .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE));
+
+        mockMvc.perform(post("/api/auth/logout").cookie(new Cookie("barony_refresh", "refresh-during-outage")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().doesNotExist("Set-Cookie"));
     }
 }

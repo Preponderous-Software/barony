@@ -1,6 +1,8 @@
 package com.barony.backend.controller;
 
 import com.barony.backend.service.AuthCookies;
+import com.barony.backend.service.JwtExpiry;
+import com.barony.backend.service.RefreshSessions;
 import com.barony.backend.service.UserAuthClient;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,9 +18,10 @@ import java.util.Map;
 
 /**
  * Authentication endpoints. These proxy to the standalone UserAuth service so Barony never
- * stores credentials itself. On login the UserAuth-issued JWT is placed in an HttpOnly cookie
- * (see {@link AuthCookies}) rather than returned to JavaScript, so an XSS cannot read it; the
- * browser then sends it automatically and game endpoints validate it on every request.
+ * stores credentials itself. On login the UserAuth-issued JWT and refresh token are placed in
+ * HttpOnly cookies (see {@link AuthCookies}) rather than returned to JavaScript, so an XSS cannot
+ * read them; the browser then sends them automatically and game endpoints validate the JWT on
+ * every request.
  */
 @RestController
 @CrossOrigin(origins = {"http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:3000", "http://127.0.0.1:3000"})
@@ -28,6 +31,7 @@ public class AuthController {
 
     private final UserAuthClient userAuthClient;
     private final AuthCookies authCookies;
+    private final RefreshSessions refreshSessions;
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody Map<String, String> request) {
@@ -53,8 +57,11 @@ public class AuthController {
                 "Authentication service did not return a token");
         }
 
-        // Token goes into an HttpOnly cookie, never the response body.
+        // Tokens go into HttpOnly cookies, never the response body.
         response.addHeader(HttpHeaders.SET_COOKIE, authCookies.issue(token, expiresAt).toString());
+        String refreshToken = stringValue(auth.get("refreshToken"));
+        response.addHeader(HttpHeaders.SET_COOKIE, (refreshToken == null
+                ? authCookies.clearRefresh() : authCookies.issueRefresh(refreshToken)).toString());
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("username", username.trim());
@@ -66,14 +73,24 @@ public class AuthController {
 
     @PostMapping("/logout")
     public Map<String, String> logout(HttpServletRequest request, HttpServletResponse response) {
-        // Revoke whatever token the request carries (cookie preferred, bearer accepted), then
-        // always clear the cookie — clearing it is the meaningful, idempotent part of logout.
+        // Revoke whatever token the request carries (cookie preferred, bearer accepted), then clear
+        // the cookies. UserAuth's logout takes a live access token and ends the refresh chain with
+        // it, so a browser left with only a refresh cookie exchanges that first. If UserAuth cannot
+        // be reached this fails rather than clearing cookies over a session that is still alive.
         String token = authCookies.read(request)
+                .filter(accessToken -> !JwtExpiry.isExpired(accessToken))
                 .orElseGet(() -> bearerToken(request.getHeader(HttpHeaders.AUTHORIZATION)));
+        if (token == null) {
+            token = authCookies.readRefresh(request)
+                    .flatMap(refreshSessions::exchange)
+                    .map(UserAuthClient.RefreshedTokens::token)
+                    .orElse(null);
+        }
         if (token != null) {
             userAuthClient.logout(token);
         }
         response.addHeader(HttpHeaders.SET_COOKIE, authCookies.clear().toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, authCookies.clearRefresh().toString());
         return Map.of("message", "logged out");
     }
 

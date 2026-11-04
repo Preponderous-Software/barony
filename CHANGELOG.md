@@ -4,6 +4,18 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ## [Unreleased]
 
+### Backend
+
+- ✅ **Signed-in players stay signed in**: a session used to end when the one-hour access token did,
+  sending the player back to the login page. Login now also keeps UserAuth's refresh token in an
+  HttpOnly `barony_refresh` cookie, and `AccountSessionFilter` renews the session on the next
+  per-player request, so it lasts until 30 days pass without a visit. `RefreshSessions` makes
+  overlapping requests spend the single-use token once, since UserAuth ends a session when a spent
+  token is presented. A UserAuth outage gives a 503 and keeps the cookies, so the player is not
+  signed out by it, and logging out with only the refresh cookie still revokes the session. The web
+  client relays the renewed cookies. Sessions started earlier get a refresh cookie at their next
+  login.
+
 ### Web Client
 
 - ✅ **Search and link-preview metadata on the landing page**: the login page that
