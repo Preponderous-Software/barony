@@ -15,7 +15,7 @@ class AuthCookiesTest {
 
     @Test
     void issuedCookieIsHttpOnlyLaxAndCarriesTheToken() {
-        ResponseCookie cookie = new AuthCookies(true).issue("jwt-abc", null);
+        ResponseCookie cookie = new AuthCookies(true, 30).issue("jwt-abc", null);
         assertEquals(AuthCookies.COOKIE_NAME, cookie.getName());
         assertEquals("jwt-abc", cookie.getValue());
         assertTrue(cookie.isHttpOnly(), "cookie must be HttpOnly so JS can't read the token");
@@ -26,33 +26,33 @@ class AuthCookiesTest {
 
     @Test
     void secureFlagIsConfigurable() {
-        assertFalse(new AuthCookies(false).issue("t", null).isSecure());
+        assertFalse(new AuthCookies(false, 30).issue("t", null).isSecure());
     }
 
     @Test
     void maxAgeTracksTokenExpiry() {
         String expiresAt = Instant.now().plus(30, ChronoUnit.MINUTES).toString();
-        ResponseCookie cookie = new AuthCookies(false).issue("t", expiresAt);
+        ResponseCookie cookie = new AuthCookies(false, 30).issue("t", expiresAt);
         long seconds = cookie.getMaxAge().getSeconds();
         assertTrue(seconds > 25 * 60 && seconds <= 30 * 60, "max-age should mirror the token expiry, was " + seconds);
     }
 
     @Test
     void unparseableOrMissingExpiryYieldsSessionCookie() {
-        assertEquals(-1, new AuthCookies(false).issue("t", null).getMaxAge().getSeconds());
-        assertEquals(-1, new AuthCookies(false).issue("t", "not-a-date").getMaxAge().getSeconds());
+        assertEquals(-1, new AuthCookies(false, 30).issue("t", null).getMaxAge().getSeconds());
+        assertEquals(-1, new AuthCookies(false, 30).issue("t", "not-a-date").getMaxAge().getSeconds());
     }
 
     @Test
     void clearCookieExpiresImmediately() {
-        ResponseCookie cookie = new AuthCookies(false).clear();
+        ResponseCookie cookie = new AuthCookies(false, 30).clear();
         assertEquals(AuthCookies.COOKIE_NAME, cookie.getName());
         assertEquals(0, cookie.getMaxAge().getSeconds());
     }
 
     @Test
     void readReturnsTokenFromCookieOrEmpty() {
-        AuthCookies cookies = new AuthCookies(false);
+        AuthCookies cookies = new AuthCookies(false, 30);
 
         MockHttpServletRequest withCookie = new MockHttpServletRequest();
         withCookie.setCookies(new Cookie(AuthCookies.COOKIE_NAME, "jwt-abc"));
@@ -63,5 +63,26 @@ class AuthCookiesTest {
         MockHttpServletRequest blank = new MockHttpServletRequest();
         blank.setCookies(new Cookie(AuthCookies.COOKIE_NAME, ""));
         assertTrue(cookies.read(blank).isEmpty(), "blank cookie value -> empty");
+    }
+
+    @Test
+    void refreshCookieIsHttpOnlyAndLastsTheConfiguredDays() {
+        ResponseCookie cookie = new AuthCookies(true, 30).issueRefresh("refresh-abc");
+
+        assertEquals("barony_refresh", cookie.getName());
+        assertEquals("refresh-abc", cookie.getValue());
+        assertTrue(cookie.isHttpOnly());
+        assertTrue(cookie.isSecure());
+        assertEquals("Lax", cookie.getSameSite());
+        assertEquals("/", cookie.getPath());
+        assertEquals(30 * 24 * 60 * 60, cookie.getMaxAge().getSeconds());
+    }
+
+    @Test
+    void clearRefreshExpiresTheRefreshCookie() {
+        ResponseCookie cookie = new AuthCookies(false, 30).clearRefresh();
+
+        assertEquals("barony_refresh", cookie.getName());
+        assertEquals(0, cookie.getMaxAge().getSeconds());
     }
 }

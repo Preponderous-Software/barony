@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -343,5 +344,35 @@ class BackendServiceTest {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    @Test
+    void relaysTheCookiesOfASessionRenewedOnAPerPlayerCall() {
+        MockHttpServletResponse browser = new MockHttpServletResponse();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest(), browser));
+        HttpHeaders renewed = new HttpHeaders();
+        renewed.add(HttpHeaders.SET_COOKIE, "barony_token=new; HttpOnly");
+        renewed.add(HttpHeaders.SET_COOKIE, "barony_refresh=next; HttpOnly");
+        server.expect(requestTo(BACKEND + "/api/session/preferences"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON).headers(renewed));
+
+        service.sessionPreferences("barony_refresh=old");
+
+        assertEquals(java.util.List.of("barony_token=new; HttpOnly", "barony_refresh=next; HttpOnly"),
+                browser.getHeaders(HttpHeaders.SET_COOKIE));
+    }
+
+    @Test
+    void leavesLoginCookiesForTheControllerToRelay() {
+        MockHttpServletResponse browser = new MockHttpServletResponse();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest(), browser));
+        HttpHeaders issued = new HttpHeaders();
+        issued.add(HttpHeaders.SET_COOKIE, "barony_token=new; HttpOnly");
+        server.expect(requestTo(BACKEND + "/api/auth/login"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON).headers(issued));
+
+        service.login(Map.of("username", "alice", "password", "secret"));
+
+        assertTrue(browser.getHeaders(HttpHeaders.SET_COOKIE).isEmpty());
     }
 }

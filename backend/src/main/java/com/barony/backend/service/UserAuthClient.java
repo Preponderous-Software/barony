@@ -29,6 +29,10 @@ import java.util.Optional;
 @Service
 public class UserAuthClient {
 
+    /** What {@code POST /token/refresh} returns: a new access token and the refresh token that replaces the old one. */
+    public record RefreshedTokens(String token, String expiresAt, String refreshToken) {
+    }
+
     private final RestTemplate restTemplate;
     private final String userAuthUrl;
 
@@ -62,7 +66,8 @@ public class UserAuthClient {
     }
 
     /**
-     * Proxy UserAuth {@code POST /login}. On success returns {@code {token, tokenType, expiresAt}}.
+     * Proxy UserAuth {@code POST /login}. On success returns
+     * {@code {token, tokenType, expiresAt, refreshToken}}.
      * A 401 from UserAuth (bad credentials) is propagated as 401.
      */
     public Map<String, Object> login(String username, String password) {
@@ -75,6 +80,37 @@ public class UserAuthClient {
             return castBody(response.getBody());
         } catch (HttpClientErrorException e) {
             throw new ResponseStatusException(e.getStatusCode(), messageFrom(e));
+        } catch (RestClientException e) {
+            throw unavailable(e);
+        }
+    }
+
+    /**
+     * Exchange a refresh token at UserAuth {@code POST /token/refresh}. The token presented is spent
+     * by this call, so use {@link RefreshSessions}, which keeps concurrent requests from presenting
+     * it twice. Returns empty when UserAuth rejects the token with 401. Anything else, including a
+     * 429, says nothing about the session, so it surfaces as 503 and the caller keeps its cookies.
+     */
+    public Optional<RefreshedTokens> refresh(String refreshToken) {
+        HttpEntity<Map<String, String>> entity = jsonEntity(Map.of("refreshToken", refreshToken), null);
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    userAuthUrl + "/token/refresh", HttpMethod.POST, entity, Map.class);
+            Map<String, Object> body = castBody(response.getBody());
+            Object token = body.get("token");
+            Object rotated = body.get("refreshToken");
+            if (token == null || rotated == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "Authentication service returned an incomplete refresh response");
+            }
+            Object expiresAt = body.get("expiresAt");
+            return Optional.of(new RefreshedTokens(token.toString(),
+                    expiresAt == null ? null : expiresAt.toString(), rotated.toString()));
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                return Optional.empty();
+            }
+            throw unavailable(e);
         } catch (RestClientException e) {
             throw unavailable(e);
         }

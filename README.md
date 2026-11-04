@@ -104,8 +104,8 @@ A guest plays through the same `/api/session/*` endpoints using the guest cookie
 
 **Authentication (proxied to the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service):**
 - `POST /api/auth/register` - Create an account (`{username, password}`)
-- `POST /api/auth/login` - Log in; sets the JWT in an **HttpOnly** `barony_token` cookie (returns `{username, expiresAt}`, never the token)
-- `POST /api/auth/logout` - Revoke the token and clear the cookie
+- `POST /api/auth/login` - Log in; sets the JWT in an **HttpOnly** `barony_token` cookie and the refresh token in an **HttpOnly** `barony_refresh` cookie, which renews the session on per-player requests (returns `{username, expiresAt}`, never the token)
+- `POST /api/auth/logout` - Revoke the session and clear both cookies
 
 #### Authentication flow
 

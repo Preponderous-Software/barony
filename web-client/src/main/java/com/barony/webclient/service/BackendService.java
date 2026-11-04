@@ -10,9 +10,13 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpResponse;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 
@@ -20,7 +24,8 @@ import java.util.Map;
  * Proxies game and auth calls to the backend. Authentication rides on the HttpOnly
  * {@code barony_token} cookie: the browser sends it to this web client, which forwards the
  * {@code Cookie} header to the backend, and relays the backend's {@code Set-Cookie} back to the
- * browser on login/logout. The token is never read or held in JavaScript or this proxy's code.
+ * browser on login/logout and whenever the backend renews a session on a per-player call. The token
+ * is never read or held in JavaScript or this proxy's code.
  *
  * (In the gateway deployment Traefik routes {@code /api/*} straight to the backend, so this proxy
  * is exercised mainly by the local docker-compose setup; the cookie forwarding keeps that working.)
@@ -39,7 +44,26 @@ public class BackendService {
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofSeconds(5))
                 .setReadTimeout(Duration.ofSeconds(10))
+                .additionalInterceptors(this::relayRenewedSession)
                 .build();
+    }
+
+    /**
+     * The backend renews an account session on a per-player call by re-setting both auth cookies.
+     * Those calls return only their body to the controller, so the cookies are copied here;
+     * without this the browser would keep a spent refresh token.
+     */
+    private ClientHttpResponse relayRenewedSession(HttpRequest request, byte[] body,
+                                                   ClientHttpRequestExecution execution) throws IOException {
+        ClientHttpResponse response = execution.execute(request, body);
+        if (request.getURI().getPath().startsWith("/api/session/")
+                && RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs
+                && attrs.getResponse() != null) {
+            for (String cookie : response.getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE)) {
+                attrs.getResponse().addHeader(HttpHeaders.SET_COOKIE, cookie);
+            }
+        }
+        return response;
     }
 
     // Authentication (proxied through the backend to UserAuth)

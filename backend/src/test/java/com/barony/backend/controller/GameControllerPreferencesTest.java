@@ -3,10 +3,11 @@ package com.barony.backend.controller;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
+import com.barony.backend.service.GameService;
 import com.barony.backend.service.GuestCookies;
 import com.barony.backend.service.GuestSessionService;
-import com.barony.backend.service.GameService;
 import com.barony.backend.service.PreferencesService;
+import com.barony.backend.service.RefreshSessions;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
 import jakarta.servlet.http.Cookie;
@@ -35,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * a 400 rather than a 500.
  */
 @WebMvcTest(GameController.class)
-@Import({AuthCookies.class, GuestCookies.class})
+@Import({AuthCookies.class, RefreshSessions.class, GuestCookies.class})
 class GameControllerPreferencesTest {
 
     @Autowired

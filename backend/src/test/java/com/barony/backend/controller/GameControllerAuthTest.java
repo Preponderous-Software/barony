@@ -4,10 +4,11 @@ import com.barony.backend.model.GameState;
 import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.service.AuthCookies;
+import com.barony.backend.service.GameService;
 import com.barony.backend.service.GuestCookies;
 import com.barony.backend.service.GuestSessionService;
-import com.barony.backend.service.GameService;
 import com.barony.backend.service.PreferencesService;
+import com.barony.backend.service.RefreshSessions;
 import com.barony.backend.service.SessionService;
 import com.barony.backend.service.UserAuthClient;
 import jakarta.servlet.http.Cookie;
@@ -32,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@link UserAuthClient}, mocked here; a returned-empty Optional means invalid/expired/revoked.
  */
 @WebMvcTest(GameController.class)
-@Import({AuthCookies.class, GuestCookies.class})
+@Import({AuthCookies.class, RefreshSessions.class, GuestCookies.class})
 class GameControllerAuthTest {
 
     @Autowired
@@ -121,5 +122,29 @@ class GameControllerAuthTest {
                 .andExpect(jsonPath("$.losses").value(1));
 
         verify(sessionService).getRunHistory("alice");
+    }
+
+    @Test
+    void anExpiredSessionIsRenewedInPlaceAndTheRequestSucceeds() throws Exception {
+        when(userAuthClient.refresh("refresh-abc"))
+                .thenReturn(Optional.of(new UserAuthClient.RefreshedTokens("renewed", null, "refresh-def")));
+        when(userAuthClient.validate("renewed")).thenReturn(Optional.of("alice"));
+        when(sessionService.getOrCreateSession("alice")).thenReturn(new Session("alice", new GameState(5, 5)));
+        when(gameService.getState()).thenReturn(new GameState(5, 5));
+
+        mockMvc.perform(get("/api/session/state").cookie(new Cookie("barony_refresh", "refresh-abc")))
+                .andExpect(status().isOk())
+                .andExpect(cookie().value("barony_token", "renewed"))
+                .andExpect(cookie().value("barony_refresh", "refresh-def"));
+    }
+
+    @Test
+    void aGuestRequestNeverSpendsARefreshToken() throws Exception {
+        mockMvc.perform(get("/api/session/state")
+                        .header("X-Barony-Player", "guest")
+                        .cookie(new Cookie("barony_refresh", "refresh-abc")))
+                .andExpect(status().isUnauthorized());
+
+        verify(userAuthClient, never()).refresh(anyString());
     }
 }
