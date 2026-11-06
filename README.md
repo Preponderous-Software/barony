@@ -171,6 +171,11 @@ rejected with `409`. The cooldown is checked before the choice, so a wrong choic
 the cooldown also gets `409`. The same rules apply to
 `POST /api/session/decision`.
 
+**Demo script:** with the backend running, `./demo-api.sh` plays a short game through the
+single-game endpoints: it starts a new game (replacing the current single game), marches player 1's
+army to the nearest village, and prints the capture and the soldiers it recruits. It needs `curl`
+and `python3`, and `BASE_URL` points it at a backend other than `http://localhost:8080`.
+
 For detailed API documentation, see technical sections below.
 
 

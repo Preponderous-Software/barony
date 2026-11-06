@@ -87,6 +87,11 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   split rejoins its parent) and what the combined army keeps (`CombatService.mergeFriendlyArmies`):
   the lowest-numbered army's ID, morale and loyalty, and its destination, or failing that one from
   an absorbed army. `CombatServiceTest` now pins the morale and loyalty part.
+- ✅ **`demo-api.sh` plays the game as it now works** (#132): the script moved the AI's army, which
+  has been ignored since #112, and assumed instant movement, a village at (3,3) and a fight after
+  two turns. It now starts a new game, reads player 1's army and the nearest village from the state,
+  advances turns until the army arrives, and takes one more turn to show the capture and the
+  soldiers recruited. `README.md` now describes it.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 
