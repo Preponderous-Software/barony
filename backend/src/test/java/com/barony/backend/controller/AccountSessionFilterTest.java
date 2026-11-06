@@ -129,6 +129,18 @@ class AccountSessionFilterTest {
     }
 
     @Test
+    void anAccessTokenWithAnOutOfRangeExpiryIsLeftForUserAuthToJudge() throws Exception {
+        String token = "h." + Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"exp\":1e30}".getBytes(StandardCharsets.UTF_8)) + ".s";
+
+        run(request("/api/session/state",
+                new Cookie("barony_token", token), new Cookie("barony_refresh", "rt")));
+
+        verifyNoInteractions(sessions);
+        assertNotNull(chain.getRequest());
+    }
+
+    @Test
     void guestAndPublicRequestsAreLeftAlone() throws Exception {
         MockHttpServletRequest guest = request("/api/session/state", new Cookie("barony_refresh", "rt"));
         guest.addHeader(GameController.PLAYER_MODE_HEADER, "guest");

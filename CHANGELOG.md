@@ -15,6 +15,11 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   signed out by it, and logging out with only the refresh cookie still revokes the session. The web
   client relays the renewed cookies. Sessions started earlier get a refresh cookie at their next
   login.
+- ✅ **A token with an impossible expiry no longer throws**: `JwtExpiry` let `DateTimeException`
+  escape when a token's unverified `exp` claim was too large or too small for an `Instant`, so a
+  hand-made `barony_token` cookie broke the request instead of being refused. Such a token now
+  counts as unexpired like any other unreadable one, and UserAuth rejects it with the usual `401`.
+  `JwtExpiryTest` covers the class, which had no tests of its own.
 
 ### Web Client
 

@@ -3,6 +3,7 @@ package com.barony.backend.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -38,7 +39,7 @@ public final class JwtExpiry {
             return exp != null && exp.isNumber()
                     ? Optional.of(Instant.ofEpochSecond(exp.asLong()))
                     : Optional.empty();
-        } catch (java.io.IOException | IllegalArgumentException e) {
+        } catch (java.io.IOException | IllegalArgumentException | DateTimeException e) {
             return Optional.empty();
         }
     }
