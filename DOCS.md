@@ -18,7 +18,7 @@ Complete guide covering:
 
 👉 **See:** [CHANGELOG.md](CHANGELOG.md)
 
-Complete version history and feature list for the 1.0 release.
+Version history and feature list, from the MVP 1.0.0 release through the unreleased changes.
 
 ## I Want to Use the API
 

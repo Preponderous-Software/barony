@@ -92,31 +92,50 @@ Then open http://localhost:3000 in your browser.
 - `GET /api/session/preferences` - Get the player's stored interface preferences (`{}` when none are stored)
 - `PUT /api/session/preferences` - Replace the player's stored interface preferences (JSON object, up to 8192 characters serialized; larger is rejected with `400`)
 
-These endpoints validate the token against UserAuth on every request, so missing,
-invalid, expired, or revoked (logged-out) tokens are rejected with `401`. Game state is keyed
-by the authenticated username.
+These endpoints validate the token against UserAuth on every request, so a missing, invalid,
+expired, or revoked (logged-out) token that cannot be renewed is rejected with `401`. When the
+`barony_token` cookie is missing or within 30 seconds of expiring and a `barony_refresh` cookie is
+present, the session is renewed first and both cookies are set again on the response; a rejected
+refresh token clears that cookie and the request gets the usual `401`. If UserAuth cannot be
+reached, the request gets `503` and the cookies stay, so an outage does not sign the player out.
+Game state is keyed by the authenticated username.
 
 **Guest play (no account):**
 - `POST /api/guest` - Start a guest game, or resume this browser's one. Sets an **HttpOnly** `barony_guest` cookie holding a random server-issued token (a different cookie from `barony_token`). New guests are rate limited per client address and globally (`429`), and capped in total (`503`).
-- `POST /api/guest/claim` - "Keep your progress": with both a valid account cookie and a guest cookie, move the guest game (and its finished runs) into the account, **only if the account has no game yet** (`409` otherwise; nothing is changed).
+- `POST /api/guest/claim` - "Keep your progress": with both a valid account cookie and a guest cookie, move the guest game (and its finished runs) into the account, **only if the account has no game yet** (`409` otherwise; nothing is changed). A missing or invalid account cookie gets `401`, and a browser with no guest game gets `404`.
 
 A guest plays through the same `/api/session/*` endpoints using the guest cookie (except preferences, which answer `403` for guests and stay in the browser). Guest games live only in the `guest_game` table, keyed by the SHA-256 of the cookie token, and are never written to the account tables. Guests idle for 30 days (`guest.idle-days`) are deleted by a scheduled prune that touches only `guest_game`. Pages send `X-Barony-Player: account|guest`, so an account page whose login has lapsed is sent to log in instead of being served a guest game.
 
 **Authentication (proxied to the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service):**
-- `POST /api/auth/register` - Create an account (`{username, password}`)
+- `POST /api/auth/register` - Create an account (`{username, password}`); answers `201` with the created user's public fields
 - `POST /api/auth/login` - Log in; sets the JWT in an **HttpOnly** `barony_token` cookie and the refresh token in an **HttpOnly** `barony_refresh` cookie, which renews the session on per-player requests (returns `{username, expiresAt}`, never the token)
-- `POST /api/auth/logout` - Revoke the session and clear both cookies
+- `POST /api/auth/logout` - Revoke the session and clear both cookies (returns `{"message": "logged out"}`)
+
+A missing username or password gets `400`. UserAuth's own `4xx` answers (such as `401` for bad
+credentials) are passed through, and if UserAuth cannot be reached these endpoints answer `503`. A
+failed logout leaves the cookies in place.
 
 #### Authentication flow
 
 Barony never stores credentials itself — it delegates to UserAuth. On login the UserAuth-issued
-JWT is placed in an **HttpOnly, Secure, SameSite=Lax cookie** rather than handed to JavaScript, so
-an XSS can't read it; the browser then sends it automatically and the backend validates it on each
-authenticated game request. (A `Bearer` header is still accepted as a fallback for CLI / API
-clients that already hold a token.)
+JWT and refresh token are placed in **HttpOnly, SameSite=Lax cookies** rather than handed to
+JavaScript, so an XSS can't read them; the browser then sends them automatically and the backend
+validates the JWT on each authenticated game request. (A `Bearer` header is still accepted as a
+fallback for CLI / API clients that already hold a token.)
+
+The refresh token is single-use: each renewal replaces it, and the session lasts until UserAuth
+stops accepting the latest one.
+
+Two backend settings shape the cookies, neither of them set in `docker-compose.yml`:
+
+- `AUTH_COOKIE_SECURE` - adds `Secure` to the account and guest cookies. It defaults to `false` for
+  local HTTP; set it to `true` in production over HTTPS.
+- `AUTH_REFRESH_COOKIE_DAYS` - how long the browser keeps the refresh cookie (default `30`). Keep
+  it in step with UserAuth's `REFRESH_TOKEN_EXPIRATION_DAYS`, which decides when the token stops
+  working.
 
 ```
-browser → web-client (proxy) → backend → UserAuth (/register, /login, /session/validate, /logout)
+browser → web-client (proxy) → backend → UserAuth (/register, /login, /token/refresh, /session/validate, /logout)
 ```
 
 ```bash
@@ -125,7 +144,7 @@ curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username":"alice","password":"a-strong-password"}'
 
-# Log in — the JWT is set as an HttpOnly cookie (saved to the jar), not returned in the body
+# Log in — the JWT and refresh token are set as HttpOnly cookies (saved to the jar), not returned in the body
 curl -c cookies.txt -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"alice","password":"a-strong-password"}'
@@ -133,7 +152,7 @@ curl -c cookies.txt -X POST http://localhost:8080/api/auth/login \
 # Use the cookie on per-player endpoints
 curl -b cookies.txt http://localhost:8080/api/session/state
 
-# Log out (revokes the token and clears the cookie; it is refused afterward)
+# Log out (revokes the session and clears both cookies; the token is refused afterward)
 curl -b cookies.txt -X POST http://localhost:8080/api/auth/logout
 ```
 
@@ -176,7 +195,23 @@ single-game endpoints: it starts a new game (replacing the current single game),
 army to the nearest village, and prints the capture and the soldiers it recruits. It needs `curl`
 and `python3`, and `BASE_URL` points it at a backend other than `http://localhost:8080`.
 
-For detailed API documentation, see technical sections below.
+### Response Structure
+
+`GET /state`, `POST /tick`, `POST /command`, `POST /api/reset`, `POST /api/decision` and their
+`/api/session/*` counterparts all return the game state as JSON:
+
+- `grid` - tiles indexed `grid[x][y]`, each with `type` (`CASTLE`, `VILLAGE` or `EMPTY`), `ownerId`
+  (`0` neutral, `1` player, `2` AI), `occupationTicks`, `stability` and `population`
+- `width`, `height` - the map size
+- `armies` - each with `id`, `x`, `y`, `soldiers`, `playerId`, `destinationX`, `destinationY` (`null`
+  with no order), `moving`, `morale`, `loyalty` and `desertionCarryBasisPoints`
+- `tickCount`, `gameOver`, `winnerId` (`null` until the game ends), `aiEnabled`
+- `economicPolicy`, `militaryPolicy`, `populationPolicy`, `lastPolicyChangeTick`
+- `runRecorded` - internal bookkeeping for run history, always `false` here
+
+`GET /api/ruler-stats` and `GET /api/session/ruler-stats` return `averageStability`,
+`averageMorale`, `averageLoyalty`, `totalPopulation`, `economicPolicy`, `militaryPolicy`,
+`populationPolicy` and `ticksUntilNextDecision`.
 
 
 ## Web Client
