@@ -29,7 +29,8 @@ All 7 major features have been successfully implemented and tested. See [CHANGEL
 
 ### Test Coverage
 - **Backend:** Comprehensive unit and integration tests (all passing)
-- **Web Client:** Model tests (all passing)
+- **Web Client:** Controller, service, model and rendered-page tests, plus a Node suite for the
+  game page's logic (all passing)
 - **CI Pipeline:** All tests passing with 100% success rate
 
 ---
@@ -354,7 +355,8 @@ for the player-facing description of the real UI.
    - Quality Over Quantity: -10% population growth, +10% stability
 
 **Decision Interface:**
-- Every 15 ticks, player is prompted with a policy choice
+- The player can change a policy whenever the shared 15-tick cooldown has run out; nothing prompts
+  them to
 - UI shows current policy in each category
 - UI displays current realm statistics:
   - Average village stability (%)
@@ -468,36 +470,41 @@ for the player-facing description of the real UI.
 ### Backend API Extensions
 
 #### New Endpoints
+
+The MVP planned separate `/command/move` and `/command/split` routes and a `GET /stats` endpoint.
+Neither landed: both commands share `POST /command`, and there is no player statistics endpoint.
+See the [README](README.md#backend-api) for the full API.
+
 ```java
-POST /command/move    - Move army to destination (queued movement)
-POST /command/split   - Split army into two armies
-POST /reset          - Reset game state to initial conditions
-GET /stats           - Get player statistics (income, territories, etc.)
-POST /api/decision   - Change ruler policy (requires policy type and choice)
+POST /command        - Move an army (queued movement) or split it, by command type
+POST /api/reset      - Reset game state to initial conditions
+POST /api/decision   - Change ruler policy (requires category and choice)
 GET /api/ruler-stats - Get realm statistics (stability, morale, loyalty, population)
 ```
 
 #### Enhanced Models
 ```java
 // Army.java additions
-private int destinationX;
-private int destinationY;
-private boolean isMoving;
+private Integer destinationX;  // null with no order
+private Integer destinationY;  // null with no order
+public boolean isMoving();     // Derived from the position and destination
 private int morale;        // 0-200, default 100, affects combat effectiveness
-private int loyalty;       // 0-100, default 100, affects desertion rate
+private int loyalty;       // 0-110, default 100, affects desertion rate
+private int desertionCarryBasisPoints;  // Fraction of a deserter carried between ticks
 
 // Tile.java additions (for villages)
 private int ownerId;           // 0=neutral, 1=player1, 2=player2
 private int occupationTicks;   // For castle capture
-private int stability;         // 0-100, default 100, affects soldier generation
+private int stability;         // 0-110, default 100, affects soldier generation
 private int population;        // Current population, affects generation capacity
 
 // GameState.java additions
 private boolean gameOver;
-private int winnerId;
-private int ticksPerMove;      // Config: tiles per tick
-private Map<String, String> rulerPolicies;  // Maps policy category to current choice
-private int policyDecisionCooldown;         // Ticks until next policy change allowed
+private Integer winnerId;           // null until the game ends
+private String economicPolicy;      // Current choice in each category
+private String militaryPolicy;
+private String populationPolicy;
+private int lastPolicyChangeTick;   // The shared 15-tick cooldown runs from here
 
 // New RulerDecision.java
 class RulerDecision {
@@ -507,30 +514,25 @@ class RulerDecision {
     enum PopulationPolicy { GROWTH_FOCUS, STABLE_POPULATION, QUALITY_OVER_QUANTITY }
     
     PolicyCategory category;
-    Object policyChoice;  // One of the policy enums
-    Map<String, Integer> effects;  // Maps stat names to percentage modifiers
-}
-
-// New PlayerStats.java
-class PlayerStats {
-    int playerId;
-    int castlesOwned;
-    int villagesOwned;
-    int totalIncome;
-    int totalArmySize;
+    String choice;  // The name of one of the policy enum values
+    // Effects are static lookups, e.g. RulerDecision.getLoyaltyModifier(policy)
 }
 
 // New RulerStats.java
 class RulerStats {
-    int playerId;
     double averageStability;   // Average across all owned villages
     double averageMorale;      // Average across all armies
     double averageLoyalty;     // Average across all armies
     int totalPopulation;       // Sum of all village populations
-    Map<String, String> currentPolicies;  // Current policy in each category
+    String economicPolicy;     // Current policy in each category
+    String militaryPolicy;
+    String populationPolicy;
     int ticksUntilNextDecision;
 }
 ```
+
+A planned `PlayerStats` class and a `ticksPerMove` setting were not built: armies always move one
+tile per tick.
 
 ### Web Client Enhancements
 

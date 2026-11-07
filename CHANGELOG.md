@@ -97,6 +97,14 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   two turns. It now starts a new game, reads player 1's army and the nearest village from the state,
   advances turns until the army arrives, and takes one more turn to show the capture and the
   soldiers recruited. `README.md` now describes it.
+- ✅ `README.md`'s authentication docs now match the refresh-token flow. An expired token is renewed
+  rather than refused when a refresh cookie is present, a UserAuth outage answers `503`, and the
+  auth cookies are `Secure` only when `AUTH_COOKIE_SECURE` is set. It also now documents that
+  setting, `AUTH_REFRESH_COOKIE_DAYS`, the auth and `/api/guest/claim` error responses, and the JSON
+  returned by the game endpoints, which `DOCS.md` already promised and a pointer to "technical
+  sections below" never delivered. `MVP.md`'s API and model listings now show what was built rather
+  than endpoints and fields that never landed, and no longer say the player is prompted every 15
+  ticks.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 
