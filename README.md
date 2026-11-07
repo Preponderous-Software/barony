@@ -113,7 +113,7 @@ A guest plays through the same `/api/session/*` endpoints using the guest cookie
 
 A missing username or password gets `400`. UserAuth's own `4xx` answers (such as `401` for bad
 credentials) are passed through, and if UserAuth cannot be reached these endpoints answer `503`. A
-failed logout leaves the cookies in place, since the session is still alive.
+failed logout leaves the cookies in place.
 
 #### Authentication flow
 
