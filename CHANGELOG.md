@@ -105,6 +105,12 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   sections below" never delivered. `MVP.md`'s API and model listings now show what was built rather
   than endpoints and fields that never landed, and no longer say the player is prompted every 15
   ticks.
+- ✅ `PLAYER_GUIDE.md` now explains that policies take effect gradually. `PolicyService` moves each
+  stat a fixed step per turn toward the policy's target: stability 2, morale 1 and loyalty 2. A
+  policy change therefore takes several turns to show. The guide also says that policies apply only
+  to the player's side: the AI's armies fight at their raw soldier count and never desert, and its
+  villages do not grow. `MVP.md` no longer says morale and loyalty always return to 100%. They settle
+  at the military policy's target, which is 75% loyalty under Aggressive Training.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 

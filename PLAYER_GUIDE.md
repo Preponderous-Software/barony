@@ -241,6 +241,28 @@ The cooldown is shared by all three categories: changing your Economic policy al
 Military and Population policies for the next 15 turns. Re-applying the policy already in force
 still counts as a change and restarts the cooldown. Your first change is available from turn 0.
 
+### Policies Take Effect Gradually
+
+A new policy doesn't change your stats at once. It sets a target, and each turn your stats move a
+fixed step toward it:
+
+- **Stability** moves 2 points a turn toward 100 plus your Economic and Population modifiers
+  (capped at 110), in every village you own
+- **Morale** moves 1 point a turn toward 100 plus your Military morale modifier, in every army you
+  own
+- **Loyalty** moves 2 points a turn toward 100 plus your Military loyalty modifier, in every army
+  you own
+
+For example, switching from Standard Service to Aggressive Training takes 10 turns to lift morale
+to 110% and 13 turns to bring loyalty down to 75%. New armies start at 100% morale and loyalty
+and drift the same way. An army you split off starts at its parent's values instead.
+
+Policies only affect your own villages and armies. The AI's armies always fight at their full
+soldier count and never desert, and its villages never grow. An AI army on one of its villages
+gains one soldier per 100 of that village's population, whatever the stability. A village keeps
+its population when it changes hands, so if the AI captures a village you have grown, it gets
+that larger yield.
+
 ### Economic Policies
 
 Affect village income and stability:
