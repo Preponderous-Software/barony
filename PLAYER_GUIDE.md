@@ -258,8 +258,10 @@ to 110% and 13 turns to bring loyalty down to 75%. New armies start at 100% mora
 and drift the same way. An army you split off starts at its parent's values instead.
 
 Policies only affect your own villages and armies. The AI's armies always fight at their full
-soldier count and never desert, and its villages never grow. Each one generates one soldier per
-100 population (100 at the start), whatever the stability.
+soldier count and never desert, and its villages never grow. An AI army on one of its villages
+gains one soldier per 100 of that village's population, whatever the stability. A village keeps
+its population when it changes hands, so taking one you have grown hands the AI that larger
+yield.
 
 ### Economic Policies
 
