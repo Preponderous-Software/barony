@@ -380,7 +380,9 @@ for the player-facing description of the real UI.
 - Base combat strength: 1 soldier kills 1 enemy soldier
 - Modified combat: `strength * (morale / 100)`
 - Example: 120% morale = 1.2x combat effectiveness
-- Morale decays slowly over time toward 100% (1% per tick)
+- Morale drifts 1 point per tick toward its policy target: 100 plus the military morale modifier
+  (110 under Aggressive Training, 90 under Veteran Benefits)
+- Only Player 1's armies are scaled by morale; Player 2 fights at its raw soldier count
 
 *Army Loyalty:*
 - Base desertion: 0% per tick
@@ -389,7 +391,8 @@ for the player-facing description of the real UI.
 - Fractions of a soldier are carried between ticks (`Army.desertionCarryBasisPoints`) rather than
   truncated away, so the rate applies to the few-dozen-soldier armies the game actually produces
 - Reaching 100% loyalty clears any carried fraction
-- Loyalty recovers slowly over time toward 100% (2% per tick)
+- Loyalty drifts 2 points per tick toward its policy target: 100 plus the military loyalty
+  modifier; only Player 1's armies desert
 - Aggressive Training targets 75% loyalty so this band is reachable; the other military policies
   target 100% or above, i.e. no desertion at all
 
