@@ -119,6 +119,45 @@ class BackendServiceTest {
     }
 
     @Test
+    void sessionCommandForwardsATrainOrderWhole() {
+        server.expect(requestTo(BACKEND + "/api/session/command"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(jsonPath("$.type").value("TRAIN"))
+                .andExpect(jsonPath("$.armyId").value(3))
+                .andExpect(jsonPath("$.unitType").value("CAVALRY"))
+                .andExpect(jsonPath("$.count").value(4))
+                .andRespond(withSuccess("{\"armies\":[{\"id\":3,\"soldiers\":10,\"trainingType\":\"CAVALRY\","
+                        + "\"trainingRemaining\":4}]}", MediaType.APPLICATION_JSON));
+
+        com.barony.webclient.model.Command train = new com.barony.webclient.model.Command();
+        train.setType("TRAIN");
+        train.setArmyId(3);
+        train.setUnitType("CAVALRY");
+        train.setCount(4);
+        GameState state = service.sessionCommand("barony_token=jwt-abc", train);
+
+        assertEquals("CAVALRY", state.getArmies().get(0).getTrainingType());
+        assertEquals(4, state.getArmies().get(0).getTrainingRemaining());
+        server.verify();
+    }
+
+    @Test
+    void sessionBattleForwardsSurvivorsByType() {
+        server.expect(requestTo(BACKEND + "/api/session/battle"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.survivors[0]").value(12))
+                .andExpect(jsonPath("$.survivorsByType[0][1]").value(3))
+                .andExpect(jsonPath("$.survivorsByType[1][2]").value(0))
+                .andRespond(withSuccess("{\"tickCount\":9,\"pendingBattles\":[]}", MediaType.APPLICATION_JSON));
+
+        service.sessionBattle("barony_token=jwt-abc", Map.of("battleId", 2, "result", "FIELD", "winner", 0,
+                "survivors", java.util.List.of(12, 0),
+                "survivorsByType", java.util.List.of(java.util.List.of(7, 3, 2), java.util.List.of(0, 0, 0))));
+        server.verify();
+    }
+
+    @Test
     void sessionBattleForwardsAuthCookieAndTheResult() {
         server.expect(requestTo(BACKEND + "/api/session/battle"))
                 .andExpect(method(HttpMethod.POST))

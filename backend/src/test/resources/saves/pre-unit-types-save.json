@@ -1,0 +1,1824 @@
+{
+  "grid" : [ [ {
+    "type" : "CASTLE",
+    "ownerId" : 1,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 2,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 2,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "VILLAGE",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ], [ {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "EMPTY",
+    "ownerId" : 0,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  }, {
+    "type" : "CASTLE",
+    "ownerId" : 2,
+    "occupationTicks" : 0,
+    "stability" : 100,
+    "population" : 100
+  } ] ],
+  "armies" : [ {
+    "id" : 1,
+    "x" : 12,
+    "y" : 10,
+    "soldiers" : 4,
+    "playerId" : 1,
+    "destinationX" : null,
+    "destinationY" : null,
+    "morale" : 110,
+    "loyalty" : 75,
+    "desertionCarryBasisPoints" : 425,
+    "moving" : false
+  }, {
+    "id" : 2,
+    "x" : 7,
+    "y" : 12,
+    "soldiers" : 10,
+    "playerId" : 2,
+    "destinationX" : 12,
+    "destinationY" : 10,
+    "morale" : 100,
+    "loyalty" : 100,
+    "desertionCarryBasisPoints" : 0,
+    "moving" : true
+  }, {
+    "id" : 5,
+    "x" : 12,
+    "y" : 9,
+    "soldiers" : 5,
+    "playerId" : 1,
+    "destinationX" : 12,
+    "destinationY" : 10,
+    "morale" : 110,
+    "loyalty" : 75,
+    "desertionCarryBasisPoints" : 8625,
+    "moving" : true
+  }, {
+    "id" : 7,
+    "x" : 8,
+    "y" : 10,
+    "soldiers" : 7,
+    "playerId" : 2,
+    "destinationX" : 7,
+    "destinationY" : 12,
+    "morale" : 100,
+    "loyalty" : 100,
+    "desertionCarryBasisPoints" : 0,
+    "moving" : true
+  }, {
+    "id" : 10,
+    "x" : 7,
+    "y" : 13,
+    "soldiers" : 4,
+    "playerId" : 2,
+    "destinationX" : 7,
+    "destinationY" : 12,
+    "morale" : 100,
+    "loyalty" : 100,
+    "desertionCarryBasisPoints" : 0,
+    "moving" : true
+  }, {
+    "id" : 12,
+    "x" : 12,
+    "y" : 14,
+    "soldiers" : 5,
+    "playerId" : 2,
+    "destinationX" : 12,
+    "destinationY" : 10,
+    "morale" : 100,
+    "loyalty" : 100,
+    "desertionCarryBasisPoints" : 0,
+    "moving" : true
+  }, {
+    "id" : 13,
+    "x" : 12,
+    "y" : 10,
+    "soldiers" : 5,
+    "playerId" : 2,
+    "destinationX" : 12,
+    "destinationY" : 10,
+    "morale" : 100,
+    "loyalty" : 100,
+    "desertionCarryBasisPoints" : 0,
+    "moving" : false
+  } ],
+  "tickCount" : 22,
+  "gameOver" : false,
+  "winnerId" : null,
+  "runRecorded" : false,
+  "aiEnabled" : true,
+  "economicPolicy" : "BALANCED_BUDGET",
+  "militaryPolicy" : "AGGRESSIVE_TRAINING",
+  "populationPolicy" : "STABLE_POPULATION",
+  "lastPolicyChangeTick" : -15,
+  "pendingBattles" : [ {
+    "id" : 1,
+    "x" : 12,
+    "y" : 10,
+    "terrain" : "VILLAGE",
+    "seed" : 428295,
+    "tick" : 22,
+    "side0ArmyIds" : [ 1 ],
+    "side1ArmyIds" : [ 13 ],
+    "side0Soldiers" : 4,
+    "side1Soldiers" : 5,
+    "side0Morale" : 110
+  } ],
+  "nextBattleId" : 1,
+  "fieldBattles" : true,
+  "width" : 19,
+  "height" : 15
+}

@@ -239,6 +239,24 @@ class WebControllerTest {
     }
 
     @Test
+    void sessionCommandForwardsATrainOrder() throws Exception {
+        when(backendService.sessionCommand(any(), any())).thenReturn(new GameState());
+
+        mockMvc.perform(post("/api/session/command")
+                        .header(HttpHeaders.COOKIE, "barony_token=jwt-abc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"TRAIN\",\"armyId\":3,\"unitType\":\"ARCHERS\",\"count\":4}"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<Command> captor = ArgumentCaptor.forClass(Command.class);
+        verify(backendService).sessionCommand(eq("barony_token=jwt-abc"), captor.capture());
+        assertEquals("TRAIN", captor.getValue().getType());
+        assertEquals(3, captor.getValue().getArmyId());
+        assertEquals("ARCHERS", captor.getValue().getUnitType());
+        assertEquals(4, captor.getValue().getCount());
+    }
+
+    @Test
     void sessionBattleForwardsTheCookieAndTheResult() throws Exception {
         GameState state = new GameState();
         state.setTickCount(9);

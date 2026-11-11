@@ -81,7 +81,7 @@ Then open http://localhost:3000 in your browser.
 **Single-Game Endpoints:**
 - `GET /state` - Get current game state
 - `POST /tick` - Advance game by one turn
-- `POST /command` - Send MOVE or SPLIT command
+- `POST /command` - Send a MOVE, SPLIT or TRAIN command (see [Commands](#commands))
 - `POST /api/reset` - Reset game
 - `POST /api/decision` - Change ruler policy
 - `GET /api/ruler-stats` - Get realm statistics
@@ -179,7 +179,16 @@ curl -X POST http://localhost:8080/command \
   -d '{"type":"SPLIT","armyId":1,"splitAmount":5}'
 ```
 
-Both commands act only on player 1's armies; a `MOVE` or `SPLIT` naming one of the AI's armies is ignored.
+**Train Army** (archers at a village you hold, cavalry at a castle you hold):
+```bash
+curl -X POST http://localhost:8080/command \
+  -H "Content-Type: application/json" \
+  -d '{"type":"TRAIN","armyId":1,"unitType":"CAVALRY","count":3}'
+```
+
+Commands act only on player 1's armies; a `MOVE` or `SPLIT` naming one of the AI's armies is
+ignored, and a `TRAIN` naming one is refused with `400`. See [Commands](#commands) for every field
+and error.
 
 **Change Policy:**
 ```bash
@@ -212,16 +221,23 @@ and `python3`, and `BASE_URL` points it at a backend other than `http://localhos
   (`0` neutral, `1` player, `2` AI), `occupationTicks`, `stability` and `population`
 - `width`, `height` - the map size
 - `armies` - each with `id`, `x`, `y`, `soldiers`, `playerId`, `destinationX`, `destinationY` (`null`
-  with no order), `moving`, `morale`, `loyalty` and `desertionCarryBasisPoints`
+  with no order), `moving`, `morale`, `loyalty` and `desertionCarryBasisPoints`; and the unit mix:
+  `archers` and `cavalry` (part of `soldiers`, `0` in saves from before unit types), `infantry` (the
+  rest, read-only), `trainingType` (`ARCHERS`, `CAVALRY` or `null`), `trainingRemaining` and
+  `training`
 - `tickCount`, `gameOver`, `winnerId` (`null` until the game ends), `aiEnabled`
 - `economicPolicy`, `militaryPolicy`, `populationPolicy`, `lastPolicyChangeTick`
 - `runRecorded` - internal bookkeeping for run history, always `false` here
 - `pendingBattles` - the battles waiting to be fought this turn (empty when none), each with `id`,
   `x`, `y`, `terrain` (the tile type), `seed`, `tick`, `side0ArmyIds` and `side1ArmyIds` (side 0 is
-  always player 1, side 1 the AI), `side0Soldiers`, `side1Soldiers` and `side0Morale` (player 1's
-  morale on the tile, weighted by soldiers)
+  always player 1, side 1 the AI), `side0Soldiers`, `side1Soldiers`, `side0Archers`,
+  `side0Cavalry`, `side1Archers`, `side1Cavalry` (each side's archers and cavalry, summed over its
+  armies; the rest are infantry) and `side0Morale` (player 1's morale on the tile, weighted by
+  soldiers)
 - `nextBattleId` - the battle-id counter: the id of the latest pending battle this game (`0` before
   the first); the next one gets one more
+- `unitTypes` - `true` in games started since unit types, where the AI trains archers and cavalry
+  too; `null` in older saves, whose AI plays exactly as before
 - `fieldBattles` - whether engagements pause the turn for a field battle: `true`, `false`, or `null`
   when never set. The engine treats `null` as off (so the single-game endpoints and old saves keep the
   classic rule), and a player's session turns it on while it is still `null`
@@ -229,6 +245,22 @@ and `python3`, and `BASE_URL` points it at a backend other than `http://localhos
 With field battles on, `POST /api/session/tick` can return with `pendingBattles` non-empty: the turn
 has paused before combat. It finishes (captures, the win check, desertion and respawns) once the last
 pending battle is resolved through `POST /api/session/battle`.
+
+### Commands
+
+`POST /command` and `POST /api/session/command` take one command for one of player 1's armies:
+
+- `{"type": "MOVE", "armyId", "targetX", "targetY"}`
+- `{"type": "SPLIT", "armyId", "splitAmount"}` - the new army takes its share of each unit type in
+  proportion; add `"splitArchers"` and `"splitCavalry"` to choose exactly how many of each it takes
+  (the rest of `splitAmount` is infantry)
+- `{"type": "TRAIN", "armyId", "unitType": "ARCHERS" | "CAVALRY", "count"}` - convert `count` of the
+  army's infantry, one for one: archers at a village the player holds (2 a turn), cavalry at a castle
+  the player holds (1 a turn). The army must be standing on that tile with no move order. A new order
+  replaces the current one, `count: 0` stops training, and the order is dropped if the army marches
+  off, loses the tile or runs out of infantry. Refused with `400` for an unknown army or unit type or
+  a `count` below 0 or above its infantry, and `409` when the army is not on such a tile, is marching,
+  or is in a pending battle.
 
 `GET /api/ruler-stats` and `GET /api/session/ruler-stats` return `averageStability`,
 `averageMorale`, `averageLoyalty`, `totalPopulation`, `economicPolicy`, `militaryPolicy`,
@@ -257,6 +289,8 @@ Then open http://localhost:3000
 - Game-over banner overlay on canvas, with a run summary (turns, castles/villages held, armies and
   soldiers remaining)
 - Inline split validation (no alerts)
+- Unit types: each army's mix of infantry, archers and cavalry in its panel and tooltip, small marks
+  on the map for archers and cavalry, and a Train control on villages and castles you hold
 - Colorblind modes: Deuteranopia, Protanopia, Tritanopia
 - Themes: Dark (default), Classic, High Contrast
 - Adjustable font size: Small, Medium, Large
@@ -321,11 +355,16 @@ also lets the map decide it. Battles you set up yourself at `/battle` are practi
 nothing.
 
 The browser reports a fought battle's result, and the backend refuses any result in which a side
-keeps more soldiers than it started with or the winner has nobody left. Barony is single-player
+keeps more soldiers than it started with or the winner has nobody left, or (when the result gives
+them by type) more archers, cavalry or infantry than it brought. Barony is single-player
 against the AI, so a forged result only affects your own game and run history.
 
 API: `POST /api/session/battle` takes `{"battleId", "result": "FIELD", "winner": 0|1|null,
-"survivors": [yours, theirs]}` or `{"battleId", "result": "AUTO"}`. `POST /api/session/field-battles`
+"survivors": [yours, theirs]}` or `{"battleId", "result": "AUTO"}`. A fought result may add
+`"survivorsByType": [[infantry, archers, cavalry], [infantry, archers, cavalry]]` (yours, then
+theirs; each side's three must add up to its `survivors`), and each type's survivors are then shared
+among that side's armies by how many of that type each brought. Without it, each army's losses come
+out of its unit types in proportion. `POST /api/session/field-battles`
 takes `{"enabled": true|false}`. Pending battles appear in the game state as `pendingBattles`.
 
 The engine is a thin C++ host (`web-client/battle3d/main.cpp`) built with Emscripten 6.0.11
@@ -344,6 +383,8 @@ tested under Node in `web-client/src/test/js/battle-sim.test.js`.
 5. **Combat:** Battles are fought on the [3D battlefield](#3d-battlefield) by default; a battle left
    to the map is settled by simultaneous damage (10 vs 7 → 3 vs 0)
 6. **Castle Capture:** Occupy for 3 consecutive turns
+7. **Unit types:** Train infantry into archers at your villages or cavalry at your castles; in a
+   battle left to the map an archer counts as 1.25 soldiers and a horseman as 1.5
 
 See [PLAYER_GUIDE.md](PLAYER_GUIDE.md) for complete gameplay instructions.
 

@@ -314,8 +314,14 @@
                 return a.x === gridX && a.y === gridY;
             });
         if (army) {
+            var mix = describeUnitMix(army);
             var text = 'Army #' + army.id + ' (Player ' + army.playerId + ') \u2014 Soldiers: '
-                + army.soldiers + ' | Morale: ' + army.morale + ' | Loyalty: ' + army.loyalty;
+                + army.soldiers + (mix ? ' (' + mix + ')' : '')
+                + ' | Morale: ' + army.morale + ' | Loyalty: ' + army.loyalty;
+            var training = describeTraining(army);
+            if (training) {
+                text += ' | ' + training;
+            }
             if (army.destinationX !== undefined && army.destinationX !== null) {
                 text += ' | Moving to: (' + army.destinationX + ', ' + army.destinationY + ')';
             }
@@ -512,7 +518,104 @@
         return { load: load, queueUpload: queueUpload };
     }
 
+    // ------------------------------------------------------------------ unit types
+    //
+    // An army's `soldiers` is its total; `archers` and `cavalry` are part of it and the rest are
+    // infantry. A state from before unit types has neither field, which reads as all infantry.
+
+    var UNIT_TRAINING = {
+        // unitType: where it trains (a tile the player holds), how many a turn, and its name
+        ARCHERS: { tile: 'VILLAGE', perTurn: 2, plural: 'archers', singular: 'archer', place: 'village' },
+        CAVALRY: { tile: 'CASTLE', perTurn: 1, plural: 'cavalry', singular: 'cavalry', place: 'castle' }
+    };
+
+    // An army's mix as [infantry, archers, cavalry], tolerating missing or inconsistent fields.
+    function unitMix(army) {
+        var soldiers = Math.max(0, (army && army.soldiers) || 0);
+        var archers = Math.max(0, (army && army.archers) || 0);
+        var cavalry = Math.max(0, (army && army.cavalry) || 0);
+        return { infantry: Math.max(0, soldiers - archers - cavalry), archers: archers, cavalry: cavalry };
+    }
+
+    // The breakdown of an army that has archers or cavalry, e.g. "16 infantry · 5 archers ·
+    // 3 cavalry" (types it has none of are left out); null for an all-infantry army, so an old
+    // game's screens read exactly as they did.
+    function describeUnitMix(army) {
+        var mix = unitMix(army);
+        if (mix.archers === 0 && mix.cavalry === 0) return null;
+        var parts = [];
+        if (mix.infantry > 0) parts.push(mix.infantry + ' infantry');
+        if (mix.archers > 0) parts.push(mix.archers + (mix.archers === 1 ? ' archer' : ' archers'));
+        if (mix.cavalry > 0) parts.push(mix.cavalry + ' cavalry');
+        return parts.join(' · ');
+    }
+
+    // "24 soldiers: 16 infantry · 5 archers · 3 cavalry", or just "24 soldiers" when all infantry
+    // (word for word what the panel said before unit types).
+    function describeArmyStrength(army) {
+        var soldiers = (army && army.soldiers) || 0;
+        var mix = describeUnitMix(army);
+        return soldiers + ' soldiers' + (mix ? ': ' + mix : '');
+    }
+
+    // The army's training order in words ("Training 3 more archers, 2 a turn"), or null.
+    function describeTraining(army) {
+        if (!army || !army.trainingType || !(army.trainingRemaining > 0)) return null;
+        var spec = UNIT_TRAINING[army.trainingType];
+        if (!spec) return null;
+        var n = army.trainingRemaining;
+        return 'Training ' + n + ' more ' + (n === 1 ? spec.singular : spec.plural) + ', ' + spec.perTurn + ' a turn';
+    }
+
+    // What the army could train where it stands: archers on a village its player holds, cavalry on
+    // a castle its player holds, provided it is not marching. Returns { unitType, perTurn, max,
+    // plural, place } (max being its infantry, which may be 0) or null when it can train nothing here.
+    function trainingOptionFor(army, gameState) {
+        if (!army || !gameState || !gameState.grid) return null;
+        if (army.destinationX !== undefined && army.destinationX !== null
+                && (army.destinationX !== army.x || army.destinationY !== army.y)) return null;
+        var column = gameState.grid[army.x];
+        var tile = column && column[army.y];
+        if (!tile || tile.ownerId !== army.playerId) return null;
+        var types = Object.keys(UNIT_TRAINING);
+        for (var i = 0; i < types.length; i++) {
+            var spec = UNIT_TRAINING[types[i]];
+            if (tile.type === spec.tile) {
+                return { unitType: types[i], perTurn: spec.perTurn, max: unitMix(army).infantry,
+                    plural: spec.plural, place: spec.place };
+            }
+        }
+        return null;
+    }
+
+    // Validates how many infantry to train, against how many the army has.
+    function validateTrainCount(count, max) {
+        if (isNaN(count) || count < 1) {
+            return { valid: false, message: 'Enter how many to train (at least 1)' };
+        }
+        if (count > max) {
+            return { valid: false, message: 'Only ' + max + ' infantry to train' };
+        }
+        return { valid: true, message: '' };
+    }
+
+    // Which unit-type marks the map draws on an army's circle: 'archers' and/or 'cavalry'.
+    function armyUnitMarks(army) {
+        var mix = unitMix(army);
+        var marks = [];
+        if (mix.archers > 0) marks.push('archers');
+        if (mix.cavalry > 0) marks.push('cavalry');
+        return marks;
+    }
+
     return {
+        unitMix: unitMix,
+        describeUnitMix: describeUnitMix,
+        describeArmyStrength: describeArmyStrength,
+        describeTraining: describeTraining,
+        trainingOptionFor: trainingOptionFor,
+        validateTrainCount: validateTrainCount,
+        armyUnitMarks: armyUnitMarks,
         summarizeHoldings: summarizeHoldings,
         getStatClass: getStatClass,
         diffCastleMilestones: diffCastleMilestones,

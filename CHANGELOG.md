@@ -6,6 +6,25 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Backend
 
+- ✅ **Unit types: archers and cavalry alongside infantry** (ROADMAP §1.2.1): an `Army` keeps
+  `soldiers` as its total and gains `archers` and `cavalry` (infantry is the rest, exposed read-only
+  as `infantry`). Saves without them load as all infantry. A new `TRAIN` command converts infantry
+  one for one, archers at a village the player holds (2 a turn) and cavalry at a castle the player
+  holds (1 a turn), worked through over turns as `trainingType`/`trainingRemaining` and dropped if the
+  army marches off, loses the tile or runs out of infantry; refusals are `400` or `409`. Every rule
+  that shrinks an army (combat, desertion, field results, a retreat with nowhere to go, AI and player
+  splits) now goes through `Army.loseSoldiers`, which takes losses across the types in proportion by
+  largest remainder (ties: infantry, archers, cavalry; `Army.shareLosses` is the pure rule). Merges
+  add the types up, and `SPLIT` takes a proportional share or exact `splitArchers`/`splitCavalry`.
+  The map's rule weighs infantry 1.0, archers 1.25 and cavalry 1.5 in exact hundredths, which for an
+  all-infantry army is the old strength to the soldier. `PendingBattle` gains `side0Archers`,
+  `side0Cavalry`, `side1Archers` and `side1Cavalry`, and a field result may send `survivorsByType`
+  (checked against each side's starting mix and its `survivors`, then shared per type). The AI trains
+  a modest share when idle on its villages and castles, only in games started since unit types
+  (`unitTypes: true`), so an older save's AI plays as it did. `PreUnitTypesSaveTest` loads a save
+  written by the previous code and replays it, and six seeded games, against digests recorded on
+  that code: an all-infantry game is unchanged bit for bit.
+
 - ✅ **Signed-in players stay signed in**: a session used to end when the one-hour access token did,
   sending the player back to the login page. Login now also keeps UserAuth's refresh token in an
   HttpOnly `barony_refresh` cookie, and `AccountSessionFilter` renews the session on the next
@@ -49,6 +68,12 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **Archers and cavalry on the map**: the selected army's panel, its tooltip and the Armies list
+  show its mix ("24 soldiers: 16 infantry · 5 archers · 3 cavalry"; an all-infantry army reads as
+  before), and the map marks archers with an arrowhead and cavalry with a diamond on the army's
+  circle. On a village or castle you hold the panel offers **Train archers** or **Train cavalry**,
+  shows the order in progress and has a **Stop training** button, sized for touch at phone width.
+  The proxy's models carry the new fields so nothing is dropped on the way to the page.
 - ✅ **Search and link-preview metadata on the landing page**: the login page that
   barony.preponderous.org lands on was titled "Barony Game - Login" and had no description or
   Open Graph tags. It is now titled "Barony" and carries a meta description, a canonical link,

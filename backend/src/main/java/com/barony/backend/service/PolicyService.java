@@ -148,7 +148,8 @@ class PolicyService {
         while (iterator.hasNext()) {
             Army army = iterator.next();
             if (army.getPlayerId() == PLAYER_1_ID) {
-                army.setSoldiers(Math.max(0, army.getSoldiers() - takeDesertions(army)));
+                // Deserters leave from every unit type in proportion (Army.loseSoldiers).
+                army.loseSoldiers(takeDesertions(army));
 
                 if (army.getSoldiers() <= 0) {
                     iterator.remove();

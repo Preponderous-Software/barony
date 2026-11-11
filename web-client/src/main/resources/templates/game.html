@@ -85,6 +85,20 @@
                         <button id="panelSplitBtn" class="split-button" onclick="panelSplit()">Split Army</button>
                     </div>
                     <span id="panelSplitMsg" class="split-validation-msg"></span>
+                    <!-- Training: archers at a village you hold, cavalry at a castle you hold. -->
+                    <div id="panelTrain" class="selected-army-train" style="display: none;">
+                        <span id="panelTrainStatus" class="train-status"></span>
+                        <div id="panelTrainControls" class="selected-army-split">
+                            <label for="panelTrainCount" id="panelTrainLabel">Train archers</label>
+                            <input type="number" id="panelTrainCount" class="split-input"
+                                   min="1" value="2" inputmode="numeric" placeholder="How many">
+                            <button id="panelTrainBtn" class="split-button" onclick="panelTrain()">Train</button>
+                            <button id="panelTrainStop" class="split-button train-stop" onclick="panelStopTraining()"
+                                    style="display: none;">Stop training</button>
+                            <span id="panelTrainHint" class="field-hint"></span>
+                        </div>
+                        <span id="panelTrainMsg" class="split-validation-msg"></span>
+                    </div>
                     <a id="panelBattleLink" class="battle-link" href="/battle"
                        title="Practice: fight this army against the nearest enemy army as a 3D field battle. It does not change your game.">&#9876; Practice in 3D</a>
                 </div>
@@ -1295,6 +1309,35 @@
                     ctx.stroke();
                 }
 
+                // Mark an army with archers or cavalry: a small arrowhead (archers) at the top
+                // left of its circle and a small diamond (cavalry) at the top right, so the mix
+                // is visible at a glance; an all-infantry army is drawn as it always was.
+                const marks = armyUnitMarks(army);
+                if (marks.length > 0) {
+                    const markSize = Math.max(3, radius * 0.38);
+                    ctx.fillStyle = PALETTE.textWhite;
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    marks.forEach(mark => {
+                        const mx = px + (mark === 'archers' ? -1 : 1) * radius * 0.72;
+                        const my = py - radius * 0.72;
+                        ctx.beginPath();
+                        if (mark === 'archers') {
+                            ctx.moveTo(mx, my - markSize);
+                            ctx.lineTo(mx + markSize * 0.8, my + markSize * 0.6);
+                            ctx.lineTo(mx - markSize * 0.8, my + markSize * 0.6);
+                        } else {
+                            ctx.moveTo(mx, my - markSize);
+                            ctx.lineTo(mx + markSize * 0.75, my);
+                            ctx.lineTo(mx, my + markSize);
+                            ctx.lineTo(mx - markSize * 0.75, my);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    });
+                }
+
                 // Draw soldier count
                 ctx.fillStyle = PALETTE.textWhite;
                 ctx.font = Math.max(9, Math.round(12 * placement.scale)) + 'px Arial';
@@ -1393,13 +1436,15 @@
                 
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'army-info';
+                const mix = describeUnitMix(army);
+                const training = army.playerId === 1 ? describeTraining(army) : null;
                 infoDiv.innerHTML = `
                     <p>
                         Army #${army.id} (Player ${army.playerId})
                         - Position: (${army.x}, ${army.y})
-                        - Soldiers: ${army.soldiers}
+                        - Soldiers: ${army.soldiers}${mix ? ' (' + mix + ')' : ''}
                         - Morale: ${army.morale}
-                        - Loyalty: ${army.loyalty}
+                        - Loyalty: ${army.loyalty}${training ? ' - ' + training : ''}
                     </p>
                 `;
                 div.appendChild(infoDiv);
@@ -1473,7 +1518,8 @@
             empty.style.display = 'none';
             actions.style.display = 'block';
             document.getElementById('selectedArmyTitle').textContent =
-                'Army #' + army.id + ' — ' + army.soldiers + ' soldiers at (' + army.x + ', ' + army.y + ')';
+                'Army #' + army.id + ' — ' + describeArmyStrength(army) + ' at (' + army.x + ', ' + army.y + ')';
+            updateTrainControls(army);
             // A practice battle, unless this army is in a battle waiting this turn: then the link
             // opens that battle, the one that decides the map.
             const battleLink = document.getElementById('panelBattleLink');
@@ -1564,6 +1610,114 @@
                 showToast('Error splitting army: ' + errorMsg, 'danger');
                 console.error('Error:', error);
             });
+        }
+
+        // ========================
+        // Training (archers at a held village, cavalry at a held castle)
+        // ========================
+        // Shows the Train control when the selected army stands where it can train, and its
+        // training order while it works through one. Rules (trainingOptionFor, validateTrainCount)
+        // live in game-logic.js and are covered by the Node tests.
+        function updateTrainControls(army) {
+            const box = document.getElementById('panelTrain');
+            const status = document.getElementById('panelTrainStatus');
+            const controls = document.getElementById('panelTrainControls');
+            const stopBtn = document.getElementById('panelTrainStop');
+            const training = describeTraining(army);
+            const option = pendingBattleForArmy(lastGameState, army.id) ? null : trainingOptionFor(army, lastGameState);
+            document.getElementById('panelTrainMsg').style.display = 'none';
+            if (!option && !training) {
+                box.style.display = 'none';
+                return;
+            }
+            box.style.display = 'block';
+            status.textContent = training || '';
+            status.style.display = training ? 'block' : 'none';
+            stopBtn.style.display = training ? '' : 'none';
+            if (!option) {
+                // Training, but no longer able to train here (it will be dropped next turn).
+                controls.style.display = training ? 'flex' : 'none';
+                ['panelTrainLabel', 'panelTrainCount', 'panelTrainBtn', 'panelTrainHint'].forEach(id => {
+                    document.getElementById(id).style.display = 'none';
+                });
+                return;
+            }
+            controls.style.display = 'flex';
+            ['panelTrainLabel', 'panelTrainCount', 'panelTrainBtn', 'panelTrainHint'].forEach(id => {
+                document.getElementById(id).style.display = '';
+            });
+            const input = document.getElementById('panelTrainCount');
+            const canTrain = option.max > 0;
+            input.dataset.unitType = option.unitType;
+            input.max = String(Math.max(1, option.max));
+            const current = parseInt(input.value);
+            if (isNaN(current) || current < 1 || current > option.max) {
+                input.value = String(Math.max(1, Math.min(option.perTurn, option.max)));
+            }
+            input.disabled = !canTrain;
+            document.getElementById('panelTrainBtn').disabled = !canTrain;
+            document.getElementById('panelTrainBtn').textContent = training ? 'Train instead' : 'Train';
+            document.getElementById('panelTrainLabel').textContent = 'Train ' + option.plural;
+            document.getElementById('panelTrainHint').textContent = canTrain
+                ? 'From infantry, ' + option.perTurn + ' a turn at this ' + option.place + ' (1–' + option.max + ')'
+                : 'No infantry left to train';
+        }
+
+        // TRAIN command: count 0 stops the army's training.
+        function sendTrainCommand(armyId, unitType, count, msgEl) {
+            fetch('/api/session/command', {
+                method: 'POST',
+                headers: getSessionHeaders(),
+                body: JSON.stringify({ type: 'TRAIN', armyId: armyId, unitType: unitType, count: count })
+            })
+            .then(response => {
+                if (response.status === 401) { sessionExpired(); return null; }
+                if (!response.ok) {
+                    const fallback = response.status === 409
+                        ? 'This army cannot train here right now (it must stand still on a village or castle you hold)'
+                        : 'That training order was not accepted';
+                    return response.json().catch(() => null).then(err => {
+                        throw new Error((err && err.message) ? err.message : fallback);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data) return;
+                updateUI(data);
+                showToast(count > 0 ? 'Training ' + count + ' ' + unitType.toLowerCase() : 'Training stopped', 'success');
+            })
+            .catch(error => {
+                const errorMsg = error.message || 'Network error occurred';
+                if (msgEl) {
+                    msgEl.textContent = errorMsg;
+                    msgEl.style.display = 'block';
+                }
+                showToast('Could not train: ' + errorMsg, 'danger');
+                console.error('Error:', error);
+            });
+        }
+
+        function panelTrain() {
+            if (!selectedArmy) return;
+            const input = document.getElementById('panelTrainCount');
+            const msgEl = document.getElementById('panelTrainMsg');
+            const count = parseInt(input.value);
+            const result = validateTrainCount(count, parseInt(input.max));
+            if (!result.valid) {
+                msgEl.textContent = result.message;
+                msgEl.style.display = 'block';
+                return;
+            }
+            msgEl.style.display = 'none';
+            sendTrainCommand(selectedArmy.id, input.dataset.unitType, count, msgEl);
+        }
+
+        function panelStopTraining() {
+            if (!selectedArmy || !lastGameState) return;
+            const army = (lastGameState.armies || []).find(a => a.id === selectedArmy.id);
+            if (!army || !army.trainingType) return;
+            sendTrainCommand(army.id, army.trainingType, 0, document.getElementById('panelTrainMsg'));
         }
 
         // Split the army currently selected on the map, from the under-map panel.

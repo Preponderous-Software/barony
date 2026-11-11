@@ -31,6 +31,14 @@ public class PendingBattle {
     private List<Integer> side1ArmyIds = new ArrayList<>();
     private int side0Soldiers;
     private int side1Soldiers;
+    /**
+     * Of each side's soldiers, how many are archers and cavalry (the rest are infantry), summed over
+     * the side's armies when the battle was recorded. 0 in battles saved before unit types.
+     */
+    private int side0Archers;
+    private int side0Cavalry;
+    private int side1Archers;
+    private int side1Cavalry;
     /** Player 1's morale on the tile, weighted by soldiers (Barony counts morale for player 1 only). */
     private int side0Morale;
 
@@ -45,6 +53,10 @@ public class PendingBattle {
         this.side1ArmyIds = new ArrayList<>(other.side1ArmyIds);
         this.side0Soldiers = other.side0Soldiers;
         this.side1Soldiers = other.side1Soldiers;
+        this.side0Archers = other.side0Archers;
+        this.side0Cavalry = other.side0Cavalry;
+        this.side1Archers = other.side1Archers;
+        this.side1Cavalry = other.side1Cavalry;
         this.side0Morale = other.side0Morale;
     }
 }

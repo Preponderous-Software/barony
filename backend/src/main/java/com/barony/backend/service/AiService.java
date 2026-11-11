@@ -4,6 +4,7 @@ import com.barony.backend.model.Army;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.Tile;
 import com.barony.backend.model.TileType;
+import com.barony.backend.model.UnitType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +23,10 @@ class AiService {
     private static final int CAPTURE_DANGER_RANGE = 2;
     private static final double VILLAGE_ATTACK_FORCE_RATIO = 1.5;
     private static final double CASTLE_ATTACK_FORCE_RATIO = 2.0;
+    /** An idle AI army trains up to a quarter of its soldiers as archers at its own village... */
+    static final int ARCHER_SHARE_DIVISOR = 4;
+    /** ...and up to a fifth as cavalry at its own castle. */
+    static final int CAVALRY_SHARE_DIVISOR = 5;
 
     void executeAiTurn(GameState gameState) {
         int totalAiArmies = countAiArmies(gameState);
@@ -37,6 +42,45 @@ class AiService {
         }
 
         gameState.getArmiesInternal().addAll(newGarrisons);
+
+        if (gameState.isAiTrainingEnabled()) {
+            for (Army army : idleAiArmies) {
+                considerTraining(army, gameState);
+            }
+        }
+    }
+
+    /**
+     * An AI army left idle on its own village trains some archers, and on its own castle some
+     * cavalry, up to a modest share of its strength ({@link #ARCHER_SHARE_DIVISOR},
+     * {@link #CAVALRY_SHARE_DIVISOR}). GameService works the order through like a player's. Only in
+     * games started with unit types, so an older save's AI plays as it always did.
+     */
+    private void considerTraining(Army army, GameState gameState) {
+        if (army.isMoving() || army.isTraining() || army.getInfantry() <= 0
+                || !isWithinBounds(army.getX(), army.getY(), gameState)) {
+            return;
+        }
+        Tile tile = gameState.getGrid()[army.getX()][army.getY()];
+        if (tile.getOwnerId() != AI_PLAYER_ID) {
+            return;
+        }
+        UnitType type;
+        int wanted;
+        if (tile.getType() == TileType.VILLAGE) {
+            type = UnitType.ARCHERS;
+            wanted = army.getSoldiers() / ARCHER_SHARE_DIVISOR - army.getArchers();
+        } else if (tile.getType() == TileType.CASTLE) {
+            type = UnitType.CAVALRY;
+            wanted = army.getSoldiers() / CAVALRY_SHARE_DIVISOR - army.getCavalry();
+        } else {
+            return;
+        }
+        int count = Math.min(wanted, army.getInfantry());
+        if (count > 0) {
+            army.setTrainingType(type);
+            army.setTrainingRemaining(count);
+        }
     }
 
     private void assignAiTarget(Army army, GameState gameState) {
@@ -232,9 +276,8 @@ class AiService {
     }
 
     private Army splitGarrison(Army army) {
-        Army garrison = new Army(army.getX(), army.getY(), 1, AI_PLAYER_ID);
-        army.setSoldiers(army.getSoldiers() - 1);
-        return garrison;
+        // The garrison soldier is taken by the same proportional rule as any split.
+        return army.detach(1);
     }
 
     private int countAiArmies(GameState gameState) {

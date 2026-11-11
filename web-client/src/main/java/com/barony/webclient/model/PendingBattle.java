@@ -22,5 +22,10 @@ public class PendingBattle {
     private List<Integer> side1ArmyIds;
     private int side0Soldiers;
     private int side1Soldiers;
+    /** Of each side's soldiers, how many are archers and cavalry; the rest are infantry. */
+    private int side0Archers;
+    private int side0Cavalry;
+    private int side1Archers;
+    private int side1Cavalry;
     private int side0Morale;
 }
