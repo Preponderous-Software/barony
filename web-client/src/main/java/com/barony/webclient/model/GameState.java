@@ -14,6 +14,8 @@ public class GameState {
     private List<PendingBattle> pendingBattles;
     private Integer nextBattleId;
     private Boolean fieldBattles;
+    // Whether the AI trains archers and cavalry (games started since unit types); null in older saves.
+    private Boolean unitTypes;
     private int tickCount;
     private boolean gameOver;
     private Integer winnerId;

@@ -59,8 +59,26 @@ public class GameController {
 
     @PostMapping("/command")
     public GameState command(@RequestBody Command command) {
-        gameService.executeCommand(command);
+        runCommand(command);
         return gameService.getState();
+    }
+
+    /**
+     * Runs a command, turning a refusal into the matching HTTP error: 409 when the army cannot do
+     * that now (in a pending battle, on the march, not on a tile where it can train), 400 when the
+     * request itself is wrong (no such army, unknown unit type, a count it cannot meet).
+     */
+    private void runCommand(Command command) {
+        if (command == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A command is required");
+        }
+        try {
+            gameService.executeCommand(command);
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @PostMapping("/api/reset")
@@ -204,11 +222,7 @@ public class GameController {
         Session session = player.session();
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
-            try {
-                gameService.executeCommand(command);
-            } catch (IllegalStateException e) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
-            }
+            runCommand(command);
             save(player);
             return gameService.getState();
         }

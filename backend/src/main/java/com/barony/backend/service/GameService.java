@@ -9,6 +9,7 @@ import com.barony.backend.model.RulerDecision;
 import com.barony.backend.model.RulerStats;
 import com.barony.backend.model.Tile;
 import com.barony.backend.model.TileType;
+import com.barony.backend.model.UnitType;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -81,6 +82,7 @@ public class GameService {
         if (gameState.isAiEnabled()) {
             aiService.executeAiTurn(gameState);
         }
+        processTraining();
 
         if (gameState.isFieldBattlesEnabled() && recordPendingBattles()) {
             // The turn waits here for the player to fight (or auto-resolve) each battle;
@@ -139,12 +141,16 @@ public class GameService {
             if (army.getPlayerId() == 1) {
                 battle.getSide0ArmyIds().add(army.getId());
                 battle.setSide0Soldiers(battle.getSide0Soldiers() + army.getSoldiers());
+                battle.setSide0Archers(battle.getSide0Archers() + army.getArchers());
+                battle.setSide0Cavalry(battle.getSide0Cavalry() + army.getCavalry());
                 long[] m = moraleByTile.computeIfAbsent(key, k -> new long[2]);
                 m[0] += (long) army.getMorale() * army.getSoldiers();
                 m[1] += army.getSoldiers();
             } else {
                 battle.getSide1ArmyIds().add(army.getId());
                 battle.setSide1Soldiers(battle.getSide1Soldiers() + army.getSoldiers());
+                battle.setSide1Archers(battle.getSide1Archers() + army.getArchers());
+                battle.setSide1Cavalry(battle.getSide1Cavalry() + army.getCavalry());
             }
         }
         for (Map.Entry<String, PendingBattle> e : byTile.entrySet()) {
@@ -223,6 +229,10 @@ public class GameService {
         if (winner != null && survivors[winner] < 1) {
             throw new IllegalArgumentException("the winner must have soldiers left");
         }
+        int[][] byType = result.getSurvivorsByType();
+        if (byType != null) {
+            validateSurvivorsByType(battle, survivors, byType);
+        }
         List<List<Integer>> ids = List.of(battle.getSide0ArmyIds(), battle.getSide1ArmyIds());
         for (int side = 0; side < 2; side++) {
             List<Army> armies = new ArrayList<>();
@@ -232,7 +242,11 @@ public class GameService {
                     armies.add(army);
                 }
             }
-            shareSurvivors(armies, survivors[side]);
+            if (byType != null) {
+                shareSurvivorsByType(armies, byType[side]);
+            } else {
+                shareSurvivors(armies, survivors[side]);
+            }
             if (winner != null && winner != side) {
                 for (Army army : armies) {
                     if (army.getSoldiers() > 0) {
@@ -244,7 +258,73 @@ public class GameService {
         gameState.getArmiesInternal().removeIf(army -> army.getSoldiers() <= 0);
     }
 
-    /** Shares a side's survivors among its armies in proportion to their size (largest remainder). */
+    private static final String[] TYPE_NAMES = {"infantry", "archers", "cavalry"};
+
+    /**
+     * Checks a field result's per-type survivors, {@code [[inf, arch, cav], [inf, arch, cav]]}
+     * for side 0 then side 1, against what each side brought to the battle and the totals.
+     */
+    private static void validateSurvivorsByType(PendingBattle battle, int[] survivors, int[][] byType) {
+        if (byType.length != 2 || byType[0] == null || byType[1] == null
+                || byType[0].length != 3 || byType[1].length != 3) {
+            throw new IllegalArgumentException("survivorsByType must give [infantry, archers, cavalry] for each side");
+        }
+        for (int side = 0; side < 2; side++) {
+            int[] start = startingTypes(battle, side);
+            int sum = 0;
+            for (int type = 0; type < 3; type++) {
+                int kept = byType[side][type];
+                if (kept < 0 || kept > start[type]) {
+                    throw new IllegalArgumentException("side " + side + " cannot keep " + kept + " of " + start[type]
+                            + " " + TYPE_NAMES[type]);
+                }
+                sum += kept;
+            }
+            if (sum != survivors[side]) {
+                throw new IllegalArgumentException("side " + side + "'s survivors by type add up to " + sum
+                        + ", not " + survivors[side]);
+            }
+        }
+    }
+
+    /** What a side brought to a battle, as {@code [infantry, archers, cavalry]}. */
+    private static int[] startingTypes(PendingBattle battle, int side) {
+        int soldiers = side == 0 ? battle.getSide0Soldiers() : battle.getSide1Soldiers();
+        int archers = side == 0 ? battle.getSide0Archers() : battle.getSide1Archers();
+        int cavalry = side == 0 ? battle.getSide0Cavalry() : battle.getSide1Cavalry();
+        return new int[] {soldiers - archers - cavalry, archers, cavalry};
+    }
+
+    /**
+     * Shares a side's survivors of each type among its armies in proportion to how many of that
+     * type each army brought (largest remainder, ties to the earlier army).
+     */
+    private static void shareSurvivorsByType(List<Army> armies, int[] survivorsByType) {
+        int[][] kept = new int[3][];
+        for (int type = 0; type < 3; type++) {
+            int[] brought = new int[armies.size()];
+            int total = 0;
+            for (int i = 0; i < armies.size(); i++) {
+                Army army = armies.get(i);
+                brought[i] = type == 0 ? army.getInfantry() : type == 1 ? army.getArchers() : army.getCavalry();
+                total += brought[i];
+            }
+            // Validation bounds each type by the battle's starting count, which is what the armies
+            // still hold (nothing changes them while the battle is pending); clamp all the same.
+            kept[type] = Army.largestRemainder(Math.min(survivorsByType[type], total), brought);
+        }
+        for (int i = 0; i < armies.size(); i++) {
+            Army army = armies.get(i);
+            army.setSoldiers(kept[0][i] + kept[1][i] + kept[2][i]);
+            army.setArchers(kept[1][i]);
+            army.setCavalry(kept[2][i]);
+        }
+    }
+
+    /**
+     * Shares a side's survivors among its armies in proportion to their size (largest remainder).
+     * Each army's losses come out of its unit types in proportion (Army.loseSoldiers).
+     */
     private static void shareSurvivors(List<Army> armies, int survivors) {
         int total = 0;
         for (Army army : armies) {
@@ -274,7 +354,8 @@ public class GameService {
             assigned++;
         }
         for (int i = 0; i < armies.size(); i++) {
-            armies.get(i).setSoldiers(kept[i]);
+            Army army = armies.get(i);
+            army.loseSoldiers(army.getSoldiers() - kept[i]);
         }
     }
 
@@ -323,8 +404,9 @@ public class GameService {
                 bestY = ny;
             }
         }
+        army.clearTraining();
         if (bestScore < 0) {
-            army.setSoldiers(0);
+            army.loseSoldiers(army.getSoldiers());
             return;
         }
         army.setX(bestX);
@@ -349,11 +431,34 @@ public class GameService {
         if ("MOVE".equals(command.getType())) {
             executeMoveCommand(command);
         } else if ("SPLIT".equals(command.getType())) {
-            splitArmy(command.getArmyId(), command.getSplitAmount());
+            if (command.getSplitArchers() != null || command.getSplitCavalry() != null) {
+                splitArmy(command.getArmyId(), command.getSplitAmount(),
+                        command.getSplitArchers() == null ? 0 : command.getSplitArchers(),
+                        command.getSplitCavalry() == null ? 0 : command.getSplitCavalry());
+            } else {
+                splitArmy(command.getArmyId(), command.getSplitAmount());
+            }
+        } else if ("TRAIN".equals(command.getType())) {
+            trainArmy(command.getArmyId(), command.getUnitType(), command.getCount());
         }
     }
 
     public synchronized void splitArmy(int armyId, int soldierCount) {
+        splitArmy(armyId, soldierCount, null);
+    }
+
+    /**
+     * Splits off {@code soldierCount} soldiers of which exactly {@code archers} are archers and
+     * {@code cavalry} cavalry (the rest infantry).
+     *
+     * @throws IllegalArgumentException if the army does not have that many of a type
+     */
+    public synchronized void splitArmy(int armyId, int soldierCount, int archers, int cavalry) {
+        splitArmy(armyId, soldierCount, new int[] {soldierCount - archers - cavalry, archers, cavalry});
+    }
+
+    /** {@code types} is the exact [infantry, archers, cavalry] to split off, or null for a proportional share. */
+    private void splitArmy(int armyId, int soldierCount, int[] types) {
         for (PendingBattle battle : gameState.getPendingBattlesInternal()) {
             if (battle.getSide0ArmyIds().contains(armyId)) {
                 throw new IllegalStateException("Army " + armyId + " is in a battle that has not been fought yet");
@@ -368,13 +473,21 @@ public class GameService {
             return;
         }
 
-        Army newArmy = new Army(targetArmy.getX(), targetArmy.getY(), soldierCount, targetArmy.getPlayerId());
+        if (types != null && (types[0] < 0 || types[0] > targetArmy.getInfantry()
+                || types[1] < 0 || types[1] > targetArmy.getArchers()
+                || types[2] < 0 || types[2] > targetArmy.getCavalry())) {
+            throw new IllegalArgumentException("Army " + armyId + " has " + targetArmy.getInfantry() + " infantry, "
+                    + targetArmy.getArchers() + " archers and " + targetArmy.getCavalry() + " cavalry");
+        }
+        // The new army takes its share of each unit type: in proportion unless the split names them.
+        Army newArmy = types == null
+                ? targetArmy.detach(soldierCount)
+                : targetArmy.detach(types[0], types[1], types[2]);
         // Detached soldiers keep the parent's morale and loyalty rather than arriving as fresh
         // recruits at 100/100 — otherwise splitting is a free reset of a disloyal army's desertion.
         // The pending desertion fraction stays with the parent instead of being duplicated.
         newArmy.setMorale(targetArmy.getMorale());
         newArmy.setLoyalty(targetArmy.getLoyalty());
-        targetArmy.setSoldiers(targetArmy.getSoldiers() - soldierCount);
         gameState.getArmiesInternal().add(newArmy);
     }
 
@@ -427,6 +540,101 @@ public class GameService {
         } else {
             targetArmy.setDestinationX(targetX);
             targetArmy.setDestinationY(targetY);
+            targetArmy.clearTraining();   // marching off abandons the training
+        }
+    }
+
+    // ------------------------------------------------------------------ training
+
+    /**
+     * Orders one of player 1's armies to train {@code count} of its infantry into archers (at a
+     * village the player owns) or cavalry (at a castle the player owns). The army must stand on
+     * that tile with no move order; it converts infantry one for one over the coming ticks, at most
+     * {@link UnitType#perTick()} a tick. A new order replaces the current one; a count of 0 cancels.
+     *
+     * @throws IllegalArgumentException for an unknown army or unit type, or a count it cannot train
+     * @throws IllegalStateException if the army is in the wrong place, marching, or in a pending battle
+     */
+    public synchronized void trainArmy(int armyId, String unitType, int count) {
+        Army army = findArmyById(armyId);
+        if (army == null || army.getPlayerId() != 1) {
+            throw new IllegalArgumentException("No army " + armyId + " of yours");
+        }
+        UnitType type = parseUnitType(unitType);
+        if (count < 0) {
+            throw new IllegalArgumentException("count cannot be negative");
+        }
+        if (count == 0) {
+            army.clearTraining();
+            return;
+        }
+        if (count > army.getInfantry()) {
+            throw new IllegalArgumentException("Army " + armyId + " has only " + army.getInfantry()
+                    + " infantry to train");
+        }
+        for (PendingBattle battle : gameState.getPendingBattlesInternal()) {
+            if (battle.getSide0ArmyIds().contains(armyId)) {
+                throw new IllegalStateException("Army " + armyId + " is in a battle that has not been fought yet");
+            }
+        }
+        if (army.isMoving()) {
+            throw new IllegalStateException("Army " + armyId + " is on the march; stop it to train");
+        }
+        if (!canTrainHere(army, type)) {
+            throw new IllegalStateException(type == UnitType.ARCHERS
+                    ? "Archers train at a village you hold: army " + armyId + " is not on one"
+                    : "Cavalry trains at a castle you hold: army " + armyId + " is not on one");
+        }
+        army.setTrainingType(type);
+        army.setTrainingRemaining(count);
+    }
+
+    private static UnitType parseUnitType(String unitType) {
+        if (unitType != null) {
+            for (UnitType type : UnitType.values()) {
+                if (type.name().equalsIgnoreCase(unitType)) {
+                    return type;
+                }
+            }
+        }
+        throw new IllegalArgumentException("unitType must be ARCHERS or CAVALRY");
+    }
+
+    /** Whether the army stands on a tile of its own player where {@code type} trains. */
+    private boolean canTrainHere(Army army, UnitType type) {
+        if (!isWithinBounds(army.getX(), army.getY())) {
+            return false;
+        }
+        Tile tile = gameState.getGrid()[army.getX()][army.getY()];
+        return tile.getType() == type.trainedAt() && tile.getOwnerId() == army.getPlayerId();
+    }
+
+    /**
+     * Works every army's training order one tick further: converts up to the type's rate of its
+     * infantry. An army that has marched off, lost the tile or run out of infantry drops its order.
+     * Armies with no order are untouched, so a game nobody trains in plays exactly as before.
+     */
+    private void processTraining() {
+        for (Army army : gameState.getArmiesInternal()) {
+            if (army.getTrainingType() == null && army.getTrainingRemaining() == 0) {
+                continue;
+            }
+            UnitType type = army.getTrainingType();
+            if (type == null || army.getTrainingRemaining() <= 0 || army.isMoving()
+                    || !canTrainHere(army, type) || army.getInfantry() <= 0) {
+                army.clearTraining();
+                continue;
+            }
+            int converted = Math.min(type.perTick(), Math.min(army.getTrainingRemaining(), army.getInfantry()));
+            if (type == UnitType.ARCHERS) {
+                army.setArchers(army.getArchers() + converted);
+            } else {
+                army.setCavalry(army.getCavalry() + converted);
+            }
+            army.setTrainingRemaining(army.getTrainingRemaining() - converted);
+            if (army.getTrainingRemaining() <= 0) {
+                army.clearTraining();
+            }
         }
     }
 

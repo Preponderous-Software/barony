@@ -109,6 +109,42 @@ class GameStateTest {
         assertEquals(11, relayed.get("tickCount").asInt());
     }
 
+    /**
+     * The map shows each army's mix and its training, and the battlefield fields each side's archers
+     * and cavalry; the proxy must relay all of them, and an older backend's state (no mix) must
+     * still relay as all infantry.
+     */
+    @Test
+    void relayedStateKeepsEachArmysMixTrainingAndEachSidesMix() throws Exception {
+        String backendJson = "{\"armies\":[{\"id\":3,\"x\":1,\"y\":2,\"soldiers\":24,\"playerId\":1,"
+                + "\"morale\":100,\"loyalty\":100,\"archers\":5,\"cavalry\":3,\"infantry\":16,"
+                + "\"trainingType\":\"ARCHERS\",\"trainingRemaining\":2,\"training\":true,\"moving\":false}],"
+                + "\"pendingBattles\":[{\"id\":4,\"side0Soldiers\":24,\"side0Archers\":5,\"side0Cavalry\":3,"
+                + "\"side1Soldiers\":20,\"side1Archers\":1,\"side1Cavalry\":2}],\"unitTypes\":true}";
+
+        JsonNode relayed = mapper.readTree(mapper.writeValueAsString(mapper.readValue(backendJson, GameState.class)));
+
+        JsonNode army = relayed.get("armies").get(0);
+        assertEquals(24, army.get("soldiers").asInt());
+        assertEquals(5, army.get("archers").asInt());
+        assertEquals(3, army.get("cavalry").asInt());
+        assertEquals(16, army.get("infantry").asInt());
+        assertEquals("ARCHERS", army.get("trainingType").asText());
+        assertEquals(2, army.get("trainingRemaining").asInt());
+        JsonNode battle = relayed.get("pendingBattles").get(0);
+        assertEquals(5, battle.get("side0Archers").asInt());
+        assertEquals(3, battle.get("side0Cavalry").asInt());
+        assertEquals(1, battle.get("side1Archers").asInt());
+        assertEquals(2, battle.get("side1Cavalry").asInt());
+        assertTrue(relayed.get("unitTypes").asBoolean());
+
+        JsonNode old = mapper.readTree(mapper.writeValueAsString(mapper.readValue(
+                "{\"armies\":[{\"id\":3,\"soldiers\":12,\"playerId\":1}]}", GameState.class))).get("armies").get(0);
+        assertEquals(0, old.get("archers").asInt());
+        assertEquals(0, old.get("cavalry").asInt());
+        assertTrue(old.get("trainingType").isNull());
+    }
+
     @Test
     void backendWidthAndHeightAreNotStoredWithoutAGrid() throws Exception {
         GameState state = mapper.readValue("{\"width\":5,\"height\":5}", GameState.class);
