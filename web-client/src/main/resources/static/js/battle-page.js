@@ -152,8 +152,12 @@
 
     function usePending() {
         $('soldiers0').value = pending.side0Soldiers;
+        $('archers0').value = pending.side0Archers || 0;
+        $('cavalry0').value = pending.side0Cavalry || 0;
         $('morale0').value = pending.side0Morale;
         $('soldiers1').value = pending.side1Soldiers;
+        $('archers1').value = pending.side1Archers || 0;
+        $('cavalry1').value = pending.side1Cavalry || 0;
         $('terrain').value = pending.terrain || 'EMPTY';
         $('seed').value = pending.seed;
         document.body.classList.add('bt-pending');
@@ -192,8 +196,12 @@
         var g = engagements[i];
         if (!g) return;
         $('soldiers0').value = g.mine.soldiers;
+        $('archers0').value = g.mine.archers || 0;
+        $('cavalry0').value = g.mine.cavalry || 0;
         $('morale0').value = g.mine.morale != null ? g.mine.morale : 100;
         $('soldiers1').value = g.theirs.soldiers;
+        $('archers1').value = g.theirs.archers || 0;
+        $('cavalry1').value = g.theirs.cavalry || 0;
         $('terrain').value = g.terrain;
         $('seed').value = (g.mine.id * 7919 + g.theirs.id * 104729) % 999983 || 42;
         setup();
@@ -208,10 +216,11 @@
         var n0 = parseInt($('soldiers0').value, 10), n1 = parseInt($('soldiers1').value, 10);
         var m0 = parseInt($('morale0').value, 10), seed = parseInt($('seed').value, 10);
         var terrain = $('terrain').value;
+        function num(id) { return parseInt($(id).value, 10) || 0; }
         battle = Sim.create({
             sides: [
-                { soldiers: n0, morale: m0, playerId: 1, label: 'Your army' },
-                { soldiers: n1, playerId: 2, label: 'The enemy' }
+                { soldiers: n0, archers: num('archers0'), cavalry: num('cavalry0'), morale: m0, playerId: 1, label: 'Your army' },
+                { soldiers: n1, archers: num('archers1'), cavalry: num('cavalry1'), playerId: 2, label: 'The enemy' }
             ],
             terrain: terrain, seed: seed
         });
@@ -220,14 +229,37 @@
         running = false; accum = 0; resultShown = false; lastLogShown = 0;
         $('result').hidden = true;
         $('playBtn').textContent = 'Sound the advance';
-        $('side0Name').textContent = 'Your army · ' + battle.sides[0].soldiers;
-        $('side1Name').textContent = 'The enemy · ' + battle.sides[1].soldiers;
+        $('side0Name').textContent = 'Your army · ' + battle.sides[0].soldiers + mixNote(battle.sides[0]);
+        $('side1Name').textContent = 'The enemy · ' + battle.sides[1].soldiers + mixNote(battle.sides[1]);
+        // The form keeps what the battle actually used (archers and cavalry never exceed soldiers).
+        for (var si = 0; si < 2; si++) {
+            $('archers' + si).value = battle.sides[si].archers;
+            $('cavalry' + si).value = battle.sides[si].cavalry;
+        }
         $('playBtn').disabled = false;
         if (kit) watchCamera();
         updateControls();
         var per = battle.sides[0].perFigure;
-        hint(per > 1.05 ? 'Each figure stands for about ' + per.toFixed(1) + ' soldiers. Tap a soldier to take it over.'
-            : 'Tap or click any soldier to take it over, or enter as your avatar.');
+        var mixed = battle.sides[0].mixed || battle.sides[1].mixed;
+        hint((per > 1.05 ? 'Each figure stands for about ' + per.toFixed(1) + ' soldiers. ' : '') +
+            (mixed ? 'Infantry hold the front, archers shoot from behind them and cavalry ride on the wings. ' : '') +
+            (per > 1.05 || mixed ? 'Tap a soldier to take it over.' : 'Tap or click any soldier to take it over, or enter as your avatar.'));
+    }
+
+    // " (12 archers, 5 cavalry)" for a side that has any; nothing for infantry alone.
+    function mixNote(side) {
+        var parts = [];
+        if (side.archers) parts.push(side.archers + ' archer' + (side.archers === 1 ? '' : 's'));
+        if (side.cavalry) parts.push(side.cavalry + ' cavalry');
+        return parts.length ? ' (' + parts.join(', ') + ')' : '';
+    }
+
+    // "25 (16 infantry, 5 archers, 4 cavalry)" for a mixed side's survivors.
+    function keptNote(total, byType, side) {
+        if (!side.mixed) return String(total);
+        var names = ['infantry', 'archers', 'cavalry'], parts = [];
+        for (var t = 0; t < 3; t++) if (byType[t]) parts.push(byType[t] + ' ' + (t === 1 && byType[t] === 1 ? 'archer' : names[t]));
+        return total + (parts.length ? ' (' + parts.join(', ') + ')' : '');
     }
 
     function input() {
@@ -321,7 +353,7 @@
         if (!me) return;
         var first = c.dist < 0.5;
         var tall = me.kind === 'avatar' ? 1.12 : 1;
-        var head = (first ? 1.58 : 2.0) * tall;
+        var head = (first ? 1.58 : 2.0) * tall + (me.type === 'cavalry' ? 0.95 : 0);   // a rider sits up on the horse
         // Ease the target so a push in the crowd does not shake the view.
         var k = Math.min(1, dt * 14);
         c.tx += (me.x - c.tx) * k; c.ty += (head - c.ty) * k; c.tz += (me.z - c.tz) * k;
@@ -412,10 +444,13 @@
             if (posted) return;
             posted = true;
             var r = Sim.fieldResult(battle);
-            postResult({ battleId: pending.id, result: 'FIELD', winner: r.winner, survivors: r.survivors })
+            var body = { battleId: pending.id, result: 'FIELD', winner: r.winner, survivors: r.survivors };
+            // Which of the survivors are archers and cavalry, when either army had any.
+            if (battle.sides[0].mixed || battle.sides[1].mixed) body.survivorsByType = r.survivorsByType;
+            postResult(body)
                 .then(function (state) {
-                    $('resultMap').textContent = 'This battle decided the map. You kept ' + r.survivors[0] + ', the enemy ' +
-                        r.survivors[1] + (r.winner === 0 ? ' (they fell back).' : r.winner === 1 ? ' (you fell back).' : '.') + ' ' + mapNow(state);
+                    $('resultMap').textContent = 'This battle decided the map. You kept ' + keptNote(r.survivors[0], r.survivorsByType[0], battle.sides[0]) +
+                        ', the enemy ' + keptNote(r.survivors[1], r.survivorsByType[1], battle.sides[1]) + (r.winner === 0 ? ' (they fell back).' : r.winner === 1 ? ' (you fell back).' : '.') + ' ' + mapNow(state);
                     nextOrBack(state);
                 })
                 .catch(function (e) { $('resultMap').textContent = e.message; });
