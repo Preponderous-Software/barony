@@ -9,6 +9,7 @@ import com.barony.backend.service.GuestRateLimiter;
 import com.barony.backend.service.GuestSessionService;
 import com.barony.backend.service.RefreshSessions;
 import com.barony.backend.service.SessionService;
+import com.barony.backend.service.UnreadableSaveException;
 import com.barony.backend.service.UserAuthClient;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -199,6 +200,34 @@ class GuestControllerTest {
 
         verify(sessionService).claimGuestGame("alice", state, runs);
         verify(guestSessionService).delete(guest);
+    }
+
+    @Test
+    void startAnswersUnreadableSaveAndDoesNotReplaceAnUnreadableGuestGame() throws Exception {
+        when(guestSessionService.find(GUEST_TOKEN)).thenThrow(new UnreadableSaveException("guest aaaaaaaa…"));
+
+        mockMvc.perform(post("/api/guest").cookie(guestCookie()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("unreadable-save"))
+                .andExpect(header().doesNotExist("Set-Cookie"));
+
+        verifyNoInteractions(rateLimiter);
+        verify(guestSessionService, never()).create();
+    }
+
+    @Test
+    void claimAnswersUnreadableSaveAndMovesNothingForAnUnreadableGuestGame() throws Exception {
+        when(userAuthClient.validate("jwt")).thenReturn(Optional.of("alice"));
+        when(guestSessionService.find(GUEST_TOKEN)).thenThrow(new UnreadableSaveException("guest aaaaaaaa…"));
+
+        mockMvc.perform(post("/api/guest/claim").cookie(guestCookie(), authCookie("jwt")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("unreadable-save"))
+                .andExpect(header().doesNotExist("Set-Cookie"));
+
+        verifyNoInteractions(sessionService);
+        verify(guestSessionService, never()).delete(any());
+        verify(guestSessionService, never()).getRuns(any());
     }
 
     @Test

@@ -121,8 +121,9 @@ public class GameController {
     // request for a different user could swap the shared state mid-sequence. We therefore
     // synchronize on `gameService` (not on the per-session state object) across each block.
 
-    // Loading the session throws UnreadableSaveException when the account's save cannot be read;
-    // UnreadableSaveHandler turns that into a 409, so no endpoint here can save over that save.
+    // Loading the session throws UnreadableSaveException when the account's save (or, through
+    // GuestSessionService.find, a guest's game) cannot be read; UnreadableSaveHandler turns that
+    // into a 409, so no endpoint here can save over that save.
     private Session authenticate(HttpServletRequest request) {
         return sessionService.getOrCreateSession(authenticatedUsername(request));
     }
@@ -161,11 +162,16 @@ public class GameController {
         return player;
     }
 
-    private Player resolvePlayerSession(HttpServletRequest request) {
+    /** Whether the request plays as an account (else as a guest); see {@link #resolvePlayer}. */
+    private boolean playsAsAccount(HttpServletRequest request) {
         String mode = request.getHeader(PLAYER_MODE_HEADER);
         boolean wantsGuest = "guest".equalsIgnoreCase(mode);
         boolean wantsAccount = "account".equalsIgnoreCase(mode);
-        if (!wantsGuest && (wantsAccount || accountToken(request) != null)) {
+        return !wantsGuest && (wantsAccount || accountToken(request) != null);
+    }
+
+    private Player resolvePlayerSession(HttpServletRequest request) {
+        if (playsAsAccount(request)) {
             return new Player(authenticate(request), false);
         }
         Session guest = guestCookies.read(request)
@@ -285,15 +291,21 @@ public class GameController {
      * The player's confirmed choice to start a fresh game when their saved game could not be read
      * (the 409 "unreadable-save" answer). The unreadable save is set aside unchanged first, then
      * the fresh game replaces it. If the save is readable this returns that game unchanged, so a
-     * repeated click cannot wipe a game. Accounts only: guest games are kept per browser.
+     * repeated click cannot wipe a game. The request resolves to an account or a guest exactly as
+     * the other session endpoints do: an account's save is set aside in {@code saved_game_backup},
+     * a guest's in {@code guest_game_backup}.
      */
     @PostMapping("/api/session/start-fresh")
     public GameState sessionStartFresh(HttpServletRequest request) {
-        if ("guest".equalsIgnoreCase(request.getHeader(PLAYER_MODE_HEADER))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                "Only an account's saved game can be set aside. Use Reset Game for a guest game.");
+        Session session;
+        if (playsAsAccount(request)) {
+            session = sessionService.startFresh(authenticatedUsername(request));
+        } else {
+            session = guestCookies.read(request)
+                    .flatMap(guestSessionService::startFresh)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Authentication required. Please log in or play as a guest."));
         }
-        Session session = sessionService.startFresh(authenticatedUsername(request));
         GameState state = session.getGameState();
         if (state != null && state.getFieldBattles() == null) {
             state.setFieldBattles(true);

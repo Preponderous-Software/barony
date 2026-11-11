@@ -75,7 +75,19 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   `POST /api/session/start-fresh` is the only way past it: it copies the unreadable save's exact
   text into the new insert-only `saved_game_backup` table (created by `ddl-auto=update`; the
   `saved_game` table and existing saves are unchanged), then writes a fresh game. With a readable
-  save it returns that game unchanged, so a repeated click cannot wipe a game. Guest games are
+  save it returns that game unchanged, so a repeated click cannot wipe a game. Guest games: see the
+  next entry.
+- ✅ **A guest's unreadable game is no longer replaced** (#150): `GuestSessionService` logged a
+  guest game it could not read and generated a fresh one that was saved over it. The unreadable
+  game is now left untouched (not even its last-seen time is written) and logged (the first 8
+  characters of the guest key and the parse error with its position, never the game's text), and
+  every guest path answers the same `409 "unreadable-save"`: the `/api/session/*` endpoints,
+  `POST /api/guest` (which no longer makes a new guest in its place) and `POST /api/guest/claim`
+  (which copies nothing into the account and deletes nothing). `POST /api/session/start-fresh` now
+  works for guests: it copies the game's exact text into the new insert-only `guest_game_backup`
+  table (created by `ddl-auto=update`), keyed by the guest key (the SHA-256 of the cookie token,
+  never the token), flushes it, and only then writes a fresh game, in one transaction. The guest's
+  finished-run history is kept, and a readable game is returned unchanged. The idle-guest prune is
   unchanged.
 
 ### Web Client
@@ -94,6 +106,12 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   the page sees the same answer as behind the gateway. The battlefield falls back to custom battles
   and links back to the map. `isUnreadableSave`, `readUnreadableSave` and `startFreshGame` live in
   `game-logic.js` with Node tests.
+- ✅ **A guest with an unreadable game reaches the fresh start** (#150): the panel and button work for
+  guests as they are (the fresh start sends `X-Barony-Player: guest` and the guest cookie). On the
+  login page, **Play as guest** / **Continue guest game** now treats `409 "unreadable-save"` as
+  "go to the game page", where the panel is, instead of showing the message with no way past it,
+  and a refused "keep your progress" claim of such a game says the guest game couldn't be read and
+  was kept, rather than that the account already had a game.
 - ✅ **Search and link-preview metadata on the landing page**: the login page that
   barony.preponderous.org lands on was titled "Barony Game - Login" and had no description or
   Open Graph tags. It is now titled "Barony" and carries a meta description, a canonical link,

@@ -4,6 +4,7 @@ import com.barony.backend.model.GuestGame;
 import com.barony.backend.model.RunRecord;
 import com.barony.backend.model.SavedGame;
 import com.barony.backend.model.UserPreferences;
+import com.barony.backend.repository.GuestGameBackupRepository;
 import com.barony.backend.repository.GuestGameRepository;
 import com.barony.backend.repository.RunRecordRepository;
 import com.barony.backend.repository.SavedGameRepository;
@@ -32,6 +33,7 @@ class GuestPruneTest {
     private static final Instant ANCIENT = Instant.parse("2001-01-01T00:00:00Z");
 
     @Autowired private GuestGameRepository guestGames;
+    @Autowired private GuestGameBackupRepository guestBackups;
     @Autowired private SavedGameRepository savedGames;
     @Autowired private RunRecordRepository runRecords;
     @Autowired private UserPreferencesRepository preferences;
@@ -41,7 +43,7 @@ class GuestPruneTest {
     @BeforeEach
     void setUp() {
         guestGames.deleteAll(); // test-only reset of the guest table
-        service = new GuestSessionService(guestGames, 30, 1000, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new GuestSessionService(guestGames, guestBackups, 30, 1000, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private void guest(String key, Instant lastSeen) {
@@ -97,7 +99,7 @@ class GuestPruneTest {
 
     @Test
     void aPrunedGuestCannotBeResumedOrResurrected() {
-        GuestSessionService live = new GuestSessionService(guestGames, 30, 1000,
+        GuestSessionService live = new GuestSessionService(guestGames, guestBackups, 30, 1000,
                 Clock.fixed(NOW.minus(Duration.ofDays(40)), ZoneOffset.UTC));
         GuestSessionService.NewGuest created = live.create();
 
@@ -109,7 +111,7 @@ class GuestPruneTest {
 
     @Test
     void totalGuestCapRefusesNewGuests() {
-        GuestSessionService capped = new GuestSessionService(guestGames, 30, 2, Clock.fixed(NOW, ZoneOffset.UTC));
+        GuestSessionService capped = new GuestSessionService(guestGames, guestBackups, 30, 2, Clock.fixed(NOW, ZoneOffset.UTC));
         capped.create();
         capped.create();
         assertThrows(GuestSessionService.GuestCapacityException.class, capped::create);

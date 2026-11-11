@@ -117,7 +117,7 @@
         var sel = $('engagement');
         return fetch('/api/session/state', { headers: headers() })
             .then(function (r) {
-                // 409 "unreadable-save": the account's saved game exists but cannot be read. The
+                // 409 "unreadable-save": the player's saved game (account or guest) exists but cannot be read. The
                 // map explains it and offers a fresh start; here only a custom battle is possible.
                 if (r.status === 409) return r.json().catch(function () { return {}; }).then(function (body) {
                     var e = new Error('status 409');

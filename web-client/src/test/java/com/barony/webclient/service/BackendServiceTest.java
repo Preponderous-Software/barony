@@ -340,6 +340,21 @@ class BackendServiceTest {
     }
 
     @Test
+    void sessionStartFreshForwardsTheGuestCookieAndGuestMode() {
+        MockHttpServletRequest browserRequest = new MockHttpServletRequest();
+        browserRequest.addHeader(BackendService.PLAYER_MODE_HEADER, "guest");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(browserRequest));
+        server.expect(requestTo(BACKEND + "/api/session/start-fresh"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(BackendService.PLAYER_MODE_HEADER, "guest"))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_guest=guest-1"))
+                .andRespond(withSuccess("{\"tickCount\":0}", MediaType.APPLICATION_JSON));
+
+        assertEquals(0, service.sessionStartFresh("barony_guest=guest-1").getTickCount());
+        server.verify();
+    }
+
+    @Test
     void sessionDecisionForwardsAuthCookieAndTheDecision() {
         server.expect(requestTo(BACKEND + "/api/session/decision"))
                 .andExpect(method(HttpMethod.POST))

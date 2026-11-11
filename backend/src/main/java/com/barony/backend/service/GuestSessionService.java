@@ -3,10 +3,14 @@ package com.barony.backend.service;
 import com.barony.backend.model.Army;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.GuestGame;
+import com.barony.backend.model.GuestGameBackup;
 import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.RunRecord;
 import com.barony.backend.model.Session;
+import com.barony.backend.repository.GuestGameBackupRepository;
 import com.barony.backend.repository.GuestGameRepository;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -37,13 +42,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * Owns guests' games: people who play without a UserAuth account.
  *
  * Isolation from real accounts is structural. This service holds only the {@link GuestGameRepository}
- * (table {@code guest_game}); it has no reference to the saved-game, run-record or preferences
- * repositories, so no guest request can read, write or delete an account's data. A guest's
+ * (table {@code guest_game}) and the {@link GuestGameBackupRepository} (table
+ * {@code guest_game_backup}); it has no reference to the saved-game, saved-game-backup, run-record or
+ * preferences repositories, so no guest request can read, write or delete an account's data. A guest's
  * {@link Session} is keyed by the guest key (SHA-256 of the cookie token) and lives in this
  * service's own cache, never in {@link SessionService}'s.
  *
  * Guests idle for longer than {@code guest.idle-days} (default 30) are deleted by
  * {@link #pruneIdleGuests()}, which is a bulk delete on the guest table only.
+ *
+ * A guest game that exists but cannot be read is never replaced on load: {@link #find} leaves the
+ * row exactly as it is and throws {@link UnreadableSaveException} (answered 409 "unreadable-save"),
+ * and only {@link #startFresh}, the guest's confirmed choice, sets the text aside in
+ * {@code guest_game_backup} and then writes a fresh game.
  */
 @Service
 public class GuestSessionService {
@@ -56,6 +67,7 @@ public class GuestSessionService {
     private static final Duration TOUCH_INTERVAL = Duration.ofHours(1);
 
     private final GuestGameRepository repository;
+    private final GuestGameBackupRepository backupRepository;
     private final int idleDays;
     private final long maxGuests;
     private final Clock clock;
@@ -70,13 +82,16 @@ public class GuestSessionService {
 
     @Autowired
     public GuestSessionService(GuestGameRepository repository,
+                               GuestGameBackupRepository backupRepository,
                                @Value("${guest.idle-days:30}") int idleDays,
                                @Value("${guest.max-total:20000}") long maxGuests) {
-        this(repository, idleDays, maxGuests, Clock.systemUTC());
+        this(repository, backupRepository, idleDays, maxGuests, Clock.systemUTC());
     }
 
-    GuestSessionService(GuestGameRepository repository, int idleDays, long maxGuests, Clock clock) {
+    GuestSessionService(GuestGameRepository repository, GuestGameBackupRepository backupRepository,
+                        int idleDays, long maxGuests, Clock clock) {
         this.repository = repository;
+        this.backupRepository = backupRepository;
         this.idleDays = idleDays;
         this.maxGuests = maxGuests;
         this.clock = clock;
@@ -116,8 +131,39 @@ public class GuestSessionService {
         return new NewGuest(token, session);
     }
 
-    /** The guest's session for a cookie token, or empty if the token is unknown or pruned. */
+    /**
+     * The guest's session for a cookie token, or empty if the token is unknown or pruned.
+     *
+     * @throws UnreadableSaveException if the guest's stored game cannot be read. The row is left
+     *         exactly as it is (not even lastSeenAt is touched) and no fresh game is made or cached;
+     *         see {@link #startFresh}.
+     */
     public synchronized Optional<Session> find(String token) {
+        if (!GuestCookies.isWellFormed(token)) {
+            return Optional.empty();
+        }
+        evictIdleFromCache();
+        String key = keyFor(token);
+        Session cached = sessions.get(key);
+        if (cached != null) {
+            cached.updateLastAccessed();
+            return Optional.of(cached);
+        }
+        return repository.findById(key).map(this::restore);
+    }
+
+    /**
+     * Start a fresh game for a guest whose stored game cannot be read, once they have confirmed it.
+     * The unreadable text is first copied, unchanged, into {@link GuestGameBackup} (keyed by the
+     * guest key, never the token) and flushed; only then is the fresh game written over it, in the
+     * same transaction. If the backup cannot be written, nothing is overwritten and the error
+     * propagates. The guest's run history and tally are kept.
+     *
+     * Safe to repeat: a readable game (a second click, or one repaired meanwhile) is returned
+     * unchanged. Empty when the token is unknown or pruned, as for {@link #find}.
+     */
+    @Transactional
+    public synchronized Optional<Session> startFresh(String token) {
         if (!GuestCookies.isWellFormed(token)) {
             return Optional.empty();
         }
@@ -133,11 +179,27 @@ public class GuestSessionService {
             return Optional.empty();
         }
         GuestGame guest = row.get();
-        GameState state = read(guest.getState(), key);
-        if (state == null) {
-            state = mapGenerator.generate();
-            guest.setState(write(state));
+        try {
+            return Optional.of(restore(guest));
+        } catch (UnreadableSaveException e) {
+            GuestGameBackup backup = backupRepository.saveAndFlush(new GuestGameBackup(
+                    key, guest.getState(), guest.getLastSeenAt(), clock.instant()));
+            log.warn("Unreadable guest game {}… set aside as backup {} before a fresh game replaces it",
+                    shortKey(key), backup.getId());
         }
+        GameState state = mapGenerator.generate();
+        guest.setState(write(state));
+        guest.setLastSeenAt(clock.instant());
+        repository.save(guest);
+        Session session = new Session(key, state);
+        sessions.put(key, session);
+        return Optional.of(session);
+    }
+
+    /** Read a stored guest row into a cached session; throws (row untouched) when unreadable. */
+    private Session restore(GuestGame guest) {
+        String key = guest.getGuestKey();
+        GameState state = read(guest.getState(), key);
         Instant now = clock.instant();
         if (guest.getLastSeenAt() == null || guest.getLastSeenAt().isBefore(now.minus(TOUCH_INTERVAL))) {
             guest.setLastSeenAt(now);
@@ -146,7 +208,7 @@ public class GuestSessionService {
         advanceArmyIds(state);
         Session session = new Session(key, state);
         sessions.put(key, session);
-        return Optional.of(session);
+        return session;
     }
 
     /** Persist a guest's game (after any change), recording a finished run once. */
@@ -255,14 +317,34 @@ public class GuestSessionService {
         }
     }
 
+    /**
+     * Read a stored guest game. One that cannot be read is logged (key prefix and the parse error,
+     * never the game's text) and reported as {@link UnreadableSaveException}; nothing is written.
+     */
     private GameState read(String json, String key) {
         try {
-            return objectMapper.readValue(json, GameState.class);
+            GameState state = objectMapper.readValue(json, GameState.class);
+            if (state == null) {
+                throw new IllegalArgumentException("the guest game is empty");
+            }
+            return state;
         } catch (Exception e) {
-            log.warn("Could not deserialize guest game {}… — starting a fresh game: {}",
-                    key.substring(0, 8), e.getMessage());
-            return null;
+            // Save integrity first: an unreadable guest game is kept, never replaced by a fresh one.
+            log.warn("Guest game {}… could not be read and is left untouched: {}",
+                    shortKey(key), describeReadError(e));
+            throw new UnreadableSaveException("guest " + shortKey(key) + "…");
         }
+    }
+
+    // Jackson's own message quotes the start of the input it failed on; that is the guest's game,
+    // so only the parse error and its position are logged (as SessionService does for accounts).
+    private static String describeReadError(Exception e) {
+        if (e instanceof JsonProcessingException jpe) {
+            JsonLocation at = jpe.getLocation();
+            return jpe.getOriginalMessage()
+                    + (at == null ? "" : " (line " + at.getLineNr() + ", column " + at.getColumnNr() + ")");
+        }
+        return e.getClass().getSimpleName() + ": " + e.getMessage();
     }
 
     /** The stored runs for display: empty when blank or unreadable (the latter is logged). */
