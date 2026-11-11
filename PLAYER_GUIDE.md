@@ -180,6 +180,8 @@ with one figure for each soldier (see [Fighting a Battle in 3D](#fighting-a-batt
 else in that turn happens until the battle is decided: captures, the win check, desertion and
 respawns all wait.
 
+![The four steps of a field battle: the turn pauses with a banner over the map; the battle is fought in 3D; the result goes back to the game; the map keeps what happened](docs/images/field-battle-flow.jpg)
+
 **What the battle decides:**
 - The side that holds the field keeps the soldiers still standing at the end.
 - The side that breaks keeps only the soldiers who ran and got away. It falls back to a

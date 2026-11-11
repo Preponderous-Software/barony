@@ -12,6 +12,11 @@ Barony is a browser-based turn-based strategy game where you command armies to c
 <p align="center"><em>A guest game in the web client: one move order, then Auto Play; and the same page at phone width.</em></p>
 
 <p align="center">
+  <img src="docs/images/battle-3d.gif" alt="A 3D field battle in a village, drawn by Strata: 70 blue soldiers advance on 60 red, the lines meet and fight hand to hand, the red army breaks and runs, and the blue army chases it off the field while the tally at the top counts soldiers standing and running" width="720">
+</p>
+<p align="center"><em>When armies meet, the battle is fought out in 3D, one figure per soldier, and the result decides the map (see <a href="#3d-battlefield">3D Battlefield</a>).</em></p>
+
+<p align="center">
   <img src="docs/images/login.png" alt="The sign-in card with Log In, Play as guest and Create one" width="480">
 </p>
 
@@ -262,6 +267,12 @@ battle without signing in.
 
 ![Your avatar forms up with your army before an enemy castle](docs/images/battle-avatar-castle.jpg)
 
+<p align="center">
+  <img src="docs/images/avatar-editor.jpg" alt="The avatar editor over a castle battlefield: a name field reading Lady of the Fens, tunic and trim colour swatches, head (Crown), weapon (Sword) and a shield checkbox" width="560">
+  <img src="docs/images/battle-phone.jpg" alt="The battlefield on a phone: the crowned avatar from behind among blue spearmen facing a red line before a castle, with a movement stick on the left, Shield and Strike buttons on the right and Pause, Leave the body, First person and Restart along the bottom" width="200">
+</p>
+<p align="center"><em>The avatar editor, and fighting as the avatar on a phone (stick to move, drag to look, Strike and Shield).</em></p>
+
 - **Watch** from an orbit camera at ½×, 1×, 2× or 4× speed, with a live tally of soldiers standing and running.
 - **Take over any soldier** by tapping or clicking it. You get a third-person view, and **V** switches to first person.
   Move with WASD and the mouse (click to lock the mouse), strike with a click or Space, and raise your shield
@@ -275,6 +286,8 @@ battle without signing in.
 One figure stands for each soldier up to 90 a side. Above that, both armies share one scale, so a
 larger army keeps its edge in numbers. Morale decides how hard a side hits and how long it holds
 before it breaks and runs.
+
+![The four steps of a field battle: the turn pauses with a banner over the map for a battle at (10, 10); the battle is fought on the 3D battlefield; the result card says your army holds the field and the result went to the game; the map then shows your 6 soldiers holding (10, 10) and the enemy's 6 one tile away](docs/images/field-battle-flow.jpg)
 
 **Battles decide the map.** When a turn brings your armies onto the same tile as the enemy, the turn
 pauses before combat and the game takes you to that battle (`/battle?pending=<id>`). That battle is
