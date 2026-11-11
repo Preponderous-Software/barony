@@ -552,6 +552,13 @@ where you left off — it survives closing the browser and server restarts. Use 
 Game** if you'd rather start over. A guest game is saved too, but only for this browser: choose
 **Continue guest game** on the first screen, within 30 days of your last play.
 
+**Q: The game says my saved game couldn't be read. Is it gone?**
+A: No. If something in your saved game is damaged, the game keeps it exactly as it was and shows
+you a message instead of quietly starting over. Nothing is saved over it while that message is
+up. If you want to play on, choose **Start a fresh game** and confirm: your unreadable save is set
+aside first (not deleted), and then a new game begins. The battlefield can still run custom battles
+in the meantime and links you back to the map.
+
 **Q: Do I need an account to play?**
 A: No. Click **Play as guest** on the first screen. You can move the game into an account later
 (see [Playing as a Guest](#playing-as-a-guest)).

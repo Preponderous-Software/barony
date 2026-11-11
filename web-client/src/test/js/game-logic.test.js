@@ -22,7 +22,11 @@ const {
     canMovePanel,
     PREFERENCE_STORAGE_KEYS,
     mergePreferences,
-    createPreferenceSync
+    createPreferenceSync,
+    isUnreadableSave,
+    readUnreadableSave,
+    START_FRESH_CONFIRM,
+    startFreshGame
 } = require('../../main/resources/static/js/game-logic.js');
 
 // The sidebar panels in markup order, as game.html captures them for DEFAULT_PANEL_ORDER.
@@ -1168,4 +1172,66 @@ test('a change is not uploaded when there is no signed-in account to upload it t
     harness.clock.advance(UPLOAD_DELAY_MS);
 
     assert.deepEqual(harness.uploads, []);
+});
+
+// ---------------------------------------------------------------- unreadable saved game
+
+// A stand-in for a fetch Response carrying a JSON body (or a body that fails to parse).
+function fakeResponse(status, body) {
+    const response = {
+        status: status,
+        ok: status >= 200 && status < 300,
+        json: () => (body instanceof Error ? Promise.reject(body) : Promise.resolve(body)),
+        clone: () => fakeResponse(status, body)
+    };
+    return response;
+}
+
+test('only a 409 with the unreadable-save code is an unreadable save', () => {
+    assert.equal(isUnreadableSave(409, { error: 'unreadable-save', message: 'kept' }), true);
+    assert.equal(isUnreadableSave(409, { error: 'Conflict', message: 'busy' }), false);
+    assert.equal(isUnreadableSave(400, { error: 'unreadable-save' }), false);
+    assert.equal(isUnreadableSave(409, null), false);
+    assert.equal(isUnreadableSave(409, 'unreadable-save'), false);
+});
+
+test('readUnreadableSave recognises the answer from a response and tolerates other bodies', async () => {
+    assert.equal(await readUnreadableSave(fakeResponse(409, { error: 'unreadable-save' })), true);
+    assert.equal(await readUnreadableSave(fakeResponse(409, { error: 'Conflict' })), false);
+    assert.equal(await readUnreadableSave(fakeResponse(409, new SyntaxError('not json'))), false);
+    assert.equal(await readUnreadableSave(fakeResponse(200, { error: 'unreadable-save' })), false);
+});
+
+test('a fresh start is not requested when the player does not confirm', async () => {
+    const asked = [];
+    const sent = [];
+    const result = await startFreshGame({
+        confirm: (message) => { asked.push(message); return false; },
+        fetch: (url, options) => { sent.push(url); return Promise.resolve(fakeResponse(200, {})); },
+        headers: {}
+    });
+    assert.equal(result, null);
+    assert.deepEqual(asked, [START_FRESH_CONFIRM]);
+    assert.deepEqual(sent, [], 'nothing is sent without confirmation');
+});
+
+test('a confirmed fresh start posts to start-fresh and resolves to the new game', async () => {
+    const sent = [];
+    const headers = { 'X-Barony-Player': 'account' };
+    const result = await startFreshGame({
+        confirm: () => true,
+        fetch: (url, options) => { sent.push([url, options]); return Promise.resolve(fakeResponse(200, { tickCount: 0 })); },
+        headers: headers
+    });
+    assert.deepEqual(result, { tickCount: 0 });
+    assert.deepEqual(sent, [['/api/session/start-fresh', { method: 'POST', headers: headers }]]);
+});
+
+test('a fresh start that fails says the save is still kept, and a lapsed sign-in is marked', async () => {
+    await assert.rejects(
+        startFreshGame({ confirm: () => true, fetch: () => Promise.resolve(fakeResponse(500, {})), headers: {} }),
+        /still kept/);
+    await assert.rejects(
+        startFreshGame({ confirm: () => true, fetch: () => Promise.resolve(fakeResponse(401, {})), headers: {} }),
+        (error) => error.signedOut === true);
 });
