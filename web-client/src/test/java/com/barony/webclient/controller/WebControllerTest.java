@@ -161,6 +161,55 @@ class WebControllerTest {
         mockMvc.perform(post("/api/guest/claim")).andExpect(status().isConflict());
     }
 
+    private static final String UNREADABLE_SAVE_BODY =
+            "{\"error\":\"unreadable-save\",\"message\":\"Your saved game could not be read.\",\"status\":409}";
+
+    @Test
+    void anUnreadableSaveIsRelayedWithTheBackendsOwnBody() throws Exception {
+        when(backendService.getSessionState(any())).thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT,
+                "Conflict", HttpHeaders.EMPTY, UNREADABLE_SAVE_BODY.getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8));
+
+        mockMvc.perform(get("/api/session/state"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("unreadable-save"))
+                .andExpect(jsonPath("$.message").value("Your saved game could not be read."))
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void anotherConflictKeepsTheUsualErrorShape() throws Exception {
+        when(backendService.sessionCommand(any(), any())).thenThrow(HttpClientErrorException.create(
+                HttpStatus.CONFLICT, "Conflict", HttpHeaders.EMPTY,
+                "{\"error\":\"Conflict\",\"message\":\"busy\"}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8));
+
+        mockMvc.perform(post("/api/session/command").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("{\"error\":\"Conflict\",\"message\":\"busy\"}"));
+    }
+
+    @Test
+    void startFreshIsProxiedWithTheAuthCookie() throws Exception {
+        GameState fresh = new GameState();
+        fresh.setTickCount(0);
+        when(backendService.sessionStartFresh("barony_token=jwt")).thenReturn(fresh);
+
+        mockMvc.perform(post("/api/session/start-fresh").header(HttpHeaders.COOKIE, "barony_token=jwt"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tickCount").value(0));
+        verify(backendService).sessionStartFresh("barony_token=jwt");
+    }
+
+    @Test
+    void startFreshPassesTheBackendsRefusalThrough() throws Exception {
+        when(backendService.sessionStartFresh(any())).thenThrow(HttpClientErrorException.create(
+                HttpStatus.UNAUTHORIZED, "Unauthorized", HttpHeaders.EMPTY, new byte[0], null));
+
+        mockMvc.perform(post("/api/session/start-fresh")).andExpect(status().isUnauthorized());
+    }
+
     @Test
     void registerReturns201WithTheBackendBody() throws Exception {
         when(backendService.register(any())).thenReturn(Map.of("username", "alice"));

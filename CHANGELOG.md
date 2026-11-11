@@ -65,6 +65,18 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   was written over it. The unreadable history is now kept and logged, and the new run is not
   recorded in that case. The win and loss counts are left alone too, so they stay in step with the
   history, and the run is still recorded on a later save once the history can be read.
+- ✅ **An account's unreadable saved game is no longer overwritten**: when a player's stored game
+  could not be read, `SessionService` logged it and made a fresh game that was saved over it, so the
+  real game was lost. The unreadable save is now left untouched and logged (username and parse
+  error, never the save's text), and `UnreadableSaveException` is answered in one place
+  (`UnreadableSaveHandler`) with `409 {"error": "unreadable-save", "message", "status"}` from every
+  endpoint that needs the game, so no tick, command, reset, battle or setting change can save over
+  it, and a guest claim into that account is refused as before. The new
+  `POST /api/session/start-fresh` is the only way past it: it copies the unreadable save's exact
+  text into the new insert-only `saved_game_backup` table (created by `ddl-auto=update`; the
+  `saved_game` table and existing saves are unchanged), then writes a fresh game. With a readable
+  save it returns that game unchanged, so a repeated click cannot wipe a game. Guest games are
+  unchanged.
 
 ### Web Client
 
@@ -74,6 +86,14 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   circle. On a village or castle you hold the panel offers **Train archers** or **Train cavalry**,
   shows the order in progress and has a **Stop training** button, sized for touch at phone width.
   The proxy's models carry the new fields so nothing is dropped on the way to the page.
+- ✅ **An unreadable saved game is shown, not replaced**: when the state load answers
+  `409 "unreadable-save"`, the game page hides the board and says the saved game couldn't be read
+  and has been kept, with a **Start a fresh game** button that asks for confirmation before calling
+  the new `POST /api/session/start-fresh` (proxied here like the other session routes). Game actions
+  and keyboard shortcuts do nothing meanwhile. The proxy relays that 409's JSON body unchanged so
+  the page sees the same answer as behind the gateway. The battlefield falls back to custom battles
+  and links back to the map. `isUnreadableSave`, `readUnreadableSave` and `startFreshGame` live in
+  `game-logic.js` with Node tests.
 - ✅ **Search and link-preview metadata on the landing page**: the login page that
   barony.preponderous.org lands on was titled "Barony Game - Login" and had no description or
   Open Graph tags. It is now titled "Barony" and carries a meta description, a canonical link,

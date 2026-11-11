@@ -121,16 +121,21 @@ public class GameController {
     // request for a different user could swap the shared state mid-sequence. We therefore
     // synchronize on `gameService` (not on the per-session state object) across each block.
 
+    // Loading the session throws UnreadableSaveException when the account's save cannot be read;
+    // UnreadableSaveHandler turns that into a 409, so no endpoint here can save over that save.
     private Session authenticate(HttpServletRequest request) {
+        return sessionService.getOrCreateSession(authenticatedUsername(request));
+    }
+
+    private String authenticatedUsername(HttpServletRequest request) {
         String token = accountToken(request);
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "Authentication required. Please log in.");
         }
-        String username = userAuthClient.validate(token).orElseThrow(() ->
+        return userAuthClient.validate(token).orElseThrow(() ->
             new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "Invalid, expired, or revoked token. Please log in again."));
-        return sessionService.getOrCreateSession(username);
     }
 
     private String accountToken(HttpServletRequest request) {
@@ -272,6 +277,29 @@ public class GameController {
             gameService.getGameStateInternal().setFieldBattles(fieldBattles == null ? Boolean.TRUE : fieldBattles);
             session.setGameState(gameService.getGameStateInternal());
             save(player);
+            return gameService.getState();
+        }
+    }
+
+    /**
+     * The player's confirmed choice to start a fresh game when their saved game could not be read
+     * (the 409 "unreadable-save" answer). The unreadable save is set aside unchanged first, then
+     * the fresh game replaces it. If the save is readable this returns that game unchanged, so a
+     * repeated click cannot wipe a game. Accounts only: guest games are kept per browser.
+     */
+    @PostMapping("/api/session/start-fresh")
+    public GameState sessionStartFresh(HttpServletRequest request) {
+        if ("guest".equalsIgnoreCase(request.getHeader(PLAYER_MODE_HEADER))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Only an account's saved game can be set aside. Use Reset Game for a guest game.");
+        }
+        Session session = sessionService.startFresh(authenticatedUsername(request));
+        GameState state = session.getGameState();
+        if (state != null && state.getFieldBattles() == null) {
+            state.setFieldBattles(true);
+        }
+        synchronized (gameService) {
+            gameService.setGameState(state);
             return gameService.getState();
         }
     }

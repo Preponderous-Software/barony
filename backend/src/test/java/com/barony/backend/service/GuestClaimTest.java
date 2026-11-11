@@ -5,6 +5,7 @@ import com.barony.backend.model.RunRecord;
 import com.barony.backend.model.SavedGame;
 import com.barony.backend.repository.GuestGameRepository;
 import com.barony.backend.repository.RunRecordRepository;
+import com.barony.backend.repository.SavedGameBackupRepository;
 import com.barony.backend.repository.SavedGameRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ class GuestClaimTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private SavedGameRepository savedGames;
     @Autowired private RunRecordRepository runRecords;
+    @Autowired private SavedGameBackupRepository backups;
     @Autowired private GuestGameRepository guestGames;
     @Autowired private GuestSessionService guestSessionService;
     @MockBean private UserAuthClient userAuthClient;
@@ -108,6 +110,25 @@ class GuestClaimTest {
     }
 
     @Test
+    void anAccountWithAnUnreadableGameIsNeverOverwritten() throws Exception {
+        when(userAuthClient.validate("unreadable-jwt")).thenReturn(Optional.of("claim-unreadable-fay"));
+        SavedGame unreadable = new SavedGame("claim-unreadable-fay");
+        unreadable.setState("{ not a game");
+        Instant at = Instant.parse("2025-06-06T06:06:06Z");
+        unreadable.setUpdatedAt(at);
+        savedGames.save(unreadable);
+
+        Cookie guest = guestWithProgress();
+        mockMvc.perform(post("/api/guest/claim").cookie(guest, new Cookie("barony_token", "unreadable-jwt")))
+                .andExpect(status().isConflict());
+
+        SavedGame after = savedGames.findById("claim-unreadable-fay").orElseThrow();
+        assertEquals("{ not a game", after.getState());
+        assertEquals(at, after.getUpdatedAt());
+        mockMvc.perform(get("/api/session/state").cookie(guest)).andExpect(status().isOk());
+    }
+
+    @Test
     void claimNeedsAValidAccountAndAGuest() throws Exception {
         Cookie guest = guestWithProgress();
         mockMvc.perform(post("/api/guest/claim").cookie(guest, new Cookie("barony_token", "forged")))
@@ -118,7 +139,7 @@ class GuestClaimTest {
 
     @Test
     void serviceRefusesWhenTheAccountGameIsOnlyInTheCache() {
-        SessionService sessions = new SessionService(savedGames, runRecords);
+        SessionService sessions = new SessionService(savedGames, runRecords, backups);
         sessions.getOrCreateSession("claim-cached-erin"); // creates and persists
         assertFalse(sessions.claimGuestGame("claim-cached-erin", new GameState(4, 4), java.util.List.of(new RunRecord())));
     }

@@ -21,6 +21,17 @@
         <div id="error" class="error" style="display: none;">
             <p id="errorMessage"></p>
         </div>
+        <!-- Shown instead of the game when the account's saved game exists but cannot be read
+             (the backend's 409 "unreadable-save"). The save is kept; nothing replaces it until the
+             player confirms a fresh start. -->
+        <div id="unreadableSave" class="unreadable-save" role="alert" style="display: none;">
+            <h2>Your saved game couldn't be read</h2>
+            <p>Something in your saved game is damaged, so it could not be loaded. It has been kept
+                exactly as it was. Nothing has been saved over it, and nothing will be unless you
+                choose to start again.</p>
+            <p>You can start a fresh game instead. Your unreadable save is set aside first, not deleted.</p>
+            <button type="button" id="startFreshButton" onclick="confirmStartFresh()">Start a fresh game</button>
+        </div>
         <div class="game-layout">
             <div class="game-main">
             <div class="controls">
@@ -961,8 +972,50 @@
         // ========================
         // Game Actions
         // ========================
+        // ========================
+        // Unreadable saved game
+        // ========================
+        // While the account's save cannot be read, the game is hidden and every game action is a
+        // no-op: the backend refuses them anyway (409), and the page offers only the fresh start.
+        let saveUnreadable = false;
+
+        function showUnreadableSave() {
+            saveUnreadable = true;
+            if (autoPlayInterval !== null) stopAutoPlay();
+            document.querySelector('.game-layout').style.display = 'none';
+            document.getElementById('unreadableSave').style.display = 'block';
+        }
+
+        // startFreshGame (game-logic.js) asks for confirmation first and sends nothing if declined.
+        function confirmStartFresh() {
+            const button = document.getElementById('startFreshButton');
+            startFreshGame({
+                confirm: function(message) { return window.confirm(message); },
+                fetch: function(url, options) { return fetch(url, options); },
+                headers: getSessionHeaders()
+            })
+                .then(data => {
+                    if (!data) return;
+                    saveUnreadable = false;
+                    document.getElementById('unreadableSave').style.display = 'none';
+                    document.querySelector('.game-layout').style.display = '';
+                    selectedArmy = null;
+                    updateUI(data);
+                    loadRunHistory();
+                    showToast('A fresh game has started. Your unreadable save was set aside, not deleted.', 'success');
+                })
+                .catch(error => {
+                    if (error.signedOut) { sessionExpired(); return; }
+                    console.error('Error starting a fresh game:', error);
+                    showError(error.message);
+                })
+                .finally(() => { button.disabled = false; });
+            button.disabled = true;
+        }
+
         function tick() {
-            fetch('/api/session/tick', { 
+            if (saveUnreadable) return;
+            fetch('/api/session/tick', {
                 method: 'POST',
                 headers: getSessionHeaders()
             })
@@ -994,7 +1047,8 @@
         }
         
         function reset() {
-            fetch('/api/session/reset', { 
+            if (saveUnreadable) return;
+            fetch('/api/session/reset', {
                 method: 'POST',
                 headers: getSessionHeaders()
             })
@@ -1768,6 +1822,16 @@
                         sessionExpired();
                         return;
                     }
+                    if (response.status === 409) {
+                        // readUnreadableSave (game-logic.js): the save exists but cannot be read.
+                        return readUnreadableSave(response).then(unreadable => {
+                            if (unreadable) {
+                                showUnreadableSave();
+                                return null;
+                            }
+                            throw new Error('Failed to load game state: ' + response.status);
+                        });
+                    }
                     if (!response.ok) {
                         throw new Error('Failed to load game state: ' + response.status);
                     }
@@ -1976,6 +2040,7 @@
                 const tag = e.target && e.target.tagName;
                 if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
                 if (e.ctrlKey || e.metaKey || e.altKey) return;
+                if (saveUnreadable) return;
 
                 switch (e.key) {
                     case ' ':

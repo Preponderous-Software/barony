@@ -5,11 +5,15 @@ import com.barony.backend.model.GameState;
 import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.RunRecord;
 import com.barony.backend.model.SavedGame;
+import com.barony.backend.model.SavedGameBackup;
 import com.barony.backend.model.Session;
 import com.barony.backend.model.Tile;
 import com.barony.backend.model.TileType;
 import com.barony.backend.repository.RunRecordRepository;
+import com.barony.backend.repository.SavedGameBackupRepository;
 import com.barony.backend.repository.SavedGameRepository;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -21,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -39,6 +44,7 @@ public class SessionService {
     private final MapGenerator mapGenerator = new MapGenerator();
     private final SavedGameRepository savedGameRepository;
     private final RunRecordRepository runRecordRepository;
+    private final SavedGameBackupRepository savedGameBackupRepository;
 
     // Dedicated, lenient mapper: GameState exposes derived getters (getWidth, isMoving) with no
     // setters, so the round trip must tolerate "unknown" properties.
@@ -53,45 +59,79 @@ public class SessionService {
 
     private static final int PLAYER_ID = 1;
 
-    public SessionService(SavedGameRepository savedGameRepository, RunRecordRepository runRecordRepository) {
+    public SessionService(SavedGameRepository savedGameRepository, RunRecordRepository runRecordRepository,
+                          SavedGameBackupRepository savedGameBackupRepository) {
         this.savedGameRepository = savedGameRepository;
         this.runRecordRepository = runRecordRepository;
+        this.savedGameBackupRepository = savedGameBackupRepository;
     }
 
     /**
      * Return the player's session, loading it from the database (or creating and persisting a fresh
-     * game) if it isn't already cached in memory.
+     * game when the player has no save) if it isn't already cached in memory.
+     *
+     * @throws UnreadableSaveException if the player has a save that cannot be read. The save is
+     *         left untouched and no fresh game is made; see {@link #startFresh}.
      */
     public synchronized Session getOrCreateSession(String username) {
-        if (username == null || username.trim().isEmpty()) {
-            throw new IllegalArgumentException("Username cannot be empty");
-        }
-
+        requireUsername(username);
         cleanupExpiredSessions();
 
         // 1. Cache hit.
-        Session cached = sessions.values().stream()
-                .filter(s -> s.getUsername().equals(username))
-                .findFirst()
-                .orElse(null);
+        Session cached = cachedSession(username);
         if (cached != null) {
             cached.updateLastAccessed();
             return cached;
         }
 
-        // 2. Restore from the database.
-        Session restored = loadFromDatabase(username);
-        if (restored != null) {
+        // 2. Restore from the database. A save that exists but cannot be read is never replaced
+        //    here: this throws UnreadableSaveException and the row is left exactly as it is.
+        Optional<SavedGame> saved = savedGameRepository.findById(username);
+        if (saved.isPresent()) {
+            Session restored = restore(username, saved.get());
             sessions.put(restored.getSessionId(), restored);
             return restored;
         }
 
-        // 3. New game — create and persist immediately.
-        GameState newGameState = mapGenerator.generate();
-        Session newSession = new Session(username, newGameState);
-        sessions.put(newSession.getSessionId(), newSession);
-        persist(username, newGameState);
-        return newSession;
+        // 3. No save at all: a new game, created and persisted immediately.
+        return createFreshGame(username, false);
+    }
+
+    /**
+     * Start a fresh game for a player whose saved game cannot be read, once they have confirmed it.
+     * The unreadable save's text is first copied, unchanged, into {@link SavedGameBackup} (a row
+     * no later save touches); only then is the fresh game written over it. If the backup cannot be
+     * written, nothing is overwritten and the error propagates.
+     *
+     * Safe to repeat: when the player's save is readable (a second click after the fresh game was
+     * made, or a save that was repaired meanwhile) that game is returned unchanged, and with no
+     * save at all this behaves like {@link #getOrCreateSession}.
+     */
+    @Transactional
+    public synchronized Session startFresh(String username) {
+        requireUsername(username);
+        cleanupExpiredSessions();
+
+        Session cached = cachedSession(username);
+        if (cached != null) {
+            cached.updateLastAccessed();
+            return cached;
+        }
+
+        Optional<SavedGame> saved = savedGameRepository.findById(username);
+        if (saved.isPresent()) {
+            try {
+                Session restored = restore(username, saved.get());
+                sessions.put(restored.getSessionId(), restored);
+                return restored;
+            } catch (UnreadableSaveException e) {
+                SavedGameBackup backup = savedGameBackupRepository.saveAndFlush(new SavedGameBackup(
+                        username, saved.get().getState(), saved.get().getUpdatedAt(), Instant.now()));
+                log.warn("Unreadable saved game for '{}' set aside as backup {} before a fresh game replaces it",
+                        username, backup.getId());
+            }
+        }
+        return createFreshGame(username, true);
     }
 
     /** Persist the session's current game state. Call this after any mutation. */
@@ -202,31 +242,82 @@ public class SessionService {
         return run;
     }
 
-    private Session loadFromDatabase(String username) {
-        return savedGameRepository.findById(username).map(saved -> {
-            try {
-                GameState state = objectMapper.readValue(saved.getState(), GameState.class);
-                advanceArmyIds(state);
-                return new Session(username, state);
-            } catch (Exception e) {
-                log.warn("Could not deserialize saved game for '{}' — starting a fresh game: {}",
-                        username, e.getMessage());
-                return null;
+    /**
+     * Read a stored save into a session. A save that cannot be read is logged (the parse error,
+     * never the save's text) and reported as {@link UnreadableSaveException}; the row is not touched.
+     */
+    private Session restore(String username, SavedGame saved) {
+        try {
+            GameState state = objectMapper.readValue(saved.getState(), GameState.class);
+            if (state == null) {
+                throw new IllegalArgumentException("the saved game is empty");
             }
-        }).orElse(null);
+            advanceArmyIds(state);
+            return new Session(username, state);
+        } catch (Exception e) {
+            // Save integrity first: an unreadable save is kept, never replaced by a fresh game.
+            log.warn("Saved game for '{}' could not be read and is left untouched: {}",
+                    username, describeReadError(e));
+            throw new UnreadableSaveException(username);
+        }
+    }
+
+    // Jackson's own message quotes the start of the input it failed on; that is the player's save,
+    // so only the parse error and its position are logged.
+    private static String describeReadError(Exception e) {
+        if (e instanceof JsonProcessingException jpe) {
+            JsonLocation at = jpe.getLocation();
+            return jpe.getOriginalMessage()
+                    + (at == null ? "" : " (line " + at.getLineNr() + ", column " + at.getColumnNr() + ")");
+        }
+        return e.getClass().getSimpleName() + ": " + e.getMessage();
+    }
+
+    private Session createFreshGame(String username, boolean failIfNotSaved) {
+        GameState newGameState = mapGenerator.generate();
+        Session newSession = new Session(username, newGameState);
+        if (failIfNotSaved) {
+            write(username, newGameState);
+        } else {
+            persist(username, newGameState);
+        }
+        sessions.put(newSession.getSessionId(), newSession);
+        return newSession;
+    }
+
+    private Session cachedSession(String username) {
+        return sessions.values().stream()
+                .filter(s -> s.getUsername().equals(username))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static void requireUsername(String username) {
+        if (username == null || username.trim().isEmpty()) {
+            throw new IllegalArgumentException("Username cannot be empty");
+        }
     }
 
     private void persist(String username, GameState state) {
         try {
-            String json = objectMapper.writeValueAsString(state);
-            SavedGame saved = savedGameRepository.findById(username).orElseGet(() -> new SavedGame(username));
-            saved.setState(json);
-            saved.setUpdatedAt(Instant.now());
-            savedGameRepository.save(saved);
+            write(username, state);
         } catch (Exception e) {
             // Persistence failures must not break gameplay; log and keep the in-memory state.
             log.warn("Could not persist game for '{}': {}", username, e.getMessage());
         }
+    }
+
+    private void write(String username, GameState state) {
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(state);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Could not serialize the game", e);
+        }
+        SavedGame saved = savedGameRepository.findById(username).orElseGet(() -> new SavedGame(username));
+        saved.setState(json);
+        saved.setUpdatedAt(Instant.now());
+        savedGameRepository.save(saved);
     }
 
     // After loading, bump the static army-id counter past the restored armies so a new (e.g. split)
