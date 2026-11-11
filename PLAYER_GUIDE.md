@@ -557,7 +557,11 @@ A: No. If something in your saved game is damaged, the game keeps it exactly as 
 you a message instead of quietly starting over. Nothing is saved over it while that message is
 up. If you want to play on, choose **Start a fresh game** and confirm: your unreadable save is set
 aside first (not deleted), and then a new game begins. The battlefield can still run custom battles
-in the meantime and links you back to the map.
+in the meantime and links you back to the map. This works the same way for a guest game: choosing
+**Continue guest game** takes you to the same message, and the guest game is kept in this browser
+until you choose a fresh start. A guest game that can't be read can't be moved into an account
+until then; your finished-run history stays either way. (A guest game is still deleted after 30
+days without play, as usual.)
 
 **Q: Do I need an account to play?**
 A: No. Click **Play as guest** on the first screen. You can move the game into an account later

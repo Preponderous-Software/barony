@@ -98,15 +98,19 @@ Then open http://localhost:3000 in your browser.
 - `PUT /api/session/preferences` - Replace the player's stored interface preferences (JSON object, up to 8192 characters serialized; larger is rejected with `400`)
 - `POST /api/session/battle` - Resolve one of the paused turn's pending battles, with a fought result or by the map's rule (body format under [3D Battlefield](#3d-battlefield))
 - `POST /api/session/field-battles` - Turn field battles on or off for the player's game (body format under [3D Battlefield](#3d-battlefield))
-- `POST /api/session/start-fresh` - Start a fresh game after the player's saved game could not be read (see below); the unreadable save is copied to `saved_game_backup` first. Returns a readable game unchanged, so repeating it is safe. Accounts only (`403` for a guest)
+- `POST /api/session/start-fresh` - Start a fresh game after the player's saved game could not be read (see below); the unreadable save is copied first, to `saved_game_backup` for an account or `guest_game_backup` for a guest. Returns a readable game unchanged, so repeating it is safe
 
-**A saved game that cannot be read is never replaced.** If an account's stored game exists but
-cannot be read, it is left untouched in the database and logged (the username and the parse error,
-not the save itself), and every endpoint above that needs the game answers `409` with
-`{"error": "unreadable-save", "message": "...", "status": 409}` instead of making a fresh game. The
-game page shows that message with a **Start a fresh game** button, which asks for confirmation and
-then calls `POST /api/session/start-fresh`. A guest claim (`POST /api/guest/claim`) into such an
-account is refused with `409`, as for any account that already has a game.
+**A saved game that cannot be read is never replaced.** If an account's or a guest's stored game
+exists but cannot be read, it is left untouched in the database and logged (the username, or the
+first 8 characters of the guest key, and the parse error with its position, never the save itself),
+and every endpoint above that needs the game answers `409` with
+`{"error": "unreadable-save", "message": "...", "status": 409}` instead of making a fresh game. For a
+guest, `POST /api/guest` (resume) and `POST /api/guest/claim` answer the same `409`: resuming does
+not create a new guest in its place, and the unreadable game is neither copied into the account nor
+deleted. The game page shows that message with a **Start a fresh game** button, which asks for
+confirmation and then calls `POST /api/session/start-fresh`. A guest claim (`POST /api/guest/claim`)
+into an account whose save is unreadable is refused with `409`, as for any account that already has
+a game.
 
 These endpoints validate the token against UserAuth on every request, so a missing, invalid,
 expired, or revoked (logged-out) token that cannot be renewed is rejected with `401`. When the
@@ -120,7 +124,7 @@ Game state is keyed by the authenticated username.
 - `POST /api/guest` - Start a guest game, or resume this browser's one. Sets an **HttpOnly** `barony_guest` cookie holding a random server-issued token (a different cookie from `barony_token`). New guests are rate limited per client address and globally (`429`), and capped in total (`503`).
 - `POST /api/guest/claim` - "Keep your progress": with both a valid account cookie and a guest cookie, move the guest game (and its finished runs) into the account, **only if the account has no game yet** (`409` otherwise; nothing is changed). A missing or invalid account cookie gets `401`, and a browser with no guest game gets `404`.
 
-A guest plays through the same `/api/session/*` endpoints using the guest cookie (except preferences, which answer `403` for guests and stay in the browser). Guest games live only in the `guest_game` table, keyed by the SHA-256 of the cookie token, and are never written to the account tables. Guests idle for 30 days (`guest.idle-days`) are deleted by a scheduled prune that touches only `guest_game`. Pages send `X-Barony-Player: account|guest`, so an account page whose login has lapsed is sent to log in instead of being served a guest game.
+A guest plays through the same `/api/session/*` endpoints using the guest cookie (except preferences, which answer `403` for guests and stay in the browser). Guest games live only in the `guest_game` table, keyed by the SHA-256 of the cookie token, and are never written to the account tables; an unreadable guest game set aside by a fresh start goes to `guest_game_backup` under that same key, never the token. Guests idle for 30 days (`guest.idle-days`) are deleted by a scheduled prune that touches only `guest_game`. Pages send `X-Barony-Player: account|guest`, so an account page whose login has lapsed is sent to log in instead of being served a guest game.
 
 **Authentication (proxied to the [UserAuth](https://github.com/Preponderous-Software/UserAuth) service):**
 - `POST /api/auth/register` - Create an account (`{username, password}`); answers `201` with the created user's public fields
@@ -386,7 +390,8 @@ GitHub Actions runs on all PRs:
 - Spring Boot REST API
 - Per-player game state, kept in memory and **persisted per account** so games survive restarts.
   A stored game that can't be read is kept as it is, never overwritten; it is copied unchanged to the
-  insert-only `saved_game_backup` table only when the player confirms a fresh start
+  insert-only `saved_game_backup` table (`guest_game_backup` for a guest) only when the player
+  confirms a fresh start
 - Storage: embedded **H2** saved to `./data` by default (mount it as a volume in production); set `DB_URL` (+ `DB_USERNAME`/`DB_PASSWORD`) to use Postgres instead
 - Unique army IDs (not list indices)
 - CORS: localhost only
