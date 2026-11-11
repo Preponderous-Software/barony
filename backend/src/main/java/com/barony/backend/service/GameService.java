@@ -279,10 +279,12 @@ public class GameService {
     }
 
     /**
-     * Moves a beaten army off the field to a neighbouring tile with no enemy on it: its own
-     * player's land first, then a tile with a friendly army, then the first free one in a fixed
-     * order (north, east, south, west). With nowhere to go it is lost. It stops marching: a routed
-     * army does not carry on with its orders.
+     * Moves a beaten army off the field to a neighbouring tile with no enemy on it. It falls back
+     * only onto open ground or its own player's villages and castles: a village or castle held by
+     * another player, or neutral, is barred like a tile holding an enemy, so a routed army never
+     * takes ground as it retreats. Among the tiles left it prefers its own player's land, then a
+     * tile with a friendly army, then the first in a fixed order (north, east, south, west). With
+     * nowhere to go it is lost. It stops marching: a routed army does not carry on with its orders.
      */
     private void retreat(Army army) {
         int[][] steps = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
@@ -309,7 +311,12 @@ public class GameService {
             if (enemy) {
                 continue;
             }
-            int score = (gameState.getGrid()[nx][ny].getOwnerId() == army.getPlayerId() ? 2 : 0) + (friend ? 1 : 0);
+            Tile tile = gameState.getGrid()[nx][ny];
+            boolean ownTile = tile.getOwnerId() == army.getPlayerId();
+            if (tile.getType() != TileType.EMPTY && !ownTile) {
+                continue;   // another player's or a neutral village or castle: no taking ground
+            }
+            int score = (ownTile ? 2 : 0) + (friend ? 1 : 0);
             if (score > bestScore) {
                 bestScore = score;
                 bestX = nx;
