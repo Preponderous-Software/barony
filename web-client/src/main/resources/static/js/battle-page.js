@@ -12,6 +12,20 @@
     var params = new URLSearchParams(location.search);
     var playerMode = (function () { try { return localStorage.getItem('barony_mode') === 'guest' ? 'guest' : 'account'; } catch (e) { return 'account'; } })();
     var coarse = matchMedia('(pointer: coarse)').matches;
+    if (coarse) document.body.classList.add('bt-coarse');
+
+    // Keeps what floats over the bottom of the screen clear of the control bar, whose height
+    // changes as its buttons wrap: the touch stick and buttons, and the loader's slow-device bar.
+    function layoutOverlays() {
+        var bar = document.querySelector('.bt-controls');
+        if (!bar) return;
+        var h = bar.offsetHeight;
+        $('touch').style.bottom = (h + 8) + 'px';
+        var slowBar = document.querySelector('.sk-slow');
+        if (slowBar) slowBar.style.bottom = (h + 8 + ($('touch').hidden ? 0 : 140)) + 'px';
+    }
+    addEventListener('resize', layoutOverlays);
+    setInterval(layoutOverlays, 500);
 
     // Barony's army colours, following the colourblind setting on the game page.
     var PALETTES = {
@@ -436,6 +450,7 @@
         $('avatarBtn').hidden = !!embodied;
         $('touch').hidden = !(embodied && coarse);
         document.body.classList.toggle('bt-embodied', !!embodied);
+        layoutOverlays();
     }
 
     function start() {

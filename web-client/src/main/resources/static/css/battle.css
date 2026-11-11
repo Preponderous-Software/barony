@@ -122,3 +122,10 @@ body.bt-embodied .bt-panel { display: none; }
     .bt-panel { top: auto; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); max-height: 50%; }
     .bt-controls button { padding: 7px 10px; font-size: 13px; }
 }
+
+/* A phone while embodied: the bar keeps what matters in a fight, and hints move to the top,
+   clear of the stick and the Strike and Shield buttons. */
+body.bt-coarse.bt-embodied #speedBtn,
+body.bt-coarse.bt-embodied #editAvatarBtn { display: none; }
+body.bt-coarse.bt-embodied .bt-hint { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 64px); }
+.sk-slow { transition: bottom 0.2s ease; }
