@@ -64,6 +64,51 @@ class GameStateTest {
         assertEquals("BALANCED", relayed.get("economicPolicy").asText());
     }
 
+    /**
+     * The game page waits on {@code pendingBattles} before a turn goes on, and the battlefield
+     * reads the engagement from it; a field this model drops is stripped by the proxy without
+     * any error, which would silently let the map decide every battle (#143).
+     */
+    @Test
+    void relayedStateKeepsThePendingBattlesAndTheFieldBattlesSetting() throws Exception {
+        String backendJson = "{\"armies\":[],\"tickCount\":11,"
+                + "\"pendingBattles\":[{\"id\":4,\"x\":2,\"y\":3,\"terrain\":\"VILLAGE\","
+                + "\"seed\":987654,\"tick\":11,\"side0ArmyIds\":[1,5],\"side1ArmyIds\":[2],"
+                + "\"side0Soldiers\":40,\"side1Soldiers\":35,\"side0Morale\":80}],"
+                + "\"nextBattleId\":5,\"fieldBattles\":true}";
+
+        GameState state = mapper.readValue(backendJson, GameState.class);
+
+        assertEquals(1, state.getPendingBattles().size());
+        PendingBattle battle = state.getPendingBattles().get(0);
+        assertEquals(4, battle.getId());
+        assertEquals(TileType.VILLAGE, battle.getTerrain());
+        assertEquals(5, state.getNextBattleId());
+        assertEquals(true, state.getFieldBattles());
+
+        JsonNode relayed = mapper.readTree(mapper.writeValueAsString(state));
+
+        JsonNode pending = relayed.get("pendingBattles");
+        assertNotNull(pending, "pendingBattles was dropped from the relayed state");
+        assertEquals(1, pending.size());
+        JsonNode relayedBattle = pending.get(0);
+        assertEquals(4, relayedBattle.get("id").asInt());
+        assertEquals(2, relayedBattle.get("x").asInt());
+        assertEquals(3, relayedBattle.get("y").asInt());
+        assertEquals("VILLAGE", relayedBattle.get("terrain").asText());
+        assertEquals(987654, relayedBattle.get("seed").asInt());
+        assertEquals(11, relayedBattle.get("tick").asInt());
+        assertEquals(mapper.readTree("[1,5]"), relayedBattle.get("side0ArmyIds"));
+        assertEquals(mapper.readTree("[2]"), relayedBattle.get("side1ArmyIds"));
+        assertEquals(40, relayedBattle.get("side0Soldiers").asInt());
+        assertEquals(35, relayedBattle.get("side1Soldiers").asInt());
+        assertEquals(80, relayedBattle.get("side0Morale").asInt());
+        assertEquals(5, relayed.get("nextBattleId").asInt());
+        assertTrue(relayed.get("fieldBattles").asBoolean(),
+                "fieldBattles was dropped or changed in the relayed state: " + relayed.get("fieldBattles"));
+        assertEquals(11, relayed.get("tickCount").asInt());
+    }
+
     @Test
     void backendWidthAndHeightAreNotStoredWithoutAGrid() throws Exception {
         GameState state = mapper.readValue("{\"width\":5,\"height\":5}", GameState.class);
