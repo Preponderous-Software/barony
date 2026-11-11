@@ -194,6 +194,88 @@ class FieldBattleTest {
         assertFalse(state.getArmiesInternal().contains(mine));
     }
 
+    // ------------------------------------------------------------------ where a beaten army may go
+
+    /** Resolves the battle on (2,2) as a win for player 1 (side 0) and returns player 2's beaten army. */
+    private static Army beatPlayerTwoAtTheVillage(GameState state) {
+        GameService service = serviceWith(state);
+        service.tick();
+        Army theirs = state.getArmiesInternal().stream().filter(a -> a.getPlayerId() == 2).findFirst().orElseThrow();
+        service.resolveBattle(field(state.getPendingBattlesInternal().get(0).getId(), 0, 24, 6));
+        return theirs;
+    }
+
+    @Test
+    void aLoserDoesNotRetreatOntoAnEmptyEnemyVillage() {
+        GameState state = engagedOnVillage(30, 20);
+        state.getGrid()[2][1].setType(TileType.VILLAGE);   // player 1's village, north of the field
+        state.getGrid()[2][1].setOwnerId(1);
+
+        Army theirs = beatPlayerTwoAtTheVillage(state);
+
+        assertEquals(3, theirs.getX(), "the loser falls back east, onto open ground");
+        assertEquals(2, theirs.getY());
+        assertEquals(1, state.getGrid()[2][1].getOwnerId(), "the village keeps its owner");
+    }
+
+    @Test
+    void aLoserDoesNotRetreatOntoAnEmptyNeutralVillage() {
+        GameState state = engagedOnVillage(30, 20);
+        state.getGrid()[2][1].setType(TileType.VILLAGE);   // a neutral village, north of the field
+
+        Army theirs = beatPlayerTwoAtTheVillage(state);
+
+        assertEquals(3, theirs.getX());
+        assertEquals(2, theirs.getY());
+        assertEquals(0, state.getGrid()[2][1].getOwnerId(), "the village stays neutral");
+    }
+
+    @Test
+    void aLoserDoesNotRetreatOntoAnEmptyEnemyCastle() {
+        GameState state = engagedOnVillage(30, 20);
+        state.getGrid()[2][1].setType(TileType.CASTLE);    // a castle of player 1's, north of the field
+        state.getGrid()[2][1].setOwnerId(1);
+
+        Army theirs = beatPlayerTwoAtTheVillage(state);
+
+        assertEquals(3, theirs.getX());
+        assertEquals(2, theirs.getY());
+        assertEquals(1, state.getGrid()[2][1].getOwnerId());
+        assertEquals(0, state.getGrid()[2][1].getOccupationTicks(), "no siege of the castle starts");
+    }
+
+    @Test
+    void aLoserMayRetreatOntoItsOwnVillage() {
+        GameState state = engagedOnVillage(30, 20);
+        state.getGrid()[3][2].setType(TileType.VILLAGE);   // player 2's own village, east of the field
+        state.getGrid()[3][2].setOwnerId(2);
+
+        Army theirs = beatPlayerTwoAtTheVillage(state);
+
+        assertEquals(3, theirs.getX(), "its own village is preferred over open ground to the north");
+        assertEquals(2, theirs.getY());
+        assertEquals(2, state.getGrid()[3][2].getOwnerId());
+    }
+
+    @Test
+    void aLoserRingedByVillagesAndCastlesItDoesNotHoldIsLost() {
+        GameState state = engagedOnVillage(30, 20);
+        state.getGrid()[2][1].setType(TileType.VILLAGE);   // north: player 1's village
+        state.getGrid()[2][1].setOwnerId(1);
+        state.getGrid()[3][2].setType(TileType.VILLAGE);   // east: a neutral village
+        state.getGrid()[2][3].setType(TileType.CASTLE);    // south: a castle of player 1's
+        state.getGrid()[2][3].setOwnerId(1);
+        state.getGrid()[1][2].setType(TileType.CASTLE);    // west: a neutral castle
+
+        Army theirs = beatPlayerTwoAtTheVillage(state);
+
+        assertFalse(state.getArmiesInternal().contains(theirs), "with nowhere it may go, the army is lost");
+        assertEquals(1, state.getGrid()[2][1].getOwnerId());
+        assertEquals(0, state.getGrid()[3][2].getOwnerId());
+        assertEquals(0, state.getGrid()[2][3].getOccupationTicks());
+        assertEquals(0, state.getGrid()[1][2].getOccupationTicks());
+    }
+
     @Test
     void aDrawLeavesBothSidesOnTheFieldToFightAgain() {
         GameState state = engagedOnVillage(30, 20);

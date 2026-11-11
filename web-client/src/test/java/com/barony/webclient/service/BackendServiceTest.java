@@ -119,6 +119,63 @@ class BackendServiceTest {
     }
 
     @Test
+    void sessionBattleForwardsAuthCookieAndTheResult() {
+        server.expect(requestTo(BACKEND + "/api/session/battle"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(jsonPath("$.battleId").value(2))
+                .andExpect(jsonPath("$.result").value("FIELD"))
+                .andExpect(jsonPath("$.winner").value(0))
+                .andExpect(jsonPath("$.survivors[0]").value(12))
+                .andRespond(withSuccess("{\"tickCount\":9,\"pendingBattles\":[]}", MediaType.APPLICATION_JSON));
+
+        GameState state = service.sessionBattle("barony_token=jwt-abc",
+                Map.of("battleId", 2, "result", "FIELD", "winner", 0, "survivors", java.util.List.of(12, 0)));
+
+        assertEquals(9, state.getTickCount());
+        server.verify();
+    }
+
+    @Test
+    void sessionBattleForwardsGuestCookie() {
+        server.expect(requestTo(BACKEND + "/api/session/battle"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_guest=guest-1"))
+                .andExpect(jsonPath("$.result").value("AUTO"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertNotNull(service.sessionBattle("barony_guest=guest-1", Map.of("battleId", 2, "result", "AUTO")));
+        server.verify();
+    }
+
+    @Test
+    void sessionFieldBattlesForwardsAuthCookieAndTheSetting() {
+        server.expect(requestTo(BACKEND + "/api/session/field-battles"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andExpect(jsonPath("$.enabled").value(false))
+                .andRespond(withSuccess("{\"fieldBattles\":false}", MediaType.APPLICATION_JSON));
+
+        GameState state = service.sessionFieldBattles("barony_token=jwt-abc", Map.of("enabled", false));
+
+        assertEquals(false, state.getFieldBattles());
+        server.verify();
+    }
+
+    @Test
+    void sessionFieldBattlesForwardsGuestCookie() {
+        server.expect(requestTo(BACKEND + "/api/session/field-battles"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_guest=guest-1"))
+                .andExpect(jsonPath("$.enabled").value(true))
+                .andRespond(withSuccess("{\"fieldBattles\":true}", MediaType.APPLICATION_JSON));
+
+        assertEquals(true, service.sessionFieldBattles("barony_guest=guest-1", Map.of("enabled", true))
+                .getFieldBattles());
+        server.verify();
+    }
+
+    @Test
     void sessionRunsForwardsAuthCookieAndRelaysTheWholeRecord() {
         server.expect(requestTo(BACKEND + "/api/session/runs"))
                 .andExpect(method(HttpMethod.GET))

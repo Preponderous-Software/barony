@@ -239,6 +239,47 @@ class WebControllerTest {
     }
 
     @Test
+    void sessionBattleForwardsTheCookieAndTheResult() throws Exception {
+        GameState state = new GameState();
+        state.setTickCount(9);
+        when(backendService.sessionBattle(any(), any())).thenReturn(state);
+
+        mockMvc.perform(post("/api/session/battle")
+                        .header(HttpHeaders.COOKIE, "barony_token=jwt-abc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"battleId\":2,\"result\":\"FIELD\",\"winner\":0,\"survivors\":[12,0]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tickCount").value(9));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(backendService).sessionBattle(eq("barony_token=jwt-abc"), captor.capture());
+        assertEquals(2, captor.getValue().get("battleId"));
+        assertEquals("FIELD", captor.getValue().get("result"));
+        assertEquals(0, captor.getValue().get("winner"));
+        assertEquals(List.of(12, 0), captor.getValue().get("survivors"));
+    }
+
+    @Test
+    void sessionFieldBattlesForwardsTheCookieAndTheSetting() throws Exception {
+        GameState state = new GameState();
+        state.setFieldBattles(false);
+        when(backendService.sessionFieldBattles(any(), any())).thenReturn(state);
+
+        mockMvc.perform(post("/api/session/field-battles")
+                        .header(HttpHeaders.COOKIE, "barony_guest=guest-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fieldBattles").value(false));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(backendService).sessionFieldBattles(eq("barony_guest=guest-1"), captor.capture());
+        assertEquals(Map.of("enabled", false), captor.getValue());
+    }
+
+    @Test
     void sessionResetForwardsTheCookieAndReturnsTheFreshGame() throws Exception {
         when(backendService.sessionReset(any())).thenReturn(new GameState());
 

@@ -185,8 +185,9 @@ respawns all wait.
 **What the battle decides:**
 - The side that holds the field keeps the soldiers still standing at the end.
 - The side that breaks keeps only the soldiers who ran and got away. It falls back to a
-  neighbouring tile, preferring its own land, then a tile with a friendly army. An army with no free
-  tile to fall back to is lost. A beaten army also stops marching, so give it new orders.
+  neighbouring tile, but only onto open ground or its own villages and castles: never onto an enemy
+  or neutral village or castle, and never onto a tile with an enemy army. An army with nowhere
+  allowed to go is lost. A beaten army also stops marching, so give it new orders.
 - If neither side breaks before time runs out, both stay on the tile and fight again next turn.
 - Armies with 0 soldiers are destroyed.
 
@@ -218,13 +219,15 @@ in soldiers. Morale decides how hard your side hits and how many losses it takes
 - **Enter as your avatar**: your own champion, stronger than a soldier. Choose its name, colours,
   helmet, weapon and shield under **Avatar…**. It is saved with your account (a guest's stays in
   the browser). Your avatar is not one of the army's soldiers, so it does not count toward what the
-  army keeps.
+  army keeps, and it cannot hold the field alone: only soldiers decide who holds the field. Once all
+  of a side's soldiers have fallen or fled, that side has lost, even if the avatar still stands.
 - When the battle ends, the result goes to your game and **Back to the map** shows it. If the turn
   brought on more than one battle, **Next battle** takes you to the next one.
 
 A battle that is waiting can't be replayed or restarted, and you can't split an army that is in one.
-You can also fight practice battles of any size at `/battle` (or **⚔ Fight in 3D** under a selected
-army). These change nothing in your game.
+You can also fight practice battles of any size at `/battle` (or **⚔ Practice in 3D** under a
+selected army). These change nothing in your game. While the selected army is in a battle waiting
+this turn, that link reads **⚔ Fight it in 3D** instead and opens the battle that counts.
 
 **Combat Tips:**
 - Attack with superior numbers (at least 1.5x enemy strength)
@@ -410,9 +413,18 @@ shows amber. Population is reported as a plain total and is not colour-coded.
 ### Controls (above the map)
 **Advance Turn**, **Reset Game**, and the **Auto Play** toggle.
 
+While a battle is waiting, a **battle banner** sits between these controls and the map. It says
+where the battle is and how many soldiers each side has, and offers **⚔ Fight it in 3D** (opens the
+battle on the 3D battlefield) and **Let the map decide** (settles it by the classic rule). The turn
+finishes once every waiting battle is decided.
+
 ### Selected Army Panel (below the map)
 Shows the army you clicked on the map — its ID, soldier count, and position — plus the
-**Split off** control. Until you select one of your armies it just prompts you to click one.
+**Split off** control and a link to the 3D battlefield. The link reads **⚔ Practice in 3D** and
+opens a practice battle against the nearest enemy army, which changes nothing in your game. If the
+army is in a battle waiting this turn, it reads **⚔ Fight it in 3D** instead and opens that battle,
+the one that decides the map. Until you select one of your armies the panel just prompts you to
+click one.
 
 ### Game Status & Stats (sidebar)
 - **Game Status**: current turn, whether the game is over and the winner once it is, and a

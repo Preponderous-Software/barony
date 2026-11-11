@@ -20,6 +20,32 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   hand-made `barony_token` cookie broke the request instead of being refused. Such a token now
   counts as unexpired like any other unreadable one, and UserAuth rejects it with the usual `401`.
   `JwtExpiryTest` covers the class, which had no tests of its own.
+- ✅ **Field battles decide the map** (#140): when player 1's armies end up on a tile with the
+  enemy's, the turn now pauses just before combat and records a pending battle (`pendingBattles` in
+  the game state: the armies on each side, their soldiers, player 1's morale, the ground and a seed).
+  Captures, the win check, desertion and respawns run once every pending battle is resolved.
+  `POST /api/session/battle` resolves one, either with the fought result
+  (`{"battleId", "result": "FIELD", "winner", "survivors"}`) or by the map's classic rule
+  (`"result": "AUTO"`). A result in which a side keeps more soldiers than it started with, or the
+  winner has nobody left, is refused with `400`, as is an unknown or already-resolved battle. The
+  winner keeps the soldiers still standing; the loser keeps those who got away, falls back to a
+  neighbouring tile and stops marching, or is lost with nowhere to go. Survivors are shared among a
+  side's armies by size. `POST /api/session/field-battles` (`{"enabled": true|false}`) turns the
+  setting on or off, and turning it off settles anything pending by the classic rule. Field battles
+  are on by default for players; the engine default is off, so the single-game endpoints play as
+  before, and a tick with a battle still pending lets the map decide it first. Splitting an army
+  that is in a pending battle returns `409`. Saves only gain fields (`pendingBattles`,
+  `nextBattleId`, `fieldBattles`): a save from before this change loads with no pending battles and
+  takes the default setting, and a reset keeps the player's choice.
+- ✅ **A beaten army can no longer take ground by retreating** (#145): a loser could fall back onto
+  an empty enemy village and capture it in the same turn, or start the capture of an empty enemy
+  castle. A beaten army now falls back only onto open ground or its own villages and castles, never
+  onto an enemy or neutral village or castle; with nowhere allowed to go, it is lost.
+- ✅ **A guest's unreadable run history is no longer overwritten** (#146): when a guest's stored run
+  history could not be read, it was treated as empty without a log line, and the next finished game
+  was written over it. The unreadable history is now kept and logged, and the new run is not
+  recorded in that case. The win and loss counts are left alone too, so they stay in step with the
+  history, and the run is still recorded on a later save once the history can be read.
 
 ### Web Client
 
@@ -49,6 +75,35 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   `listCaptureProgress` in `game-logic.js`, covered by the Node test suite; the canvas drawing
   itself has no automated coverage.
 - ✅ **Site footer backlink**: every page (login, register and the game) now ends with a small, muted "More by Daniel Stephenson → danielstephenson.dev" line, served from one shared Thymeleaf fragment (`templates/fragments/footer.html`) and covered by `SiteFooterTest`.
+- ✅ **3D battlefield** (#139): any engagement can be fought out as a 3D field battle at `/battle`,
+  drawn by the [Strata](https://github.com/Preponderous-Software/strata) engine in WebGL 2, with one
+  figure per soldier up to 90 a side and one shared scale above that. Watch from an orbit camera at
+  ½× to 4× speed, take over any soldier in third or first person (keyboard and mouse, or a stick and
+  Strike/Shield buttons on a phone), or enter as your own avatar, saved with the account's
+  preferences (a guest's stays in the browser). The engine is a thin C++ host built with Emscripten
+  against Strata's pinned v0.7.0 wasm release; the outputs are committed, and CI rebuilds them and
+  fails if the bytes differ. The battle itself is plain JavaScript, tested under Node.
+- ✅ **The game page takes the player to a waiting battle** (#140): after a turn that leaves a battle
+  pending, the page opens `/battle?pending=<id>` and stops Auto Play, and a banner above the map
+  offers **Fight it in 3D** or **Let the map decide**. The battle page locks a pending battle to the
+  real armies, ground and seed, posts the result when it ends, and offers **Next battle** when the
+  turn brought on more than one. **Fight battles in 3D** in Settings turns field battles off. The
+  web client proxies the two new endpoints and relays the new state fields.
+- ✅ **The avatar cannot hold the field alone** (#141): when every soldier of a side had fallen and
+  only the player's avatar stood, that side won and the result lifted it to one surviving soldier,
+  so an army wiped out on the field survived on the map. Only soldiers now decide who holds the
+  field: once all of a side's soldiers have fallen or fled, that side has lost, even if the avatar
+  still stands. If the beaten side's avatar cuts down the winner's last soldier during the pursuit,
+  the battle ends as a draw, so the map is never sent a winner with nobody left.
+- ✅ **The field-battle wiring is covered by the web client's tests** (#143): the proxy-route check
+  now also reads the battle page's script, so its API calls must have a proxy; the two field-battle
+  proxies (`POST /api/session/battle` and `POST /api/session/field-battles`) have forwarding tests;
+  and the relayed game state is checked to keep `pendingBattles`, `nextBattleId` and
+  `fieldBattles`.
+- ✅ **The selected army's 3D link says whether it counts** (#144): it read **⚔ Fight in 3D**, almost
+  the banner's **⚔ Fight it in 3D**, but opened a practice battle that changes nothing. It now reads
+  **⚔ Practice in 3D**. While the selected army is in a battle waiting this turn, it reads
+  **⚔ Fight it in 3D** instead and opens that battle. `BattlePageTest` checks both.
 
 ### Usage reporting
 
@@ -111,6 +166,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   to the player's side: the AI's armies fight at their raw soldier count and never desert, and its
   villages do not grow. `MVP.md` no longer says morale and loyalty always return to 100%. They settle
   at the military policy's target, which is 75% loyalty under Aggressive Training.
+- ✅ **The docs describe field battles** (#142): `README.md` lists `POST /api/session/battle` and
+  `POST /api/session/field-battles` with the per-player endpoints, documents `pendingBattles`,
+  `nextBattleId` and `fieldBattles` in the response structure along with a turn that returns paused
+  on a pending battle, and its rules overview says battles are fought on the 3D battlefield by
+  default. `PLAYER_GUIDE.md`'s **Reading the Interface** now covers the battle banner and the
+  selected army's practice / fight link. Both describe the retreat rule from #145 and the avatar
+  rule from #141, and use the link naming from #144.
 
 ## [2.0.0-SNAPSHOT-8-8-2026] – 2026-08-08
 

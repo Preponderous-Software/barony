@@ -86,7 +86,7 @@
                     </div>
                     <span id="panelSplitMsg" class="split-validation-msg"></span>
                     <a id="panelBattleLink" class="battle-link" href="/battle"
-                       title="Fight this army against the nearest enemy army as a 3D field battle. It does not change your game.">&#9876; Fight in 3D</a>
+                       title="Practice: fight this army against the nearest enemy army as a 3D field battle. It does not change your game.">&#9876; Practice in 3D</a>
                 </div>
             </div>
             </div><!-- /game-main -->
@@ -1008,6 +1008,12 @@
             return state && state.pendingBattles && state.pendingBattles.length ? state.pendingBattles[0] : null;
         }
 
+        // The waiting battle the given army of player 1 is in (side 0 is always player 1), or null.
+        function pendingBattleForArmy(state, armyId) {
+            if (!state || !state.pendingBattles) return null;
+            return state.pendingBattles.find(b => (b.side0ArmyIds || []).includes(armyId)) || null;
+        }
+
         // The banner over the map while a battle waits; the turn finishes once it is resolved.
         function updateBattleBanner(state) {
             const banner = document.getElementById('battleBanner');
@@ -1468,7 +1474,19 @@
             actions.style.display = 'block';
             document.getElementById('selectedArmyTitle').textContent =
                 'Army #' + army.id + ' — ' + army.soldiers + ' soldiers at (' + army.x + ', ' + army.y + ')';
-            document.getElementById('panelBattleLink').href = '/battle?army=' + encodeURIComponent(army.id);
+            // A practice battle, unless this army is in a battle waiting this turn: then the link
+            // opens that battle, the one that decides the map.
+            const battleLink = document.getElementById('panelBattleLink');
+            const pending = pendingBattleForArmy(lastGameState, army.id);
+            if (pending) {
+                battleLink.href = '/battle?pending=' + encodeURIComponent(pending.id);
+                battleLink.textContent = '\u2694 Fight it in 3D';
+                battleLink.title = 'This army is in a battle waiting this turn. Fight it out in 3D; the result decides the map.';
+            } else {
+                battleLink.href = '/battle?army=' + encodeURIComponent(army.id);
+                battleLink.textContent = '\u2694 Practice in 3D';
+                battleLink.title = 'Practice: fight this army against the nearest enemy army as a 3D field battle. It does not change your game.';
+            }
 
             const input = document.getElementById('panelSplitAmount');
             const maxSplit = Math.max(1, army.soldiers - 1);

@@ -1,18 +1,25 @@
 package com.barony.backend.service;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.GuestGame;
 import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
 import com.barony.backend.repository.GuestGameRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.StringJoiner;
 
@@ -38,6 +45,27 @@ class GuestSessionServiceTest {
         // Mocked repo: findById returns Optional.empty() unless a test stubs it.
         repository = mock(GuestGameRepository.class);
         service = new GuestSessionService(repository, 30, 1000, Clock.fixed(NOW, ZoneOffset.UTC));
+        logs = new ListAppender<>();
+        logs.start();
+        serviceLogger().addAppender(logs);
+    }
+
+    @AfterEach
+    void tearDown() {
+        serviceLogger().detachAppender(logs);
+    }
+
+    private ListAppender<ILoggingEvent> logs;
+
+    private static Logger serviceLogger() {
+        return (Logger) LoggerFactory.getLogger(GuestSessionService.class);
+    }
+
+    private List<String> warnings() {
+        return logs.list.stream()
+                .filter(e -> e.getLevel() == Level.WARN)
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
     }
 
     private GuestGame storedGuest(String state, Instant lastSeen) {
@@ -235,13 +263,55 @@ class GuestSessionServiceTest {
     }
 
     @Test
-    void unreadableStoredRunsAreTreatedAsNone() {
+    void unreadableStoredRunsAreShownAsNoneWithAWarning() {
         GuestGame row = storedGuest(storedState(1), NOW);
         row.setRuns("not json");
         Session session = new Session(row.getGuestKey(), new MapGenerator().generate());
 
         assertTrue(service.getRuns(session).isEmpty());
         assertTrue(service.getRunHistory(session).getRuns().isEmpty());
+        assertEquals("not json", row.getRuns(), "reading never rewrites the stored history");
+        List<String> warnings = warnings();
+        assertEquals(2, warnings.size());
+        String shortKey = row.getGuestKey().substring(0, 8);
+        assertTrue(warnings.stream().allMatch(w -> w.contains(shortKey) && w.contains("run history")),
+                warnings.toString());
+    }
+
+    @Test
+    void aFinishedRunIsNotRecordedOverUnreadableStoredHistory() {
+        GuestGame row = storedGuest(storedState(1), NOW.minus(Duration.ofDays(1)));
+        String unreadable = "[{\"result\":\"WIN\",\"turnsPlayed\":";  // truncated write
+        row.setRuns(unreadable);
+        row.setWins(3);
+        Session session = finishedGame(2);
+
+        assertDoesNotThrow(() -> service.save(session));
+
+        assertEquals(unreadable, row.getRuns(), "the unreadable history is kept byte-for-byte");
+        assertEquals(3, row.getWins());
+        assertEquals(0, row.getLosses());
+        assertFalse(session.getGameState().isRunRecorded());
+        verify(repository).save(row); // the game state itself is still saved
+        assertEquals(NOW, row.getLastSeenAt());
+        assertTrue(warnings().stream().anyMatch(w -> w.contains("Run not recorded")
+                && w.contains(row.getGuestKey().substring(0, 8))), warnings().toString());
+    }
+
+    @Test
+    void aFinishedRunStartsANewHistoryWhenNoneIsStored() {
+        GuestGame row = storedGuest(storedState(1), NOW);
+        row.setRuns(null);
+        Session session = finishedGame(2);
+
+        service.save(session);
+
+        RunHistory history = service.getRunHistory(session);
+        assertEquals(1, history.getRuns().size());
+        assertEquals("LOSS", history.getRuns().get(0).getResult());
+        assertEquals(1, history.getLosses());
+        assertTrue(session.getGameState().isRunRecorded());
+        assertTrue(warnings().isEmpty(), warnings().toString());
     }
 
     @Test

@@ -96,6 +96,8 @@ Then open http://localhost:3000 in your browser.
 - `GET /api/session/runs` - Get the player's win/loss tally and recent finished-run history
 - `GET /api/session/preferences` - Get the player's stored interface preferences (`{}` when none are stored)
 - `PUT /api/session/preferences` - Replace the player's stored interface preferences (JSON object, up to 8192 characters serialized; larger is rejected with `400`)
+- `POST /api/session/battle` - Resolve one of the paused turn's pending battles, with a fought result or by the map's rule (body format under [3D Battlefield](#3d-battlefield))
+- `POST /api/session/field-battles` - Turn field battles on or off for the player's game (body format under [3D Battlefield](#3d-battlefield))
 
 These endpoints validate the token against UserAuth on every request, so a missing, invalid,
 expired, or revoked (logged-out) token that cannot be renewed is rejected with `401`. When the
@@ -203,7 +205,8 @@ and `python3`, and `BASE_URL` points it at a backend other than `http://localhos
 ### Response Structure
 
 `GET /state`, `POST /tick`, `POST /command`, `POST /api/reset`, `POST /api/decision` and their
-`/api/session/*` counterparts all return the game state as JSON:
+`/api/session/*` counterparts, as well as `POST /api/session/battle` and
+`POST /api/session/field-battles`, all return the game state as JSON:
 
 - `grid` - tiles indexed `grid[x][y]`, each with `type` (`CASTLE`, `VILLAGE` or `EMPTY`), `ownerId`
   (`0` neutral, `1` player, `2` AI), `occupationTicks`, `stability` and `population`
@@ -213,6 +216,19 @@ and `python3`, and `BASE_URL` points it at a backend other than `http://localhos
 - `tickCount`, `gameOver`, `winnerId` (`null` until the game ends), `aiEnabled`
 - `economicPolicy`, `militaryPolicy`, `populationPolicy`, `lastPolicyChangeTick`
 - `runRecorded` - internal bookkeeping for run history, always `false` here
+- `pendingBattles` - the battles waiting to be fought this turn (empty when none), each with `id`,
+  `x`, `y`, `terrain` (the tile type), `seed`, `tick`, `side0ArmyIds` and `side1ArmyIds` (side 0 is
+  always player 1, side 1 the AI), `side0Soldiers`, `side1Soldiers` and `side0Morale` (player 1's
+  morale on the tile, weighted by soldiers)
+- `nextBattleId` - the battle-id counter: the id of the latest pending battle this game (`0` before
+  the first); the next one gets one more
+- `fieldBattles` - whether engagements pause the turn for a field battle: `true`, `false`, or `null`
+  when never set. The engine treats `null` as off (so the single-game endpoints and old saves keep the
+  classic rule), and a player's session turns it on while it is still `null`
+
+With field battles on, `POST /api/session/tick` can return with `pendingBattles` non-empty: the turn
+has paused before combat. It finishes (captures, the win check, desertion and respawns) once the last
+pending battle is resolved through `POST /api/session/battle`.
 
 `GET /api/ruler-stats` and `GET /api/session/ruler-stats` return `averageStability`,
 `averageMorale`, `averageLoyalty`, `totalPopulation`, `economicPolicy`, `militaryPolicy`,
@@ -261,9 +277,10 @@ Then open http://localhost:3000
 
 Any engagement can be fought out as a 3D field battle at `/battle`, drawn by the
 [Strata](https://github.com/Preponderous-Software/strata) engine in WebGL 2. Select one of your
-armies on the map and choose **Fight in 3D** to load it and the nearest enemy army, with their real
-soldier counts, morale and ground (open field, village or castle). You can also set up a custom
-battle without signing in.
+armies on the map and choose **Practice in 3D** to load it and the nearest enemy army, with their
+real soldier counts, morale and ground (open field, village or castle), as a practice battle. While
+that army is in a battle waiting this turn, the same link reads **Fight it in 3D** and opens that
+battle instead. You can also set up a custom battle without signing in.
 
 ![Your avatar forms up with your army before an enemy castle](docs/images/battle-avatar-castle.jpg)
 
@@ -280,6 +297,8 @@ battle without signing in.
   you can take over another.
 - **Enter as your own avatar**: name, tunic and trim colours, helmet, weapon and shield. Your avatar is
   stronger than a soldier and is saved with your account preferences (a guest's stays in the browser).
+  The avatar cannot hold the field alone: only soldiers decide who holds the field, so once all of a
+  side's soldiers have fallen or fled that side has lost, even if the avatar still stands.
 
 ![A battle on a village tile, seen from above](docs/images/battle-village.jpg)
 
@@ -293,8 +312,9 @@ before it breaks and runs.
 pauses before combat and the game takes you to that battle (`/battle?pending=<id>`). That battle is
 locked to the real armies, ground and seed. When it ends, the result is sent back to the game. The
 winner keeps the soldiers still standing. The loser keeps only those who got away and falls back to
-a neighbouring tile (its own land first), or is lost if surrounded. Then the rest of the turn runs:
-captures, the win check, desertion and respawns. You can instead **Let the map decide**, which applies
+a neighbouring tile: only onto open ground or its own villages and castles, never onto an enemy or
+neutral village or castle, or a tile held by an enemy army. With nowhere allowed to go, it is lost.
+Then the rest of the turn runs: captures, the win check, desertion and respawns. You can instead **Let the map decide**, which applies
 the classic rule that both sides lose the other's strength in one exchange. Turning off **Fight battles
 in 3D** in Settings makes every battle resolve that way at once. Ending the turn while a battle waits
 also lets the map decide it. Battles you set up yourself at `/battle` are practice and change
@@ -321,7 +341,8 @@ tested under Node in `web-client/src/test/js/battle-sim.test.js`.
 2. **Players:** You (blue) vs AI (red)
 3. **Movement:** Armies move 1 tile per turn
 4. **Villages:** Generate soldiers each turn for their owner's army stationed there — one per 100 population (1 at the start, more as your villages grow)
-5. **Combat:** Simultaneous damage (10 vs 7 → 3 vs 0)
+5. **Combat:** Battles are fought on the [3D battlefield](#3d-battlefield) by default; a battle left
+   to the map is settled by simultaneous damage (10 vs 7 → 3 vs 0)
 6. **Castle Capture:** Occupy for 3 consecutive turns
 
 See [PLAYER_GUIDE.md](PLAYER_GUIDE.md) for complete gameplay instructions.
