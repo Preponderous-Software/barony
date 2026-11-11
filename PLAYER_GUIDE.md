@@ -174,10 +174,55 @@ below the map, or use the split control next to any of your armies in the **Armi
 
 ### Combat
 
-When armies of different players occupy the same tile:
-- **Simultaneous Damage**: Each army loses soldiers equal to the enemy's count
-- **Example**: 10 soldiers vs 7 soldiers → 3 vs 0 (you win with 3 remaining)
-- **Armies with 0 soldiers are destroyed**
+When your armies and the enemy's end up on the same tile, the turn **pauses for battle** right
+after the armies move and the AI acts. The game takes you onto the 3D battlefield to fight it out,
+with one figure for each soldier (see [Fighting a Battle in 3D](#fighting-a-battle-in-3d)). Nothing
+else in that turn happens until the battle is decided: captures, the win check, desertion and
+respawns all wait.
+
+**What the battle decides:**
+- The side that holds the field keeps the soldiers still standing at the end.
+- The side that breaks keeps only the soldiers who ran and got away. It falls back to a
+  neighbouring tile, preferring its own land, then a tile with a friendly army. An army with no free
+  tile to fall back to is lost. A beaten army also stops marching, so give it new orders.
+- If neither side breaks before time runs out, both stay on the tile and fight again next turn.
+- Armies with 0 soldiers are destroyed.
+
+**Letting the map decide instead.** Choose **Let the map decide** (above the map, or on the
+battlefield), or turn off **Fight battles in 3D** in Settings. The battle is then settled by the
+classic rule:
+- **Simultaneous damage**: each army loses soldiers equal to the enemy's strength (your strength is
+  your soldiers × morale ÷ 100)
+- **Example**: 10 soldiers vs 7 soldiers at normal morale → 3 vs 0 (you win with 3 remaining)
+
+**Advance Turn** while a battle is waiting also lets the map decide it, then plays the next turn.
+
+### Fighting a Battle in 3D
+
+The battlefield matches the battle on the map: the same soldiers on each side, your army's morale,
+and the ground the armies met on (open field, a village, or before a castle). A larger army is
+drawn at one figure per several soldiers, the same scale for both sides, and the tally always counts
+in soldiers. Morale decides how hard your side hits and how many losses it takes before it breaks.
+
+- **Watch** from above: drag to look around, and scroll or pinch to zoom. Play at ½×, 1×, 2× or 4×.
+- **Take over any soldier** by clicking or tapping it. You see it from behind; press **V** for
+  first person.
+  - **Keyboard and mouse:** **WASD** to move, **Shift** to run. Click the view to lock the mouse,
+    then click (or **Space**) to strike and hold the right button (or **F**) to raise your shield.
+    **Esc** frees the mouse, and **Esc** again lets go of the soldier.
+  - **Phone:** the stick on the left moves you, dragging the view looks around, and **Strike** and
+    **Shield** are on the right.
+  - If your soldier falls, tap another to fight on.
+- **Enter as your avatar**: your own champion, stronger than a soldier. Choose its name, colours,
+  helmet, weapon and shield under **Avatar…**. It is saved with your account (a guest's stays in
+  the browser). Your avatar is not one of the army's soldiers, so it does not count toward what the
+  army keeps.
+- When the battle ends, the result goes to your game and **Back to the map** shows it. If the turn
+  brought on more than one battle, **Next battle** takes you to the next one.
+
+A battle that is waiting can't be replayed or restarted, and you can't split an army that is in one.
+You can also fight practice battles of any size at `/battle` (or **⚔ Fight in 3D** under a selected
+army). These change nothing in your game.
 
 **Combat Tips:**
 - Attack with superior numbers (at least 1.5x enemy strength)
@@ -186,7 +231,7 @@ When armies of different players occupy the same tile:
 
 ### Village Capture
 
-- **After combat**, if only your army remains on a village, you capture it
+- **After combat** (once every battle that turn is decided), if only your army remains on a village, you capture it
 - **Contested villages** (multiple players present) become neutral
 - Villages retain ownership when abandoned (no army present)
 - A captured village starts generating soldiers for you on the following turn: each turn,
@@ -415,6 +460,9 @@ Open the **Settings** panel in the sidebar. Changes apply immediately:
   - Applies to faction colors and map ownership indicators
 - **Theme:** Dark (default), Classic, High Contrast
 - **Font Size:** Small, Medium (default), Large
+- **Fight battles in 3D:** on by default. When off, every battle is settled at once by the map's
+  classic rule, and any battle already waiting is settled that way straight away. This one is
+  kept with your game rather than your browser, and **Reset Game** keeps your choice.
 - **Panels:** which sidebar panels are shown and in what order (see
   [Arranging the sidebar](#arranging-the-sidebar) above)
 
@@ -493,6 +541,14 @@ Game** if you'd rather start over. A guest game is saved too, but only for this 
 **Q: Do I need an account to play?**
 A: No. Click **Play as guest** on the first screen. You can move the game into an account later
 (see [Playing as a Guest](#playing-as-a-guest)).
+
+**Q: Does the 3D battle really change my game?**
+A: Yes, when the turn paused for it: the soldiers each side keeps, and who falls back, come from
+how the battle went. Practice battles you set up yourself at `/battle` change nothing.
+
+**Q: I don't want to fight every battle. Can I skip them?**
+A: Choose **Let the map decide** for one battle, or turn off **Fight battles in 3D** in Settings
+to settle all of them by the classic rule. **Advance Turn** also settles a waiting battle that way.
 
 **Q: Can I play with friends?**
 A: Not yet - it's single-player only right now. Multiplayer is planned for future versions.

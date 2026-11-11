@@ -139,6 +139,16 @@ public class BackendService {
         return restTemplate.postForObject(backendUrl + "/api/session/command", entity, GameState.class);
     }
 
+    public GameState sessionBattle(String cookie, Map<String, Object> result) {
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(result, jsonHeaders(cookie));
+        return restTemplate.postForObject(backendUrl + "/api/session/battle", entity, GameState.class);
+    }
+
+    public GameState sessionFieldBattles(String cookie, Map<String, Object> body) {
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, jsonHeaders(cookie));
+        return restTemplate.postForObject(backendUrl + "/api/session/field-battles", entity, GameState.class);
+    }
+
     public GameState sessionReset(String cookie) {
         HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
         return restTemplate.postForObject(backendUrl + "/api/session/reset", entity, GameState.class);

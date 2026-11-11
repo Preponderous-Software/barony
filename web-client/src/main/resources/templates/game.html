@@ -29,6 +29,15 @@
                 <button id="autoPlayToggle" onclick="toggleAutoPlay()">Auto Play</button>
             </div>
             
+            <!-- A battle waiting on the player: the turn is paused until it is fought or left to the map. -->
+            <div id="battleBanner" class="battle-banner" role="status" hidden>
+                <span id="battleBannerText"></span>
+                <div class="battle-banner-actions">
+                    <a id="battleBannerFight" class="battle-link battle-link-primary" href="/battle">&#9876; Fight it in 3D</a>
+                    <button type="button" id="battleBannerAuto" onclick="autoResolveBattle()">Let the map decide</button>
+                </div>
+            </div>
+
             <div id="gameCanvas">
                 <canvas id="mapCanvas" width="800" height="600"></canvas>
                 <div class="canvas-tooltip" id="canvasTooltip"></div>
@@ -176,6 +185,11 @@
             <details class="collapsible-section section-settings" data-panel-id="settings">
                 <summary>Settings</summary>
                 <div class="settings-panel" id="settingsPanel">
+                    <div class="settings-row">
+                        <label for="fieldBattlesToggle">Fight battles in 3D:</label>
+                        <input type="checkbox" id="fieldBattlesToggle" checked onchange="setFieldBattles(this.checked)"
+                               title="When your armies meet the enemy, the turn pauses and the battle opens in 3D. Off: the map decides every battle at once.">
+                    </div>
                     <div class="settings-row">
                         <label>Colorblind:</label>
                         <select id="colorblindSelect" onchange="applySettings()">
@@ -818,6 +832,7 @@
         function updateUI(data) {
             const previous = lastGameState;
             lastGameState = data;
+            updateBattleBanner(data);
             document.getElementById('tickCount').textContent = data.tickCount;
             document.getElementById('gameOver').textContent = data.gameOver;
 
@@ -948,7 +963,15 @@
                     return response.json();
                 })
                 .then(data => {
-                    if (data) updateUI(data);
+                    if (!data) return;
+                    updateUI(data);
+                    // Field battles are the default: a turn that brings your armies to the enemy
+                    // takes you straight onto the battlefield to fight it.
+                    const battle = firstPendingBattle(data);
+                    if (battle && data.fieldBattles !== false) {
+                        stopAutoPlay();
+                        window.location.href = '/battle?pending=' + encodeURIComponent(battle.id);
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -977,6 +1000,64 @@
                 });
         }
         
+        // ========================
+        // Field battles
+        // ========================
+
+        function firstPendingBattle(state) {
+            return state && state.pendingBattles && state.pendingBattles.length ? state.pendingBattles[0] : null;
+        }
+
+        // The banner over the map while a battle waits; the turn finishes once it is resolved.
+        function updateBattleBanner(state) {
+            const banner = document.getElementById('battleBanner');
+            const battle = firstPendingBattle(state);
+            document.getElementById('fieldBattlesToggle').checked = !state || state.fieldBattles !== false;
+            if (!battle) {
+                banner.hidden = true;
+                return;
+            }
+            const ground = { CASTLE: 'before a castle', VILLAGE: 'in a village', EMPTY: 'in open field' }[battle.terrain] || '';
+            const more = state.pendingBattles.length > 1 ? ' (' + state.pendingBattles.length + ' battles this turn)' : '';
+            document.getElementById('battleBannerText').textContent =
+                'Battle at (' + battle.x + ', ' + battle.y + ') ' + ground + ': your ' + battle.side0Soldiers +
+                ' against ' + battle.side1Soldiers + more + '. The turn finishes once it is fought.';
+            document.getElementById('battleBannerFight').href = '/battle?pending=' + encodeURIComponent(battle.id);
+            banner.hidden = false;
+        }
+
+        function autoResolveBattle() {
+            const battle = firstPendingBattle(lastGameState);
+            if (!battle) return;
+            fetch('/api/session/battle', {
+                method: 'POST',
+                headers: getSessionHeaders(),
+                body: JSON.stringify({ battleId: battle.id, result: 'AUTO' })
+            })
+                .then(response => {
+                    if (response.status === 401) { sessionExpired(); return; }
+                    if (!response.ok) throw new Error('status ' + response.status);
+                    return response.json();
+                })
+                .then(data => { if (data) updateUI(data); })
+                .catch(error => showError('Could not resolve the battle: ' + error.message));
+        }
+
+        function setFieldBattles(enabled) {
+            fetch('/api/session/field-battles', {
+                method: 'POST',
+                headers: getSessionHeaders(),
+                body: JSON.stringify({ enabled: !!enabled })
+            })
+                .then(response => {
+                    if (response.status === 401) { sessionExpired(); return; }
+                    if (!response.ok) throw new Error('status ' + response.status);
+                    return response.json();
+                })
+                .then(data => { if (data) updateUI(data); })
+                .catch(error => showError('Could not change the battle setting: ' + error.message));
+        }
+
         // Auto Play toggle
         function toggleAutoPlay() {
             if (isAutoPlaying) {

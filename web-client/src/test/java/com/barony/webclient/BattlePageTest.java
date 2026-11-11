@@ -54,4 +54,27 @@ class BattlePageTest {
         assertTrue(html.contains("'/battle?army=' + encodeURIComponent(army.id)"),
                 "the battle link must carry the selected army, so the battle loads its real numbers");
     }
+
+    @Test
+    void aTurnThatStartsABattleTakesThePlayerToTheBattlefield() throws Exception {
+        String html = mockMvc.perform(get("/game"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertTrue(html.contains("'/battle?pending=' + encodeURIComponent(battle.id)"),
+                "a tick that leaves a pending battle must open it on the battlefield");
+        assertTrue(html.contains("data.fieldBattles !== false"), "only while field battles are on");
+        assertTrue(html.contains("id=\"battleBanner\""), "a waiting battle must be shown over the map");
+        assertTrue(html.contains("result: 'AUTO'"), "the map must offer to decide the battle itself");
+        assertTrue(html.contains("id=\"fieldBattlesToggle\"") && html.contains("/api/session/field-battles"),
+                "field battles must be a setting the player can turn off");
+    }
+
+    @Test
+    void theBattlefieldCanLetTheMapDecideAPendingBattle() throws Exception {
+        String html = mockMvc.perform(get("/battle"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertTrue(html.contains("id=\"autoBtn\""));
+    }
 }

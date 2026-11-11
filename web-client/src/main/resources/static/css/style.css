@@ -1364,3 +1364,21 @@ input[type="password"]:focus {
     text-decoration: none;
 }
 .battle-link:hover, .battle-link:focus-visible { background: rgba(201, 169, 110, 0.15); }
+
+/* A battle waiting on the player, over the map (field battles). */
+.battle-banner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 0;
+    padding: 10px 14px;
+    border: 1px solid var(--accent, #c9a96e);
+    border-radius: 6px;
+    background: rgba(201, 169, 110, 0.12);
+}
+.battle-banner[hidden] { display: none; }
+.battle-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.battle-banner .battle-link { margin-top: 0; }
+.battle-link-primary { background: rgba(201, 169, 110, 0.25); font-weight: 600; }

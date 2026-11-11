@@ -24,6 +24,25 @@ class CombatService {
         removeDefeatedArmies(gameState);
     }
 
+    /**
+     * The same exchange as {@link #processCombat}, for the armies on one tile only: how a pending
+     * battle that the player chose to auto-resolve is decided.
+     */
+    void processCombatAt(GameState gameState, int x, int y) {
+        List<Army> armies = gameState.getArmiesInternal();
+        for (int i = 0; i < armies.size(); i++) {
+            for (int j = i + 1; j < armies.size(); j++) {
+                Army attacker = armies.get(i);
+                Army defender = armies.get(j);
+                if (attacker.getX() == x && attacker.getY() == y && areOnSameTile(attacker, defender)
+                        && areEnemies(attacker, defender)) {
+                    resolveEngagement(attacker, defender);
+                }
+            }
+        }
+        removeDefeatedArmies(gameState);
+    }
+
     private void resolveCombatBetweenArmies(GameState gameState) {
         int armyCount = gameState.getArmiesInternal().size();
         for (int i = 0; i < armyCount; i++) {
