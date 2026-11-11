@@ -358,6 +358,29 @@ h3 {
     color: var(--text-primary, #d4cfc8);
 }
 
+/* Training archers / cavalry, under the split control. */
+.selected-army-train {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #5a4e3c;
+}
+
+.selected-army-train .field-hint {
+    flex-basis: 100%;
+    margin-top: 0;
+}
+
+.train-status {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--accent, #c9a96e);
+    font-size: 14px;
+}
+
+.split-button.train-stop {
+    background: #4a3f33;
+}
+
 .split-input {
     width: 80px;
     padding: 6px 10px;

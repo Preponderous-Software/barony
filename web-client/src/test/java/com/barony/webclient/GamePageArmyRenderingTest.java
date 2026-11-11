@@ -94,6 +94,28 @@ class GamePageArmyRenderingTest {
                         + "the capture requirement the page owns");
     }
 
+    /**
+     * Unit types: the panel describes the mix and offers training through the tested rules in
+     * game-logic.js (describeArmyStrength, trainingOptionFor, validateTrainCount), the map marks
+     * mixed armies through armyUnitMarks, and the order goes out as a TRAIN command.
+     */
+    @Test
+    void unitTypesAreShownAndTrainedThroughTheSharedRules() throws Exception {
+        String html = renderGamePage();
+
+        assertTrue(html.contains("describeArmyStrength(army)"),
+                "The selected army's title must come from describeArmyStrength, which keeps an "
+                        + "all-infantry army's title word for word as before");
+        assertTrue(html.contains("armyUnitMarks(army)"), "drawMap must mark archers and cavalry");
+        assertTrue(html.contains("trainingOptionFor(army, lastGameState)"),
+                "The Train control must appear only where trainingOptionFor allows it");
+        assertTrue(html.contains("validateTrainCount(count"), "A training count is checked before sending");
+        assertTrue(html.contains("type: 'TRAIN'"), "Training is sent as a TRAIN command");
+        assertTrue(html.contains("id=\"panelTrainCount\"") && html.contains("id=\"panelTrainBtn\"")
+                        && html.contains("id=\"panelTrainStop\""),
+                "The panel has a count, a Train button and a Stop button");
+    }
+
     private String renderGamePage() throws Exception {
         return mockMvc.perform(get("/game"))
                 .andExpect(status().isOk())
