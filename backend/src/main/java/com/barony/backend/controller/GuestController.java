@@ -31,6 +31,11 @@ import java.util.Optional;
  * {@code POST /api/guest/claim} is the "keep your progress" upgrade: a signed-in account that has no
  * game yet takes over this browser's guest game. It is insert-only on the account side and refuses
  * (409) when the account already has a game, so an existing account's game is never replaced.
+ *
+ * When this browser's guest game exists but cannot be read, {@link GuestSessionService#find} throws
+ * and both endpoints answer 409 {@code {"error": "unreadable-save"}} (see
+ * {@link UnreadableSaveHandler}): resuming does not create a new guest in its place, and a claim
+ * neither copies nor deletes it. The game page then offers POST /api/session/start-fresh.
  */
 @RestController
 @RequestMapping("/api/guest")

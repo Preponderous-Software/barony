@@ -37,9 +37,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * An account whose saved game cannot be read: every endpoint that needs the game answers 409
- * {@code {"error": "unreadable-save"}} and saves nothing, and only the confirmed start-fresh call
- * gives the player a new game.
+ * An account (or a guest) whose saved game cannot be read: every endpoint that needs the game
+ * answers 409 {@code {"error": "unreadable-save"}} and saves nothing, and only the confirmed
+ * start-fresh call gives the player a new game.
  */
 @WebMvcTest(GameController.class)
 @Import({AuthCookies.class, RefreshSessions.class, GuestCookies.class, GameService.class})
@@ -115,15 +115,82 @@ class GameControllerUnreadableSaveTest {
     }
 
     @Test
-    void startFreshNeedsAnAccount() throws Exception {
+    void startFreshNeedsAnAccountOrAGuest() throws Exception {
         mockMvc.perform(post("/api/session/start-fresh"))
                 .andExpect(status().isUnauthorized());
         when(userAuthClient.validate("revoked")).thenReturn(Optional.empty());
         mockMvc.perform(post("/api/session/start-fresh").cookie(new Cookie("barony_token", "revoked")))
                 .andExpect(status().isUnauthorized());
+        // An unknown or pruned guest has nothing to start fresh from.
         mockMvc.perform(post("/api/session/start-fresh").header("X-Barony-Player", "guest")
-                        .cookie(new Cookie(GuestCookies.COOKIE_NAME, "g".repeat(43))))
-                .andExpect(status().isForbidden());
+                        .cookie(guest()))
+                .andExpect(status().isUnauthorized());
         verify(sessionService, never()).startFresh(anyString());
+    }
+
+    private static final String GUEST_TOKEN = "g".repeat(43);
+
+    private static Cookie guest() {
+        return new Cookie(GuestCookies.COOKIE_NAME, GUEST_TOKEN);
+    }
+
+    @Test
+    void everyGameEndpointAnswersUnreadableSaveForAGuestAndSavesNothing() throws Exception {
+        when(guestSessionService.find(GUEST_TOKEN)).thenThrow(new UnreadableSaveException("guest gggggggg…"));
+        List<RequestBuilder> calls = List.of(
+                get("/api/session/state").cookie(guest()).header("X-Barony-Player", "guest"),
+                get("/api/session/state").cookie(guest()),
+                post("/api/session/tick").cookie(guest()).header("X-Barony-Player", "guest"),
+                post("/api/session/reset").cookie(guest()).header("X-Barony-Player", "guest"),
+                post("/api/session/command").cookie(guest()).header("X-Barony-Player", "guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"MOVE\",\"armyId\":1,\"targetX\":1,\"targetY\":1}"),
+                post("/api/session/battle").cookie(guest()).header("X-Barony-Player", "guest")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"battleId\":1,\"result\":\"AUTO\"}"),
+                post("/api/session/field-battles").cookie(guest()).header("X-Barony-Player", "guest")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"),
+                post("/api/session/decision").cookie(guest()).header("X-Barony-Player", "guest")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"ECONOMIC\",\"choice\":\"BALANCED\"}"),
+                get("/api/session/ruler-stats").cookie(guest()).header("X-Barony-Player", "guest"),
+                get("/api/session/runs").cookie(guest()).header("X-Barony-Player", "guest"));
+        for (RequestBuilder call : calls) {
+            mockMvc.perform(call)
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error").value("unreadable-save"))
+                    .andExpect(jsonPath("$.status").value(409))
+                    .andExpect(jsonPath("$.message").value(UnreadableSaveHandler.MESSAGE));
+        }
+        verify(guestSessionService, never()).save(any());
+        verify(guestSessionService, never()).startFresh(anyString());
+        verify(sessionService, never()).save(any());
+    }
+
+    @Test
+    void startFreshGivesTheConfirmedGuestANewGame() throws Exception {
+        GameState fresh = new GameState(5, 5);
+        fresh.setTickCount(0);
+        when(guestSessionService.startFresh(GUEST_TOKEN)).thenReturn(Optional.of(new Session("k", fresh)));
+
+        mockMvc.perform(post("/api/session/start-fresh").cookie(guest()).header("X-Barony-Player", "guest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tickCount").value(0))
+                .andExpect(jsonPath("$.fieldBattles").value(true));
+        // Without the header a request with only a guest cookie is a guest too, as on every endpoint.
+        mockMvc.perform(post("/api/session/start-fresh").cookie(guest()))
+                .andExpect(status().isOk());
+        verify(guestSessionService, org.mockito.Mockito.times(2)).startFresh(GUEST_TOKEN);
+        verify(sessionService, never()).startFresh(anyString());
+    }
+
+    @Test
+    void aGuestHeaderNeverStartsAnAccountFresh() throws Exception {
+        when(guestSessionService.startFresh(GUEST_TOKEN)).thenReturn(Optional.of(new Session("k", new GameState(5, 5))));
+
+        mockMvc.perform(post("/api/session/start-fresh").cookie(account(), guest()).header("X-Barony-Player", "guest"))
+                .andExpect(status().isOk());
+
+        verify(sessionService, never()).startFresh(anyString());
+        verify(guestSessionService).startFresh(GUEST_TOKEN);
     }
 }

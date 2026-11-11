@@ -6,8 +6,10 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.GuestGame;
+import com.barony.backend.model.GuestGameBackup;
 import com.barony.backend.model.RunHistory;
 import com.barony.backend.model.Session;
+import com.barony.backend.repository.GuestGameBackupRepository;
 import com.barony.backend.repository.GuestGameRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +30,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link GuestSessionService} against a mocked {@link GuestGameRepository}: the
- * session cache, the lastSeenAt touch interval, recovery from a corrupt stored game, and how a
+ * session cache, the lastSeenAt touch interval, keeping an unreadable stored game, and how a
  * finished run is recorded. The H2-backed behavior (prune, capacity, isolation) is covered by
  * {@code GuestPruneTest} and {@code GuestIsolationTest}.
  */
@@ -38,13 +40,16 @@ class GuestSessionServiceTest {
     private static final String TOKEN = "A".repeat(43);
 
     private GuestGameRepository repository;
+    private GuestGameBackupRepository backups;
     private GuestSessionService service;
 
     @BeforeEach
     void setUp() {
         // Mocked repo: findById returns Optional.empty() unless a test stubs it.
         repository = mock(GuestGameRepository.class);
-        service = new GuestSessionService(repository, 30, 1000, Clock.fixed(NOW, ZoneOffset.UTC));
+        backups = mock(GuestGameBackupRepository.class);
+        when(backups.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        service = new GuestSessionService(repository, backups, 30, 1000, Clock.fixed(NOW, ZoneOffset.UTC));
         logs = new ListAppender<>();
         logs.start();
         serviceLogger().addAppender(logs);
@@ -187,18 +192,115 @@ class GuestSessionServiceTest {
         assertEquals(NOW, row.getLastSeenAt());
     }
 
+    private static final String UNREADABLE = "{ this is not a game state";
+
     @Test
-    void findStartsAFreshGameWhenTheStoredStateIsCorrupt() {
-        GuestGame row = storedGuest("not json", null);
+    void findRefusesAnUnreadableStoredGameAndLeavesTheRowUntouched() {
+        Instant seen = NOW.minus(Duration.ofDays(2)); // past the touch interval: still not touched
+        GuestGame row = storedGuest(UNREADABLE, seen);
 
-        Session session = service.find(TOKEN).orElseThrow();
+        UnreadableSaveException refused = assertThrows(UnreadableSaveException.class, () -> service.find(TOKEN));
 
-        assertNotNull(session.getGameState());
-        assertEquals(0, session.getGameState().getTickCount());
-        assertNotEquals("not json", row.getState(), "the fresh game replaces the corrupt one");
-        // Written now only because lastSeenAt is null (the touch rule); a recently seen guest's
-        // replacement game is persisted by the next save instead.
-        verify(repository).save(row);
+        assertFalse(refused.getMessage().contains(UNREADABLE), "the game's text is not carried in the error");
+        assertFalse(refused.getMessage().contains(row.getGuestKey()), "nor the full guest key");
+        assertEquals(UNREADABLE, row.getState(), "the unreadable game is kept byte for byte");
+        assertEquals(seen, row.getLastSeenAt());
+        verify(repository, never()).save(any());
+        verifyNoInteractions(backups);
+        String shortKey = row.getGuestKey().substring(0, 8);
+        List<String> warnings = warnings();
+        assertEquals(1, warnings.size(), warnings.toString());
+        String warning = warnings.get(0);
+        assertTrue(warning.contains(shortKey) && warning.contains("left untouched"), warning);
+        assertFalse(warning.contains(row.getGuestKey()), "only the key prefix is logged");
+        assertFalse(warning.contains(UNREADABLE), "the game's text is never logged");
+        assertTrue(warning.contains("line 1, column"), "the parse position is logged: " + warning);
+    }
+
+    @Test
+    void repeatedFindsKeepRefusingAndCacheNothing() {
+        GuestGame row = storedGuest(UNREADABLE, null);
+
+        for (int i = 0; i < 3; i++) {
+            assertThrows(UnreadableSaveException.class, () -> service.find(TOKEN));
+        }
+
+        verify(repository, times(3)).findById(row.getGuestKey());
+        verify(repository, never()).save(any());
+        assertEquals(UNREADABLE, row.getState());
+        assertNull(row.getLastSeenAt());
+    }
+
+    @Test
+    void anEmptyStoredGameIsUnreadableToo() {
+        GuestGame row = storedGuest("null", NOW);
+
+        assertThrows(UnreadableSaveException.class, () -> service.find(TOKEN));
+
+        assertEquals("null", row.getState());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void startFreshBacksUpTheUnreadableTextFirstThenWritesAFreshGame() {
+        Instant seen = NOW.minus(Duration.ofDays(3));
+        GuestGame row = storedGuest(UNREADABLE, seen);
+        String runs = "[{\"result\":\"WIN\",\"turnsPlayed\":4}]";
+        row.setRuns(runs);
+        row.setWins(1);
+
+        Session fresh = service.startFresh(TOKEN).orElseThrow();
+
+        var order = inOrder(backups, repository);
+        ArgumentCaptor<GuestGameBackup> backup = ArgumentCaptor.forClass(GuestGameBackup.class);
+        order.verify(backups).saveAndFlush(backup.capture());
+        order.verify(repository).save(row);
+        assertEquals(row.getGuestKey(), backup.getValue().getGuestKey(), "keyed by the guest key");
+        assertNotEquals(TOKEN, backup.getValue().getGuestKey(), "never by the cookie token");
+        assertEquals(UNREADABLE, backup.getValue().getState(), "the original text is preserved exactly");
+        assertEquals(seen, backup.getValue().getLastSeenAt());
+        assertEquals(NOW, backup.getValue().getBackedUpAt());
+
+        assertEquals(0, fresh.getGameState().getTickCount());
+        assertEquals(service.write(fresh.getGameState()), row.getState());
+        assertEquals(NOW, row.getLastSeenAt());
+        assertEquals(1, row.getWins(), "the guest's run tally is kept");
+        assertEquals(runs, row.getRuns(), "and so is their run history");
+        assertSame(fresh, service.find(TOKEN).orElseThrow(), "the fresh game is now the guest's game");
+    }
+
+    @Test
+    void startFreshDoesNotOverwriteWhenTheBackupFails() {
+        GuestGame row = storedGuest(UNREADABLE, NOW);
+        when(backups.saveAndFlush(any())).thenThrow(new IllegalStateException("disk full"));
+
+        assertThrows(IllegalStateException.class, () -> service.startFresh(TOKEN));
+
+        assertEquals(UNREADABLE, row.getState());
+        verify(repository, never()).save(any());
+        assertThrows(UnreadableSaveException.class, () -> service.find(TOKEN));
+    }
+
+    @Test
+    void startFreshReturnsAReadableGameUnchanged() {
+        String stored = storedState(12);
+        GuestGame row = storedGuest(stored, NOW);
+
+        Session session = service.startFresh(TOKEN).orElseThrow();
+
+        assertEquals(12, session.getGameState().getTickCount());
+        assertEquals(stored, row.getState());
+        verifyNoInteractions(backups);
+        verify(repository, never()).save(any());
+        assertSame(session, service.startFresh(TOKEN).orElseThrow(), "a repeat returns the cached game");
+    }
+
+    @Test
+    void startFreshIsEmptyForAnUnknownOrMalformedToken() {
+        assertTrue(service.startFresh(TOKEN).isEmpty());
+        assertTrue(service.startFresh("too-short").isEmpty());
+        verify(repository, never()).save(any());
+        verifyNoInteractions(backups);
     }
 
     @Test
