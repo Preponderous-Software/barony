@@ -1,5 +1,6 @@
 package com.barony.backend.controller;
 
+import com.barony.backend.model.BattleResult;
 import com.barony.backend.model.Command;
 import com.barony.backend.model.GameState;
 import com.barony.backend.model.RulerDecision;
@@ -127,6 +128,17 @@ public class GameController {
      * {@link SessionService}.
      */
     private Player resolvePlayer(HttpServletRequest request) {
+        Player player = resolvePlayerSession(request);
+        // Field battles are the default for players: a game that has never had the setting (a new
+        // one, or a save from before field battles existed) takes it here.
+        GameState state = player.session().getGameState();
+        if (state != null && state.getFieldBattles() == null) {
+            state.setFieldBattles(true);
+        }
+        return player;
+    }
+
+    private Player resolvePlayerSession(HttpServletRequest request) {
         String mode = request.getHeader(PLAYER_MODE_HEADER);
         boolean wantsGuest = "guest".equalsIgnoreCase(mode);
         boolean wantsAccount = "account".equalsIgnoreCase(mode);
@@ -187,7 +199,49 @@ public class GameController {
         Session session = player.session();
         synchronized (gameService) {
             gameService.setGameState(session.getGameState());
-            gameService.executeCommand(command);
+            try {
+                gameService.executeCommand(command);
+            } catch (IllegalStateException e) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+            }
+            save(player);
+            return gameService.getState();
+        }
+    }
+
+    /**
+     * Resolves one of the paused turn's pending battles: {@code FIELD} with the result the player
+     * fought on the battlefield, or {@code AUTO} to let the map's rule decide it. The turn finishes
+     * once the last one is resolved.
+     */
+    @PostMapping("/api/session/battle")
+    public GameState sessionBattle(HttpServletRequest request, @RequestBody BattleResult result) {
+        Player player = resolvePlayer(request);
+        Session session = player.session();
+        synchronized (gameService) {
+            gameService.setGameState(session.getGameState());
+            try {
+                gameService.resolveBattle(result);
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+            }
+            save(player);
+            return gameService.getState();
+        }
+    }
+
+    /** Turns field battles on or off for the player's game: {@code {"enabled": true|false}}. */
+    @PostMapping("/api/session/field-battles")
+    public GameState sessionFieldBattles(HttpServletRequest request, @RequestBody Map<String, Boolean> body) {
+        Boolean enabled = body == null ? null : body.get("enabled");
+        if (enabled == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body needs 'enabled': true or false");
+        }
+        Player player = resolvePlayer(request);
+        Session session = player.session();
+        synchronized (gameService) {
+            gameService.setGameState(session.getGameState());
+            gameService.setFieldBattles(enabled);
             save(player);
             return gameService.getState();
         }
@@ -198,7 +252,10 @@ public class GameController {
         Player player = resolvePlayer(request);
         Session session = player.session();
         synchronized (gameService) {
+            Boolean fieldBattles = session.getGameState() == null ? null : session.getGameState().getFieldBattles();
             gameService.resetGame();
+            // A new game keeps the player's field-battle setting (on unless they turned it off).
+            gameService.getGameStateInternal().setFieldBattles(fieldBattles == null ? Boolean.TRUE : fieldBattles);
             session.setGameState(gameService.getGameStateInternal());
             save(player);
             return gameService.getState();

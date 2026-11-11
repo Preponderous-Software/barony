@@ -531,10 +531,31 @@
         };
     }
 
+    // ---------------------------------------------------------------- the result the map keeps
+
+    // What a finished battle hands back to the game when field battles decide the map (the
+    // backend's BattleResult): the winner, 0, 1 or null for a draw, and how many soldiers each
+    // side keeps. The winner keeps its soldiers still standing; the loser keeps only those who
+    // ran and got away (the backend moves them off the field). In a draw both keep who stands.
+    // In soldiers, never more than a side started with. The avatar is not a soldier.
+    function fieldResult(b) {
+        var s = summary(b);
+        var start = [b.sides[0].soldiers, b.sides[1].soldiers];
+        var winner = b.winner === 0 || b.winner === 1 ? b.winner : null;
+        var keep = [0, 0];
+        for (var side = 0; side < 2; side++) {
+            var c = s.sides[side];
+            var figures = winner === null || winner === side ? c.standing : c.routing + c.escaped;
+            keep[side] = Math.max(0, Math.min(start[side], Math.round(figures * c.perFigure)));
+        }
+        if (winner !== null && keep[winner] < 1) keep[winner] = 1;
+        return { winner: winner, survivors: keep };
+    }
+
     var api = {
         DT: DT, FIGURE_CAP: FIGURE_CAP, REACH: REACH, KINDS: KINDS, FIELD_HALF_LENGTH: FIELD_HALF_LENGTH,
         create: create, step: step, embody: embody, release: release, spawnAvatar: spawnAvatar,
-        summary: summary, mapOutcome: mapOutcome, unit: unit, alive: alive, fighting: fighting,
+        summary: summary, mapOutcome: mapOutcome, fieldResult: fieldResult, unit: unit, alive: alive, fighting: fighting,
         figuresFor: figuresFor, breakingPoint: breakingPoint, hitChance: hitChance, rng: rng, wrapAngle: wrapAngle
     };
     if (typeof module === 'object' && module.exports) module.exports = api;

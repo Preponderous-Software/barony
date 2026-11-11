@@ -10,6 +10,10 @@ import java.util.List;
 public class GameState {
     private Tile[][] grid;
     private List<Army> armies;
+    // Field battles: the engagements waiting on the player, and whether turns pause for them.
+    private List<PendingBattle> pendingBattles;
+    private Integer nextBattleId;
+    private Boolean fieldBattles;
     private int tickCount;
     private boolean gameOver;
     private Integer winnerId;

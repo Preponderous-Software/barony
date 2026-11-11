@@ -226,3 +226,35 @@ test('Avatar names are single-spaced, printable and capped', () => {
     assert.equal(Avatar.clean({ name: '  Sir   Otto \n of\tthe Fens ' }).name, 'Sir Otto of the Fens');
     assert.equal(Avatar.clean({ name: 'x'.repeat(50) }).name.length, Avatar.NAME_MAX);
 });
+
+// ----------------------------------------------------------------------- the result the map keeps
+
+test('fieldResult: the winner keeps who stands, the loser who got away, within what each started with', () => {
+    for (let seed = 1; seed <= 8; seed++) {
+        const b = fight({ sides: [{ soldiers: 40, playerId: 1 }, { soldiers: 30, playerId: 2 }], seed });
+        const r = Sim.fieldResult(b), s = Sim.summary(b);
+        assert.ok([0, 1, null].includes(r.winner));
+        for (const side of [0, 1]) {
+            assert.ok(r.survivors[side] >= 0 && r.survivors[side] <= b.sides[side].soldiers);
+        }
+        if (r.winner !== null) {
+            const loser = 1 - r.winner;
+            assert.equal(r.survivors[r.winner], s.sides[r.winner].standing);
+            assert.equal(r.survivors[loser], s.sides[loser].routing + s.sides[loser].escaped);
+            assert.ok(r.survivors[r.winner] >= 1, 'the backend refuses a winner with nobody left');
+        }
+    }
+});
+
+test('fieldResult reports a scaled army in soldiers, and leaves the avatar out', () => {
+    const b = fight({ sides: [{ soldiers: 400, playerId: 1 }, { soldiers: 90, playerId: 2 }], seed: 3 });
+    const r = Sim.fieldResult(b);
+    assert.equal(r.winner, 0);
+    assert.ok(r.survivors[0] > 90 && r.survivors[0] <= 400, 'counted in soldiers, not figures: ' + r.survivors[0]);
+
+    const c = Sim.create({ sides: [{ soldiers: 3 }, { soldiers: 3 }], seed: 2 });
+    Sim.spawnAvatar(c, 0, Avatar.clean(null));
+    while (c.phase !== 'over') Sim.step(c, {});
+    const rc = Sim.fieldResult(c);
+    assert.ok(rc.survivors[0] <= 3, 'the avatar is not one of the army\'s soldiers');
+});

@@ -74,6 +74,10 @@
     // ------------------------------------------------------------------ setup from the game
 
     var engagements = [];
+    // Field battles: /battle?pending=<id> fights a battle the game is waiting on, and its result
+    // decides the map. The battle is locked to the real armies and seed: no setup, no restart.
+    var pendingId = params.get('pending');
+    var pending = null, posted = false;
 
     function engagementsFrom(state) {
         var mine = (state.armies || []).filter(function (a) { return a.playerId === 1; });
@@ -113,6 +117,12 @@
                 $('engagementNote').textContent = engagements.length
                     ? 'Each of your armies against the nearest enemy army, with real soldier counts and morale.'
                     : 'No armies to match up right now. Set up a custom battle below.';
+                if (pendingId) {
+                    pending = (state.pendingBattles || []).filter(function (b) { return String(b.id) === pendingId; })[0] || null;
+                    if (pending) { usePending(); return true; }
+                    $('engagementNote').textContent = 'That battle has already been decided. Here is a custom battle instead.';
+                    pendingId = null;
+                }
                 var wanted = params.get('army');
                 var idx = wanted ? engagements.findIndex(function (g) { return String(g.mine.id) === wanted; }) : -1;
                 if (idx >= 0) { sel.value = String(idx); useEngagement(idx); return true; }
@@ -124,6 +134,44 @@
                 $('engagementNote').textContent = 'Sign in, or play as a guest on the map, to load battles from your game.';
                 return false;
             });
+    }
+
+    function usePending() {
+        $('soldiers0').value = pending.side0Soldiers;
+        $('morale0').value = pending.side0Morale;
+        $('soldiers1').value = pending.side1Soldiers;
+        $('terrain').value = pending.terrain || 'EMPTY';
+        $('seed').value = pending.seed;
+        document.body.classList.add('bt-pending');
+        $('setupPanel').hidden = true;
+        $('restartBtn').hidden = true;
+        $('autoBtn').hidden = false;
+        $('resultAgain').hidden = true;
+        setup();
+        hint('Battle at (' + pending.x + ', ' + pending.y + '). This one counts: the map keeps what happens here.');
+    }
+
+    // Sends the result to the game; the map then shows it. AUTO lets the map's own rule decide.
+    function postResult(body) {
+        return fetch('/api/session/battle', { method: 'POST', headers: headers(), body: JSON.stringify(body) })
+            .then(function (r) {
+                if (r.status === 401) throw new Error('Your sign-in has lapsed. Sign in again from the map.');
+                if (r.status === 400) return r.json().catch(function () { return {}; }).then(function (e) {
+                    throw new Error(e.message || 'The game no longer has this battle waiting. It may have been decided from the map.');
+                });
+                if (!r.ok) throw new Error('The game could not be reached (' + r.status + ').');
+                return r.json();
+            });
+    }
+
+    function mapNow(state) {
+        // What the map shows on and around the battle tile after the result.
+        var mine = 0, theirs = 0;
+        (state.armies || []).forEach(function (a) {
+            if (Math.abs(a.x - pending.x) + Math.abs(a.y - pending.y) > 1) return;
+            if (a.playerId === 1) mine += a.soldiers; else theirs += a.soldiers;
+        });
+        return 'The map now has ' + mine + ' of yours and ' + theirs + ' of the enemy\u2019s on and around (' + pending.x + ', ' + pending.y + ').';
     }
 
     function useEngagement(i) {
@@ -160,6 +208,7 @@
         $('playBtn').textContent = 'Sound the advance';
         $('side0Name').textContent = 'Your army · ' + battle.sides[0].soldiers;
         $('side1Name').textContent = 'The enemy · ' + battle.sides[1].soldiers;
+        $('playBtn').disabled = false;
         if (kit) watchCamera();
         updateControls();
         var per = battle.sides[0].perFigure;
@@ -338,9 +387,38 @@
         var mapLine = { 0: 'your army wins with ' + m.remaining[0] + ' left', 1: 'the enemy wins with ' + m.remaining[1] + ' left',
                         'both-destroyed': 'both armies are destroyed', 'both-stand': 'both armies survive (' + m.remaining[0] + ' and ' + m.remaining[1] + ' left)' }[m.winner];
         $('resultMap').textContent = 'On the map, Barony’s turn rules decide this engagement in one exchange: ' + mapLine +
-            '. This battle does not change your game.';
+            '. This practice battle does not change your game: battles opened from the map do.';
         $('result').hidden = false;
         $('playBtn').textContent = 'Fight it again';
+        if (pending) {
+            $('playBtn').hidden = true;
+            $('avatarBtn').hidden = true;
+            $('autoBtn').hidden = true;
+            $('resultMap').textContent = 'Sending the result to your game\u2026';
+            if (posted) return;
+            posted = true;
+            var r = Sim.fieldResult(battle);
+            postResult({ battleId: pending.id, result: 'FIELD', winner: r.winner, survivors: r.survivors })
+                .then(function (state) {
+                    $('resultMap').textContent = 'This battle decided the map. You kept ' + r.survivors[0] + ', the enemy ' +
+                        r.survivors[1] + (r.winner === 0 ? ' (they fell back).' : r.winner === 1 ? ' (you fell back).' : '.') + ' ' + mapNow(state);
+                    nextOrBack(state);
+                })
+                .catch(function (e) { $('resultMap').textContent = e.message; });
+        }
+    }
+
+    // After a result: on to the turn's next battle, or back to the map.
+    function nextOrBack(state) {
+        var next = (state.pendingBattles || [])[0];
+        var back = document.querySelector('#result .bt-link');
+        if (next && state.fieldBattles !== false) {
+            back.textContent = 'Next battle';
+            back.href = '/battle?pending=' + encodeURIComponent(next.id);
+        } else {
+            back.textContent = 'Back to the map';
+            back.href = '/game';
+        }
     }
 
     function hint(text) {
@@ -514,7 +592,7 @@
 
     $('playBtn').addEventListener('click', function () {
         if (!battle) return;
-        if (battle.phase === 'over') { setup(); start(); return; }
+        if (battle.phase === 'over') { if (pending) return; setup(); start(); return; }
         if (running) { running = false; $('playBtn').textContent = 'Resume'; } else start();
     });
     $('speedBtn').addEventListener('click', function () {
@@ -528,14 +606,34 @@
     });
     $('avatarBtn').addEventListener('click', function () {
         if (!battle) return;
-        if (battle.phase === 'over') setup();
+        if (battle.phase === 'over') { if (pending) return; setup(); }
         var a = Sim.spawnAvatar(battle, 0, avatar);
         takeOver(a.id);
     });
     $('leaveBtn').addEventListener('click', leaveBody);
     $('viewBtn').addEventListener('click', toggleView);
     $('editAvatarBtn').addEventListener('click', openEditor);
-    $('resultAgain').addEventListener('click', function () { setup(); start(); });
+    $('resultAgain').addEventListener('click', function () { if (!pending) { setup(); start(); } });
+    $('autoBtn').addEventListener('click', function () {
+        if (!pending || posted) return;
+        posted = true;
+        running = false;
+        $('autoBtn').disabled = true;
+        postResult({ battleId: pending.id, result: 'AUTO' })
+            .then(function (state) {
+                var m = Sim.mapOutcome(battle.sides);
+                $('resultTitle').textContent = 'The map decided this battle';
+                $('resultField').textContent = 'Both sides lost the other\u2019s strength in one exchange: you kept ' + m.remaining[0] +
+                    ', the enemy ' + m.remaining[1] + '.';
+                $('resultMap').textContent = mapNow(state);
+                $('resultAgain').hidden = true;
+                $('result').hidden = false;
+                $('playBtn').hidden = true;
+                resultShown = true;
+                nextOrBack(state);
+            })
+            .catch(function (e) { posted = false; $('autoBtn').disabled = false; hint(e.message); });
+    });
     $('resultClose').addEventListener('click', function () { $('result').hidden = true; });
 
     // ------------------------------------------------------------------ boot

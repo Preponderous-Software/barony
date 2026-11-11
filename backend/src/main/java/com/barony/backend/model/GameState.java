@@ -25,6 +25,19 @@ public class GameState {
     private String militaryPolicy;
     private String populationPolicy;
     private int lastPolicyChangeTick;
+    /**
+     * Engagements waiting to be fought out or auto-resolved; while any are pending the turn is
+     * paused just before combat. Absent from saves made before field battles existed, which load
+     * with none.
+     */
+    private List<PendingBattle> pendingBattles;
+    private int nextBattleId;
+    /**
+     * Whether the player's engagements pause the turn for a field battle. Null in saves made before
+     * field battles existed and in games the engine runs directly: off. A player's session turns it
+     * on when it is still null (the default for players), and the player can turn it off.
+     */
+    private Boolean fieldBattles;
 
     public GameState(int width, int height) {
         this.grid = new Tile[width][height];
@@ -38,6 +51,7 @@ public class GameState {
         this.militaryPolicy = "STANDARD_SERVICE";
         this.populationPolicy = "STABLE_POPULATION";
         this.lastPolicyChangeTick = -15;
+        this.pendingBattles = new ArrayList<>();
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 grid[x][y] = new Tile(TileType.EMPTY);
@@ -55,6 +69,11 @@ public class GameState {
         snapshot.setMilitaryPolicy(militaryPolicy);
         snapshot.setPopulationPolicy(populationPolicy);
         snapshot.setLastPolicyChangeTick(lastPolicyChangeTick);
+        snapshot.setNextBattleId(nextBattleId);
+        snapshot.setFieldBattles(fieldBattles);
+        for (PendingBattle battle : getPendingBattlesInternal()) {
+            snapshot.pendingBattles.add(new PendingBattle(battle));
+        }
         for (int x = 0; x < getWidth(); x++) {
             for (int y = 0; y < getHeight(); y++) {
                 Tile source = grid[x][y];
@@ -79,6 +98,23 @@ public class GameState {
     @JsonIgnore
     public List<Army> getArmiesInternal() {
         return armies;
+    }
+
+    public List<PendingBattle> getPendingBattles() {
+        return new ArrayList<>(getPendingBattlesInternal());
+    }
+
+    @JsonIgnore
+    public List<PendingBattle> getPendingBattlesInternal() {
+        if (pendingBattles == null) {
+            pendingBattles = new ArrayList<>();
+        }
+        return pendingBattles;
+    }
+
+    @JsonIgnore
+    public boolean isFieldBattlesEnabled() {
+        return Boolean.TRUE.equals(fieldBattles);
     }
 
     public void incrementTick() {

@@ -171,6 +171,18 @@ public class WebController {
         return proxy(() -> backendService.sessionTick(cookie(request)));
     }
 
+    @PostMapping("/api/session/battle")
+    @ResponseBody
+    public ResponseEntity<?> sessionBattle(HttpServletRequest request, @RequestBody Map<String, Object> result) {
+        return proxy(() -> backendService.sessionBattle(cookie(request), result));
+    }
+
+    @PostMapping("/api/session/field-battles")
+    @ResponseBody
+    public ResponseEntity<?> sessionFieldBattles(HttpServletRequest request, @RequestBody Map<String, Object> body) {
+        return proxy(() -> backendService.sessionFieldBattles(cookie(request), body));
+    }
+
     @PostMapping("/api/session/command")
     @ResponseBody
     public ResponseEntity<?> sessionCommand(HttpServletRequest request, @RequestBody Command command) {
