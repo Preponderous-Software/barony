@@ -46,6 +46,13 @@ public class WebController {
         return "game";
     }
 
+    @GetMapping("/battle")
+    public String battle() {
+        // The 3D battlefield. It works without signing in (a custom battle); signed-in players and
+        // guests can also load engagements from their own game through the same /api/session/state.
+        return "battle";
+    }
+
     // Auth proxy endpoints (forward to the backend, which talks to UserAuth). On login/logout the
     // backend sets/clears the HttpOnly auth cookie; we relay that Set-Cookie to the browser.
     @PostMapping("/api/auth/register")

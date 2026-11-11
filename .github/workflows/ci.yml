@@ -81,3 +81,27 @@ jobs:
 
     - name: Run game page JS tests
       run: node --test web-client/src/test/js/
+
+  battle3d:
+    # The 3D battlefield's engine (web-client/battle3d/main.cpp) is built with Emscripten against
+    # Strata's pinned wasm release, and its outputs are committed so the Maven build needs no
+    # Emscripten. This rebuilds them and fails if the committed bytes differ.
+    name: Battlefield engine (rebuild and compare)
+    runs-on: ubuntu-latest
+    env:
+      EMSDK_VERSION: "6.0.11"   # Strata's; everything linked into one .wasm must agree on it
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install emsdk
+      run: |
+        git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+        "$RUNNER_TEMP/emsdk/emsdk" install "$EMSDK_VERSION"
+        "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSDK_VERSION"
+
+    - name: Rebuild and compare
+      run: |
+        source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+        web-client/battle3d/build.sh
+        git diff --stat --exit-code -- web-client/src/main/resources/static/battle3d/

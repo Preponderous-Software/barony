@@ -1,0 +1,228 @@
+// Tests for the 3D battlefield's simulation (battle-sim.js), its renderer rows (battle-render.js)
+// and the avatar rules (battle-avatar.js). Run with: node --test web-client/src/test/js/
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+
+const js = (f) => path.join(__dirname, '../../main/resources/static/js', f);
+const Sim = require(js('battle-sim.js'));
+const Render = require(js('battle-render.js'));
+const Avatar = require(js('battle-avatar.js'));
+
+function fight(options, input) {
+    const b = Sim.create(options);
+    let steps = 0;
+    while (b.phase !== 'over' && steps < 20000) { Sim.step(b, input ? input(b) : {}); steps++; }
+    return b;
+}
+
+function wins(sides, seeds) {
+    let won = 0;
+    for (let seed = 1; seed <= seeds; seed++) if (fight({ sides, seed }).winner === 0) won++;
+    return won;
+}
+
+// ----------------------------------------------------------------------- the simulation
+
+test('the same seed fights the same battle', () => {
+    const opts = { sides: [{ soldiers: 30, playerId: 1 }, { soldiers: 28, playerId: 2 }], seed: 9 };
+    const a = fight(opts), b = fight(opts);
+    assert.equal(a.time, b.time);
+    assert.equal(a.winner, b.winner);
+    assert.deepEqual(a.units.map(u => [u.state, u.x.toFixed(4)]), b.units.map(u => [u.state, u.x.toFixed(4)]));
+});
+
+test('every battle ends, with a winner or a draw', () => {
+    for (let seed = 1; seed <= 6; seed++) {
+        const b = fight({ sides: [{ soldiers: 1 + seed * 7 }, { soldiers: 50 - seed * 6 }], seed });
+        assert.equal(b.phase, 'over');
+        assert.ok([0, 1, 'draw'].includes(b.winner));
+    }
+});
+
+test('one figure per soldier up to the cap, then both sides share one scale', () => {
+    const small = Sim.create({ sides: [{ soldiers: 12 }, { soldiers: 30 }] });
+    assert.equal(small.units.filter(u => u.side === 0).length, 12);
+    assert.equal(small.units.filter(u => u.side === 1).length, 30);
+
+    const big = Sim.create({ sides: [{ soldiers: 900 }, { soldiers: 450 }] });
+    const n0 = big.units.filter(u => u.side === 0).length, n1 = big.units.filter(u => u.side === 1).length;
+    assert.equal(n0, Sim.FIGURE_CAP);
+    assert.equal(n1, Sim.FIGURE_CAP / 2, 'the smaller army keeps its proportion, not the cap');
+    assert.ok(Math.abs(big.sides[0].perFigure - big.sides[1].perFigure) < 1e-9);
+});
+
+test('a much larger army wins', () => {
+    assert.equal(wins([{ soldiers: 60, playerId: 1 }, { soldiers: 30, playerId: 2 }], 8), 8);
+    assert.equal(wins([{ soldiers: 200, playerId: 1 }, { soldiers: 150, playerId: 2 }], 6), 6,
+        'an army above the figure cap keeps its advantage in numbers');
+});
+
+test('morale counts for player 1, as in Barony\'s turn rules', () => {
+    const high = wins([{ soldiers: 30, morale: 160, playerId: 1 }, { soldiers: 30, playerId: 2 }], 8);
+    const low = wins([{ soldiers: 30, morale: 30, playerId: 1 }, { soldiers: 30, playerId: 2 }], 8);
+    assert.ok(high >= 7, 'high morale should win almost every even fight, won ' + high);
+    assert.ok(low <= 1, 'low morale should lose almost every even fight, won ' + low);
+    // The enemy's morale field is ignored, as CombatService ignores it.
+    const a = fight({ sides: [{ soldiers: 20, playerId: 1 }, { soldiers: 20, morale: 200, playerId: 2 }], seed: 3 });
+    const b = fight({ sides: [{ soldiers: 20, playerId: 1 }, { soldiers: 20, morale: 0, playerId: 2 }], seed: 3 });
+    assert.equal(a.time, b.time);
+});
+
+test('the beaten side breaks and is chased before the battle ends', () => {
+    const b = Sim.create({ sides: [{ soldiers: 50, playerId: 1 }, { soldiers: 25, playerId: 2 }], seed: 4 });
+    let sawPursuit = false;
+    while (b.phase !== 'over') { Sim.step(b, {}); sawPursuit = sawPursuit || b.phase === 'pursuit'; }
+    assert.ok(sawPursuit);
+    assert.ok(b.routed[1]);
+    assert.ok(b.log.some(l => /breaks and runs/.test(l.text)));
+    const s = Sim.summary(b);
+    assert.ok(s.sides[1].escaped + s.sides[1].routing > 0, 'some of the beaten side got away');
+});
+
+test('summary reports soldiers, not figures, for a scaled army', () => {
+    const b = Sim.create({ sides: [{ soldiers: 270 }, { soldiers: 90 }] });
+    const s = Sim.summary(b);
+    assert.equal(s.sides[0].soldiersStanding, 270);
+    assert.equal(s.sides[1].soldiersStanding, 90);
+});
+
+// ----------------------------------------------------------------------- the player
+
+test('a taken-over soldier moves where the player steers it, relative to the camera', () => {
+    const b = Sim.create({ sides: [{ soldiers: 5 }, { soldiers: 5 }], seed: 2 });
+    const u = b.units.find(v => v.side === 0);
+    assert.ok(Sim.embody(b, u.id));
+    const x0 = u.x, z0 = u.z;
+    // Heading +x (yaw 0), push forward for one second: it walks along +x.
+    for (let i = 0; i < 30; i++) Sim.step(b, { forward: 1, yaw: 0 });
+    assert.ok(u.x - x0 > 1.5, 'moved along +x');
+    assert.ok(Math.abs(u.z - z0) < 0.6, 'did not drift along z');
+    // Strafe right of a +x heading is +z.
+    const z1 = u.z;
+    for (let i = 0; i < 30; i++) Sim.step(b, { right: 1, yaw: 0 });
+    assert.ok(u.z - z1 > 1.5);
+});
+
+test('the player strikes the enemy in front, within reach', () => {
+    const b = Sim.create({ sides: [{ soldiers: 1 }, { soldiers: 1 }], seed: 5 });
+    const me = b.units[0], foe = b.units[1];
+    Sim.embody(b, me.id);
+    me.x = 0; me.z = 0; foe.x = 1.2; foe.z = 0; foe.cooldown = 99;   // the foe never swings back
+    const hp = foe.hp;
+    for (let i = 0; i < 60; i++) {
+        foe.x = 1.2; foe.z = 0; foe.cooldown = 99;
+        Sim.step(b, { attack: true, yaw: 0 });
+    }
+    assert.ok(foe.hp < hp || foe.state === 'dead', 'the foe was hit');
+});
+
+test('a raised shield turns most of a blow from the front', () => {
+    const hits = (block) => {
+        const b = Sim.create({ sides: [{ soldiers: 1 }, { soldiers: 1 }], seed: 6 });
+        const me = b.units[0], foe = b.units[1];
+        Sim.embody(b, me.id);
+        me.maxHp = me.hp = 1000;
+        let lost = 0;
+        for (let i = 0; i < 600; i++) {
+            me.x = 0; me.z = 0; foe.x = 1.2; foe.z = 0;
+            const before = me.hp;
+            Sim.step(b, { block, yaw: 0 });
+            lost += before - me.hp;
+        }
+        return lost;
+    };
+    const open = hits(false), shielded = hits(true);
+    assert.ok(open > 0);
+    assert.ok(shielded < open * 0.4, `shielded ${shielded} vs open ${open}`);
+});
+
+test('the player can let go, and a fallen figure is no longer the player\'s', () => {
+    const b = Sim.create({ sides: [{ soldiers: 3 }, { soldiers: 3 }], seed: 7 });
+    const u = b.units[0];
+    Sim.embody(b, u.id);
+    Sim.release(b);
+    assert.equal(b.player, null);
+    Sim.embody(b, u.id);
+    u.hp = 0.1; u.state = 'dead';
+    Sim.step(b, {});
+    assert.equal(b.player, null);
+    assert.equal(Sim.embody(b, u.id), false, 'the dead cannot be taken over');
+});
+
+test('an avatar joins a side, stronger than a soldier, and takes the player with it', () => {
+    const b = Sim.create({ sides: [{ soldiers: 10 }, { soldiers: 10 }], seed: 8 });
+    const a = Sim.spawnAvatar(b, 0, { name: 'Dan' });
+    assert.equal(a.kind, 'avatar');
+    assert.equal(a.side, 0);
+    assert.equal(b.player, a.id);
+    assert.ok(a.maxHp > Sim.KINDS.soldier.hp);
+    assert.ok(b.log.some(l => l.text === 'Dan takes the field.'));
+    // A second avatar replaces the first.
+    const a2 = Sim.spawnAvatar(b, 1, null);
+    assert.equal(a.state, 'escaped');
+    assert.equal(a2.side, 1);
+    // Avatars are not counted as the army's soldiers.
+    assert.equal(Sim.summary(b).sides[1].figures, 10);
+});
+
+// ----------------------------------------------------------------------- the map's rule
+
+test('mapOutcome repeats CombatService.resolveEngagement', () => {
+    // Equal armies at normal morale destroy each other in one exchange.
+    assert.deepEqual(Sim.mapOutcome([{ soldiers: 30, morale: 100, playerId: 1 }, { soldiers: 30, playerId: 2 }]).remaining, [0, 0]);
+    // Player 1's strength is soldiers * morale / 100, rounded half up ((s * m + 50) / 100).
+    const m = Sim.mapOutcome([{ soldiers: 25, morale: 150, playerId: 1 }, { soldiers: 30, playerId: 2 }]);
+    assert.deepEqual(m.strength, [38, 30]);   // 25 * 150 = 3750 -> (3750 + 50) / 100 = 38
+    assert.deepEqual(m.remaining, [0, 0]);
+    // The enemy's morale never counts.
+    assert.deepEqual(Sim.mapOutcome([{ soldiers: 40, morale: 100, playerId: 1 }, { soldiers: 30, morale: 10, playerId: 2 }]).remaining, [10, 0]);
+    assert.equal(Sim.mapOutcome([{ soldiers: 40, playerId: 1 }, { soldiers: 30, playerId: 2 }]).winner, 0);
+    assert.equal(Sim.mapOutcome([{ soldiers: 40, morale: 20, playerId: 1 }, { soldiers: 30, playerId: 2 }]).winner, 'both-stand');
+});
+
+// ----------------------------------------------------------------------- the renderer
+
+test('rows are whole, finite, and of known primitive kinds', () => {
+    const b = Sim.create({ sides: [{ soldiers: 20 }, { soldiers: 20 }], terrain: 'CASTLE', seed: 3 });
+    Sim.spawnAvatar(b, 0, Avatar.clean({ helmet: 'plume', weapon: 'hammer' }));
+    for (let i = 0; i < 600; i++) Sim.step(b, { attack: true });
+    for (const rows of [Render.scenery('CASTLE', 3), Render.scenery('VILLAGE', 3), Render.frame(b, { time: 4 }).prims]) {
+        assert.equal(rows.length % Render.STRIDE, 0);
+        for (let i = 0; i < rows.length; i += Render.STRIDE) {
+            assert.ok([0, 1, 2, 3].includes(rows[i]), 'kind ' + rows[i]);
+            for (let k = 1; k < Render.STRIDE; k++) assert.ok(Number.isFinite(rows[i + k]));
+        }
+    }
+});
+
+test('first person hides the player\'s own head', () => {
+    const b = Sim.create({ sides: [{ soldiers: 1 }, { soldiers: 1 }], seed: 1 });
+    Sim.embody(b, b.units[0].id);
+    const third = Render.frame(b, { firstPerson: false }).prims.length;
+    const first = Render.frame(b, { firstPerson: true }).prims.length;
+    assert.ok(first < third);
+});
+
+test('hexToLinear converts sRGB hex to linear light', () => {
+    assert.deepEqual(Render.hexToLinear('#ffffff'), [1, 1, 1]);
+    assert.deepEqual(Render.hexToLinear('#000000'), [0, 0, 0]);
+    assert.ok(Math.abs(Render.hexToLinear('#808080')[0] - 0.2158) < 0.001);
+    assert.deepEqual(Render.hexToLinear('not a colour'), [0.5, 0.5, 0.5]);
+});
+
+// ----------------------------------------------------------------------- the avatar
+
+test('Avatar.clean keeps a valid avatar and repairs anything else', () => {
+    const good = { name: 'Lady Wren', tunic: '#1F4FBF', trim: '#e0a100', helmet: 'greathelm', weapon: 'axe', shield: false };
+    assert.deepEqual(Avatar.clean(good), Object.assign({}, good, { tunic: '#1f4fbf' }));
+    assert.deepEqual(Avatar.clean(null), Avatar.DEFAULT);
+    assert.deepEqual(Avatar.clean('nonsense'), Avatar.DEFAULT);
+    const bad = Avatar.clean({ name: '  \u0007  ', tunic: 'red', trim: '#12345', helmet: 'tophat', weapon: 'gun', shield: 'yes' });
+    assert.deepEqual(bad, Avatar.DEFAULT);
+});
+
+test('Avatar names are single-spaced, printable and capped', () => {
+    assert.equal(Avatar.clean({ name: '  Sir   Otto \n of\tthe Fens ' }).name, 'Sir Otto of the Fens');
+    assert.equal(Avatar.clean({ name: 'x'.repeat(50) }).name.length, Avatar.NAME_MAX);
+});

@@ -76,6 +76,8 @@
                         <button id="panelSplitBtn" class="split-button" onclick="panelSplit()">Split Army</button>
                     </div>
                     <span id="panelSplitMsg" class="split-validation-msg"></span>
+                    <a id="panelBattleLink" class="battle-link" href="/battle"
+                       title="Fight this army against the nearest enemy army as a 3D field battle. It does not change your game.">&#9876; Fight in 3D</a>
                 </div>
             </div>
             </div><!-- /game-main -->
@@ -1385,6 +1387,7 @@
             actions.style.display = 'block';
             document.getElementById('selectedArmyTitle').textContent =
                 'Army #' + army.id + ' — ' + army.soldiers + ' soldiers at (' + army.x + ', ' + army.y + ')';
+            document.getElementById('panelBattleLink').href = '/battle?army=' + encodeURIComponent(army.id);
 
             const input = document.getElementById('panelSplitAmount');
             const maxSplit = Math.max(1, army.soldiers - 1);
