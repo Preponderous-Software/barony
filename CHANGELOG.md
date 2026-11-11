@@ -44,7 +44,8 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 - ✅ **A guest's unreadable run history is no longer overwritten** (#146): when a guest's stored run
   history could not be read, it was treated as empty without a log line, and the next finished game
   was written over it. The unreadable history is now kept and logged, and the new run is not
-  recorded in that case.
+  recorded in that case. The win and loss counts are left alone too, so they stay in step with the
+  history, and the run is still recorded on a later save once the history can be read.
 
 ### Web Client
 
@@ -92,7 +93,8 @@ All notable changes to the Barony Prototype MVP are documented in this file.
   only the player's avatar stood, that side won and the result lifted it to one surviving soldier,
   so an army wiped out on the field survived on the map. Only soldiers now decide who holds the
   field: once all of a side's soldiers have fallen or fled, that side has lost, even if the avatar
-  still stands.
+  still stands. If the beaten side's avatar cuts down the winner's last soldier during the pursuit,
+  the battle ends as a draw, so the map is never sent a winner with nobody left.
 - ✅ **The field-battle wiring is covered by the web client's tests** (#143): the proxy-route check
   now also reads the battle page's script, so its API calls must have a proxy; the two field-battle
   proxies (`POST /api/session/battle` and `POST /api/session/field-battles`) have forwarding tests;
