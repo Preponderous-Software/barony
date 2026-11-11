@@ -278,7 +278,7 @@ test('an avatar left alone does not hold the field, and no soldier is made from 
     runOut(b);
     assert.ok(Sim.alive(a), 'the avatar still stands');
     assert.equal(b.winner, 'draw');
-    assert.deepEqual(Sim.fieldResult(b), { winner: null, survivors: [0, 0] });
+    assert.deepEqual(Sim.fieldResult(b), { winner: null, survivors: [0, 0], survivorsByType: [[0, 0, 0], [0, 0, 0]] });
 });
 
 test('an avatar whose soldiers have all fallen loses to the enemy still standing', () => {
@@ -354,5 +354,125 @@ test('a winner whose last soldier falls during the pursuit holds nothing: the re
     assert.ok(Sim.alive(a));
     assert.equal(b.winner, 'draw');
     assert.equal(b.phase, 'over');
-    assert.deepEqual(Sim.fieldResult(b), { winner: null, survivors: [0, 0] });
+    assert.deepEqual(Sim.fieldResult(b), { winner: null, survivors: [0, 0], survivorsByType: [[0, 0, 0], [0, 0, 0]] });
+});
+
+// ----------------------------------------------------------------------- unit types
+
+const MIXED = [{ soldiers: 40, archers: 10, cavalry: 8, morale: 100, playerId: 1 }, { soldiers: 40, archers: 6, cavalry: 12, playerId: 2 }];
+
+test('infantry alone: every figure is infantry and the result is all infantry', () => {
+    const b = fight({ sides: [{ soldiers: 40, playerId: 1 }, { soldiers: 35, playerId: 2 }], seed: 42 });
+    assert.ok(b.units.filter(u => u.kind === 'soldier').every(u => u.type === 'infantry'));
+    const r = Sim.fieldResult(b);
+    assert.deepEqual(r.survivorsByType.map(t => t.slice(1)), [[0, 0], [0, 0]]);
+    assert.deepEqual(r.survivorsByType.map(t => t[0]), r.survivors);
+});
+
+test('a side never has more archers and cavalry than soldiers', () => {
+    const b = Sim.create({ sides: [{ soldiers: 10, archers: 8, cavalry: 7 }, { soldiers: 5, archers: -3, cavalry: 'x' }], seed: 1 });
+    assert.deepEqual([b.sides[0].infantry, b.sides[0].archers, b.sides[0].cavalry], [0, 3, 7]);
+    assert.deepEqual([b.sides[1].infantry, b.sides[1].archers, b.sides[1].cavalry], [5, 0, 0]);
+});
+
+test('figures divide between types in proportion, with at least one for every type a side has', () => {
+    const side = { soldiers: 1000, infantry: 990, archers: 6, cavalry: 4 };
+    const t = Sim.typeFigures(side, 90);
+    assert.equal(t.infantry.figures + t.archer.figures + t.cavalry.figures, 90);
+    assert.ok(t.archer.figures >= 1 && t.cavalry.figures >= 1);
+    assert.equal(t.archer.figures * t.archer.perFigure, 6);
+    const even = Sim.typeFigures({ soldiers: 60, infantry: 30, archers: 20, cavalry: 10 }, 60);
+    assert.deepEqual([even.infantry.figures, even.archer.figures, even.cavalry.figures], [30, 20, 10]);
+});
+
+test('infantry form the front, archers stand behind them and cavalry on the wings', () => {
+    const b = Sim.create({ sides: MIXED, seed: 3 });
+    const mine = b.units.filter(u => u.side === 0);
+    const front = (type) => mine.filter(u => u.type === type).map(u => u.z);
+    assert.ok(Math.min(...front('infantry')) > Math.max(...front('archer')), 'archers are behind the infantry (side 0 faces +z)');
+    const infX = Math.max(...mine.filter(u => u.type === 'infantry').map(u => Math.abs(u.x)));
+    assert.ok(mine.filter(u => u.type === 'cavalry').every(u => Math.abs(u.x) > infX), 'cavalry are outside the infantry\'s files');
+});
+
+test('archers shoot arrows that land and wound before the lines meet', () => {
+    const b = Sim.create({ sides: [{ soldiers: 30, archers: 30, playerId: 1 }, { soldiers: 30, playerId: 2 }], seed: 5 });
+    let shots = 0, arrowHits = 0, firstMeleeAt = null, firstArrowHitAt = null;
+    for (let i = 0; i < 30 * 60 && b.phase !== 'over'; i++) {
+        Sim.step(b, {});
+        for (const e of b.events) {
+            if (e.type === 'shot') shots++;
+            if (e.type === 'hit' && e.ranged) { arrowHits++; if (firstArrowHitAt == null) firstArrowHitAt = b.time; }
+            if (e.type === 'hit' && !e.ranged && firstMeleeAt == null) firstMeleeAt = b.time;
+        }
+    }
+    assert.ok(shots > 30 && arrowHits > 10, shots + ' shots, ' + arrowHits + ' hits');
+    assert.ok(firstArrowHitAt < (firstMeleeAt == null ? Infinity : firstMeleeAt), 'arrows strike first');
+});
+
+test('cavalry charge: the first blow at the gallop lands twice as hard', () => {
+    const b = fight({ sides: [{ soldiers: 30, cavalry: 30, playerId: 1 }, { soldiers: 30, playerId: 2 }], seed: 9 }, null);
+    assert.ok(b.winner === 0);
+    let charges = 0;
+    const c = Sim.create({ sides: [{ soldiers: 30, cavalry: 30, playerId: 1 }, { soldiers: 30, playerId: 2 }], seed: 9 });
+    for (let i = 0; i < 30 * 60 && c.phase !== 'over'; i++) { Sim.step(c, {}); charges += c.events.filter(e => e.type === 'hit' && e.charge).length; }
+    assert.ok(charges > 5, charges + ' charges');
+});
+
+test('a mixed army is worth more than the same number of infantry, and cavalry ride down archers', () => {
+    assert.ok(wins([{ soldiers: 40, cavalry: 15, playerId: 1 }, { soldiers: 40, playerId: 2 }], 12) >= 7);
+    assert.ok(wins([{ soldiers: 40, archers: 15, playerId: 1 }, { soldiers: 40, playerId: 2 }], 12) >= 6);
+    assert.ok(wins([{ soldiers: 40, cavalry: 40, playerId: 1 }, { soldiers: 40, archers: 40, playerId: 2 }], 12) >= 7);
+});
+
+test('fieldResult by type: each within what the side brought, summing to its survivors', () => {
+    for (let seed = 1; seed <= 8; seed++) {
+        const b = fight({ sides: MIXED, seed });
+        const r = Sim.fieldResult(b);
+        for (const side of [0, 1]) {
+            const brought = [b.sides[side].infantry, b.sides[side].archers, b.sides[side].cavalry];
+            r.survivorsByType[side].forEach((n, t) => assert.ok(n >= 0 && n <= brought[t], `side ${side} type ${t}: ${n} of ${brought[t]}`));
+            assert.equal(r.survivorsByType[side].reduce((a, c) => a + c, 0), r.survivors[side]);
+        }
+    }
+});
+
+test('fieldResult counts a scaled mixed army in soldiers, type by type', () => {
+    const b = fight({ sides: [{ soldiers: 600, archers: 150, cavalry: 90, playerId: 1 }, { soldiers: 100, playerId: 2 }], seed: 4 });
+    assert.equal(b.winner, 0);
+    const r = Sim.fieldResult(b);
+    assert.ok(r.survivorsByType[0][1] > 30 && r.survivorsByType[0][2] > 20, JSON.stringify(r.survivorsByType[0]));
+});
+
+test('mapOutcome weighs archers 1.25 and cavalry 1.5, as CombatService does', () => {
+    // 28 infantry + 8 archers + 4 cavalry = 2800 + 1000 + 600 = 4400 hundredths.
+    const army = { soldiers: 40, archers: 8, cavalry: 4 };
+    assert.equal(Sim.mapOutcome([Object.assign({ morale: 100, playerId: 1 }, army), { soldiers: 1, playerId: 2 }]).strength[0], 44);
+    assert.equal(Sim.mapOutcome([Object.assign({ morale: 150, playerId: 1 }, army), { soldiers: 1, playerId: 2 }]).strength[0], 66);
+    assert.equal(Sim.mapOutcome([{ soldiers: 1, playerId: 1 }, Object.assign({ playerId: 2 }, army)]).strength[1], 44);
+    // 3 archers: 375 hundredths, rounded half up to 4.
+    assert.equal(Sim.mapOutcome([{ soldiers: 1, playerId: 1 }, { soldiers: 3, archers: 3, playerId: 2 }]).strength[1], 4);
+});
+
+test('a player who takes over an archer shoots what they aim at', () => {
+    const b = Sim.create({ sides: [{ soldiers: 10, archers: 10, playerId: 1 }, { soldiers: 10, playerId: 2 }], seed: 2 });
+    const me = b.units.find(u => u.side === 0);
+    assert.ok(Sim.embody(b, me.id));
+    const enemy = b.units.find(u => u.side === 1);
+    enemy.x = me.x; enemy.z = me.z + 15;          // well inside bow range
+    const yaw = Math.atan2(enemy.z - me.z, enemy.x - me.x);
+    me.facing = yaw;
+    Sim.step(b, { yaw, attack: true });
+    assert.equal(b.arrows.length, 1);
+    assert.equal(b.arrows[0].by, me.id);
+});
+
+test('rows for archers, cavalry and arrows are whole and finite', () => {
+    const b = Sim.create({ sides: MIXED, seed: 6 });
+    for (let i = 0; i < 30 * 12; i++) Sim.step(b, {});
+    assert.ok(b.arrows.length > 0, 'arrows in the air');
+    const rows = Render.frame(b, {}).prims;
+    assert.equal(rows.length % Render.STRIDE, 0);
+    assert.ok(rows.every(Number.isFinite));
+    const plain = Sim.create({ sides: [{ soldiers: 40 }, { soldiers: 40 }], seed: 6 });
+    assert.ok(Render.frame(b, {}).prims.length > Render.frame(plain, {}).prims.length, 'horses and bows add rows');
 });

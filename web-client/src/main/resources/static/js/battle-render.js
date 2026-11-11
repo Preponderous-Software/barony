@@ -55,6 +55,8 @@
     var LEAF2 = hexToLinear('#4f7a33');
     var BARK = hexToLinear('#5b4330');
     var BLOOD = hexToLinear('#7a1712');
+    var HORSES = [hexToLinear('#6b4a2e'), hexToLinear('#3e2c1f'), hexToLinear('#8a6a48'), hexToLinear('#5a5550')];
+    var FLETCH = hexToLinear('#e8e2d0');
 
     // ------------------------------------------------------------- scenery
 
@@ -161,14 +163,42 @@
         return Math.abs(c) >= Math.abs(s) ? [c > 0 ? 1 : -1, 0] : [0, s > 0 ? 1 : -1];
     }
 
-    // One figure. look: {tunic, trim, helmet, weapon, shield, tall, hideHead}
+    // A horse under a mounted figure: body and neck along the axis nearest its facing (Strata's
+    // primitives do not turn), four legs that trot with the stride, and a dark mane and tail.
+    function horse(r, u, coat, dead) {
+        var a = axisOf(dead ? u.fallFacing : u.facing), x = u.x, z = u.z;
+        var lx = a[0] !== 0 ? 1.7 : 0.62, lz = a[1] !== 0 ? 1.7 : 0.62;
+        var mane = scale(coat, 0.45);
+        if (dead) {
+            r.add(CUBE, x - a[1] * 0.4, 0.32, z + a[0] * 0.4, lx, 0.62, lz, scale(coat, 0.8));
+            r.add(CUBE, x + a[0] * 1.1 - a[1] * 0.4, 0.22, z + a[1] * 1.1 + a[0] * 0.4, a[0] !== 0 ? 0.7 : 0.3, 0.3, a[1] !== 0 ? 0.7 : 0.3, coat);
+            return;
+        }
+        var trot = Math.sin(u.stride * 1.3) * Math.min(1, u.moving * 1.2);
+        r.add(CUBE, x, 1.12, z, lx, 0.62, lz, coat);
+        // neck and head, raised ahead
+        r.add(CUBE, x + a[0] * 0.95, 1.55 + trot * 0.04, z + a[1] * 0.95, a[0] !== 0 ? 0.45 : 0.3, 0.75, a[1] !== 0 ? 0.45 : 0.3, coat);
+        r.add(CUBE, x + a[0] * 1.3, 1.82 + trot * 0.04, z + a[1] * 1.3, a[0] !== 0 ? 0.62 : 0.26, 0.28, a[1] !== 0 ? 0.62 : 0.26, coat);
+        r.add(CUBE, x + a[0] * 0.85, 1.75, z + a[1] * 0.85, a[0] !== 0 ? 0.5 : 0.1, 0.5, a[1] !== 0 ? 0.5 : 0.1, mane);
+        r.add(CUBE, x - a[0] * 0.95, 1.05, z - a[1] * 0.95, 0.14, 0.7, 0.14, mane);       // tail
+        var side = [-a[1], a[0]];
+        for (var i = 0; i < 4; i++) {
+            var fore = i < 2 ? 0.62 : -0.62, s = i % 2 ? 1 : -1;
+            var swing = (i === 0 || i === 3 ? trot : -trot) * 0.22;
+            r.add(CYLINDER, x + a[0] * (fore + swing) + side[0] * s * 0.2, 0.42, z + a[1] * (fore + swing) + side[1] * s * 0.2, 0.15, 0.42, 0.15, coat);
+        }
+    }
+
+    // One figure. look: {tunic, trim, helmet, weapon, shield, tall, hideHead, mounted: coat colour}
     function figure(r, u, look, t) {
         var fx = Math.cos(u.facing), fz = Math.sin(u.facing);      // forward
         var rx = -fz, rz = fx;                                     // right
         var x = u.x, z = u.z;
         var k = look.tall || 1;
         var tunic = u.hurt > 0 ? mix(look.tunic, [1, 0.3, 0.25], u.hurt * 2.5) : look.tunic;
+        var lift = look.mounted ? 0.95 : 0;                        // a rider sits this far up
 
+        if (look.mounted) horse(r, u, look.mounted, u.state === 'dead');
         if (u.state === 'dead') {
             // Fallen, along the axis nearest the blow that felled it.
             var a = axisOf(u.fallFacing), along = 0.85 * k;
@@ -182,11 +212,17 @@
         var stride = Math.sin(u.stride) * Math.min(1, u.moving * 1.6);
         var lunge = u.swing > 0 ? Math.sin((1 - u.swing / 0.45) * Math.PI) : 0;   // 0..1..0 through a swing
         var crouch = u.blocking ? 0.08 : 0;
-        // legs
-        r.add(CYLINDER, x + rx * 0.13 + fx * stride * 0.22, 0.24 * k, z + rz * 0.13 + fz * stride * 0.22, 0.17 * k, 0.24 * k, 0.17 * k, LEATHER);
-        r.add(CYLINDER, x - rx * 0.13 - fx * stride * 0.22, 0.24 * k, z - rz * 0.13 - fz * stride * 0.22, 0.17 * k, 0.24 * k, 0.17 * k, LEATHER);
+        if (look.mounted) {
+            // legs astride the horse
+            r.add(CYLINDER, x + rx * 0.36, lift + 0.32, z + rz * 0.36, 0.15, 0.26, 0.15, LEATHER);
+            r.add(CYLINDER, x - rx * 0.36, lift + 0.32, z - rz * 0.36, 0.15, 0.26, 0.15, LEATHER);
+        } else {
+            // legs
+            r.add(CYLINDER, x + rx * 0.13 + fx * stride * 0.22, 0.24 * k, z + rz * 0.13 + fz * stride * 0.22, 0.17 * k, 0.24 * k, 0.17 * k, LEATHER);
+            r.add(CYLINDER, x - rx * 0.13 - fx * stride * 0.22, 0.24 * k, z - rz * 0.13 - fz * stride * 0.22, 0.17 * k, 0.24 * k, 0.17 * k, LEATHER);
+        }
         // body, leaning into a blow
-        var bx = x + fx * lunge * 0.12, bz = z + fz * lunge * 0.12, by = (0.98 - crouch) * k;
+        var bx = x + fx * lunge * 0.12, bz = z + fz * lunge * 0.12, by = (0.98 - crouch) * k + lift;
         r.add(CAPSULE, bx, by, bz, 0.52 * k, 0.34 * k, 0.52 * k, tunic);
         r.add(CUBE, bx, by - 0.12 * k, bz, 0.5 * k, 0.07 * k, 0.5 * k, LEATHER);   // belt
         var hy = by + 0.55 * k;
@@ -194,9 +230,21 @@
             r.add(SPHERE, bx, hy, bz, 0.3 * k, 0.32 * k, 0.3 * k, SKIN);
             helmet(r, look.helmet, bx, hy, bz, k, look);
         }
-        // weapon arm on the right
-        var wx = bx + rx * 0.38 + fx * (0.1 + lunge * 0.55), wz = bz + rz * 0.38 + fz * (0.1 + lunge * 0.55);
-        weapon(r, look.weapon, wx, by - 0.05 + lunge * 0.15, wz, k, fx, fz, lunge);
+        if (look.weapon === 'bow') {
+            // The bow held out on the left, drawn back on the right when it looses; a quiver behind.
+            var ox = bx - rx * 0.32 + fx * 0.42, oz = bz - rz * 0.32 + fz * 0.42;
+            r.add(CYLINDER, ox, by + 0.1, oz, 0.05, 0.62 * k, 0.05, WOOD);
+            r.add(SPHERE, ox, by + 0.72 * k, oz, 0.08, 0.08, 0.08, WOOD);
+            r.add(SPHERE, ox, by - 0.52 * k, oz, 0.08, 0.08, 0.08, WOOD);
+            var draw = 0.2 + lunge * 0.25;
+            r.add(SPHERE, bx + rx * 0.2 + fx * (0.42 - draw), by + 0.12, bz + rz * 0.2 + fz * (0.42 - draw), 0.13, 0.13, 0.13, SKIN);
+            r.add(CYLINDER, bx - fx * 0.3 + rx * 0.12, by + 0.25, bz - fz * 0.3 + rz * 0.12, 0.17, 0.3, 0.17, LEATHER);
+            r.add(CUBE, bx - fx * 0.3 + rx * 0.12, by + 0.62, bz - fz * 0.3 + rz * 0.12, 0.14, 0.12, 0.14, FLETCH);
+        } else {
+            // weapon arm on the right
+            var wx = bx + rx * 0.38 + fx * (0.1 + lunge * 0.55), wz = bz + rz * 0.38 + fz * (0.1 + lunge * 0.55);
+            weapon(r, look.weapon, wx, by - 0.05 + lunge * 0.15, wz, k, fx, fz, lunge);
+        }
         // shield on the left, in front; square to the axis nearest the facing
         if (look.shield && u.state !== 'routing') {
             var ax = axisOf(u.facing), out = u.blocking ? 0.42 : 0.3;
@@ -283,6 +331,12 @@
                 var av = u.avatar;
                 look = { tunic: hexToLinear(av.tunic), trim: hexToLinear(av.trim), shieldFace: hexToLinear(av.trim), helmet: av.helmet, weapon: av.weapon,
                          shield: av.shield !== false, tall: 1.12 };
+            } else if (u.type === 'archer') {
+                look = { tunic: mix(scale(side[u.side], 0.85 + (u.id % 5) * 0.04), LEATHER, 0.25), trim: trims[u.side], helmet: 'hood',
+                         weapon: 'bow', shield: false, tall: 0.95 + (u.id % 9) * 0.01 };
+            } else if (u.type === 'cavalry') {
+                look = { tunic: scale(side[u.side], 0.9 + (u.id % 5) * 0.03), trim: trims[u.side], helmet: 'plume',
+                         weapon: 'sword', shield: true, tall: 1, mounted: HORSES[u.id % HORSES.length] };
             } else {
                 look = { tunic: scale(side[u.side], 0.85 + (u.id % 5) * 0.04), trim: trims[u.side], helmet: 'kettle',
                          weapon: u.id % 7 === 0 ? 'axe' : 'spear', shield: true, tall: 0.96 + (u.id % 9) * 0.01 };
@@ -290,11 +344,23 @@
             look.hideHead = u.id === player && !!opts.firstPerson;
             figure(r, u, look, t);
         }
+        // Arrows in the air, on a shallow arc from bow to target: a shaft along the axis nearest
+        // their flight, with pale fletching at the back.
+        var arrows = b.arrows || [], now = b.time;
+        for (var ai = 0; ai < arrows.length; ai++) {
+            var ar = arrows[ai], p = clamp01((now - ar.t0) / (ar.t1 - ar.t0));
+            var dist = Math.sqrt((ar.x1 - ar.x0) * (ar.x1 - ar.x0) + (ar.z1 - ar.z0) * (ar.z1 - ar.z0));
+            var axz = axisOf(Math.atan2(ar.z1 - ar.z0, ar.x1 - ar.x0));
+            var ax = ar.x0 + (ar.x1 - ar.x0) * p, az = ar.z0 + (ar.z1 - ar.z0) * p;
+            var ay = 1.5 + Math.sin(p * Math.PI) * Math.min(9, dist * 0.22) - p * 0.4;
+            r.add(CUBE, ax, ay, az, axz[0] !== 0 ? 0.9 : 0.07, 0.07, axz[1] !== 0 ? 0.9 : 0.07, WOOD);
+            r.add(CUBE, ax - axz[0] * 0.33, ay, az - axz[1] * 0.33, axz[0] !== 0 ? 0.12 : 0.1, 0.1, axz[1] !== 0 ? 0.12 : 0.1, FLETCH);
+        }
         // A ring under the player's figure, so it can be found in a crowd.
         var me = player != null ? findUnit(b, player) : null;
         var points = [], lights = [];
         if (me && me.state !== 'dead') {
-            r.add(CYLINDER, me.x, 0.025, me.z, 0.95, 0.01, 0.95, scale(GOLD, 0.6));
+            r.add(CYLINDER, me.x, 0.025, me.z, me.type === 'cavalry' ? 1.6 : 0.95, 0.01, me.type === 'cavalry' ? 1.6 : 0.95, scale(GOLD, 0.6));
             lights.push([me.x, 2.6, me.z, 6, [1, 0.85, 0.5], 1.2]);
         }
         // Dust from the moving and sparks from blows this frame.
@@ -306,6 +372,8 @@
         }
         return { prims: r.f32(), points: points, lights: lights };
     }
+
+    function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
     function findUnit(b, id) {
         for (var i = 0; i < b.units.length; i++) if (b.units[i].id === id) return b.units[i];

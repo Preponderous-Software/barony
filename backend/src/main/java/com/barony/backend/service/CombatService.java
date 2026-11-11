@@ -18,6 +18,10 @@ class CombatService {
     private static final int PLAYER_1_ID = 1;
     private static final long ROUNDING_OFFSET = 50L;
     private static final long MORALE_DIVISOR = 100L;
+    /** Combat weight of each unit type, in hundredths of an infantryman. */
+    static final long INFANTRY_WEIGHT = 100L;
+    static final long ARCHER_WEIGHT = 125L;
+    static final long CAVALRY_WEIGHT = 150L;
 
     void processCombat(GameState gameState) {
         resolveCombatBetweenArmies(gameState);
@@ -65,15 +69,33 @@ class CombatService {
         int attackerStrength = calculateEffectiveStrength(attacker);
         int defenderStrength = calculateEffectiveStrength(defender);
 
-        attacker.setSoldiers(Math.max(0, attacker.getSoldiers() - defenderStrength));
-        defender.setSoldiers(Math.max(0, defender.getSoldiers() - attackerStrength));
+        // Losses come out of every unit type in proportion (Army.loseSoldiers), which for an
+        // all-infantry army is exactly the old subtraction clamped at zero.
+        attacker.loseSoldiers(defenderStrength);
+        defender.loseSoldiers(attackerStrength);
     }
 
-    private int calculateEffectiveStrength(Army army) {
+    /**
+     * An army's strength in the one-exchange rule: its soldiers weighted by type (infantry 1.0,
+     * archers 1.25, cavalry 1.5), held in hundredths so the arithmetic stays exact, then scaled by
+     * morale for player 1, rounding half up. For an all-infantry army the weighted figure is
+     * {@code soldiers * 100}, so this is exactly the old {@code (soldiers * morale + 50) / 100} for
+     * player 1 and {@code soldiers} for everyone else.
+     */
+    static int calculateEffectiveStrength(Army army) {
+        long weighted100 = weightedHundredths(army);
         if (army.getPlayerId() == PLAYER_1_ID) {
-            return (int) ((((long) army.getSoldiers() * army.getMorale()) + ROUNDING_OFFSET) / MORALE_DIVISOR);
+            return (int) ((weighted100 * army.getMorale() + ROUNDING_OFFSET * MORALE_DIVISOR)
+                    / (MORALE_DIVISOR * MORALE_DIVISOR));
         }
-        return army.getSoldiers();
+        return (int) ((weighted100 + ROUNDING_OFFSET) / MORALE_DIVISOR);
+    }
+
+    /** {@code infantry*100 + archers*125 + cavalry*150}: an army's weighted size in hundredths. */
+    static long weightedHundredths(Army army) {
+        return (long) army.getInfantry() * INFANTRY_WEIGHT
+                + (long) army.getArchers() * ARCHER_WEIGHT
+                + (long) army.getCavalry() * CAVALRY_WEIGHT;
     }
 
     private void removeDefeatedArmies(GameState gameState) {
@@ -109,14 +131,13 @@ class CombatService {
         group.sort((a, b) -> Integer.compare(a.getId(), b.getId()));
 
         Army survivingArmy = group.get(0);
-        int totalSoldiers = survivingArmy.getSoldiers();
         boolean hasMovementOrder = survivingArmy.isMoving();
         Integer destinationX = survivingArmy.getDestinationX();
         Integer destinationY = survivingArmy.getDestinationY();
 
         for (int i = 1; i < group.size(); i++) {
             Army absorbedArmy = group.get(i);
-            totalSoldiers += absorbedArmy.getSoldiers();
+            survivingArmy.absorb(absorbedArmy);   // soldiers, archers and cavalry all add up
 
             if (!hasMovementOrder && absorbedArmy.isMoving()) {
                 hasMovementOrder = true;
@@ -127,7 +148,6 @@ class CombatService {
             gameState.getArmiesInternal().remove(absorbedArmy);
         }
 
-        survivingArmy.setSoldiers(totalSoldiers);
         if (hasMovementOrder && destinationX != null && destinationY != null) {
             survivingArmy.setDestinationX(destinationX);
             survivingArmy.setDestinationY(destinationY);

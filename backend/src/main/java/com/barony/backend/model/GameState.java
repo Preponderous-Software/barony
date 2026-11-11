@@ -38,6 +38,12 @@ public class GameState {
      * on when it is still null (the default for players), and the player can turn it off.
      */
     private Boolean fieldBattles;
+    /**
+     * Whether the AI trains archers and cavalry in this game. True for every game started since
+     * unit types; null in saves made before them, so an old save's AI plays exactly as it did (the
+     * player may still train their own armies there).
+     */
+    private Boolean unitTypes;
 
     public GameState(int width, int height) {
         this.grid = new Tile[width][height];
@@ -71,6 +77,7 @@ public class GameState {
         snapshot.setLastPolicyChangeTick(lastPolicyChangeTick);
         snapshot.setNextBattleId(nextBattleId);
         snapshot.setFieldBattles(fieldBattles);
+        snapshot.setUnitTypes(unitTypes);
         for (PendingBattle battle : getPendingBattlesInternal()) {
             snapshot.pendingBattles.add(new PendingBattle(battle));
         }
@@ -110,6 +117,11 @@ public class GameState {
             pendingBattles = new ArrayList<>();
         }
         return pendingBattles;
+    }
+
+    @JsonIgnore
+    public boolean isAiTrainingEnabled() {
+        return Boolean.TRUE.equals(unitTypes);
     }
 
     @JsonIgnore

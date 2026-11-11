@@ -126,7 +126,41 @@ the one you want rather than getting whichever the game listed first.
   Auto Play stops on its own when the game ends.
 
 **Splitting armies:** select an army on the map and use the **Split off** control in the panel
-below the map, or use the split control next to any of your armies in the **Armies** panel.
+below the map, or use the split control next to any of your armies in the **Armies** panel. The new
+army takes its share of each unit type: split 10 off an army of 12 infantry, 6 archers and 2 cavalry
+and it leaves with 6 infantry, 3 archers and 1 cavalry.
+
+### Unit Types: Infantry, Archers and Cavalry
+
+Every army starts as **infantry**, and villages recruit infantry. You can train some of an army's
+infantry into **archers** or **cavalry**:
+
+| Unit | Trained at | Speed of training | Worth in a battle left to the map |
+|------|------------|-------------------|-----------------------------------|
+| Infantry | (recruited by villages) | n/a | 1 soldier |
+| Archers | a village you hold | 2 per turn per army | 1.25 soldiers |
+| Cavalry | a castle you hold | 1 per turn per army | 1.5 soldiers |
+
+**To train:** select an army standing on a village or castle you hold and not marching anywhere.
+The panel below the map shows **Train archers** (on a village) or **Train cavalry** (on a castle).
+Enter how many and tap **Train**. Each one is converted from one of the army's infantry, so the army
+does not grow, and the order works through over the following turns. The panel shows the order in
+progress ("Training 3 more archers, 2 a turn"); **Stop training** cancels it, and training again
+replaces it. Marching off, losing the tile, or running out of infantry also ends the order; what was
+already trained stays.
+
+**Seeing the mix:** an army's soldier count is always its total. Its panel, tooltip and Armies-list
+entry show the breakdown when it has archers or cavalry, for example
+"24 soldiers: 16 infantry · 5 archers · 3 cavalry", and on the map a small arrowhead (archers) and
+diamond (cavalry) sit on the army's circle. An all-infantry army looks as it always did.
+
+**Losses** come out of every unit type in proportion: an army of 12 infantry and 8 archers that
+loses 10 soldiers loses 6 infantry and 4 archers. The same goes for deserters. Merging armies adds
+their types together.
+
+The AI trains a modest number of archers and cavalry too when its armies wait on its villages and
+castles, in games started since unit types. A game saved before them plays exactly as it did: its
+armies are all infantry, and its AI does not train, though you can still train your own armies.
 
 **Keyboard shortcuts** (ignored while typing in a text field, or with Ctrl/Cmd/Alt held):
 - **Space** — Advance Turn
@@ -184,6 +218,9 @@ respawns all wait.
 
 **What the battle decides:**
 - The side that holds the field keeps the soldiers still standing at the end.
+- When the battle reports which kinds of soldier survived, each army keeps its own share of the
+  surviving infantry, archers and cavalry; otherwise each army's losses are taken from its unit
+  types in proportion.
 - The side that breaks keeps only the soldiers who ran and got away. It falls back to a
   neighbouring tile, but only onto open ground or its own villages and castles: never onto an enemy
   or neutral village or castle, and never onto a tile with an enemy army. An army with nowhere
@@ -194,9 +231,13 @@ respawns all wait.
 **Letting the map decide instead.** Choose **Let the map decide** (above the map, or on the
 battlefield), or turn off **Fight battles in 3D** in Settings. The battle is then settled by the
 classic rule:
-- **Simultaneous damage**: each army loses soldiers equal to the enemy's strength (your strength is
-  your soldiers × morale ÷ 100)
+- **Simultaneous damage**: each army loses soldiers equal to the enemy's strength. An army's strength
+  counts each infantryman as 1, each archer as 1.25 and each horseman as 1.5 (rounded to the nearest
+  whole soldier), and yours is then scaled by morale (× morale ÷ 100)
 - **Example**: 10 soldiers vs 7 soldiers at normal morale → 3 vs 0 (you win with 3 remaining)
+- **Example with cavalry**: your 20 infantry against an enemy of 10 infantry and 4 cavalry (14
+  soldiers, strength 16) → you keep 4 and the enemy is destroyed
+- Each army's losses are taken from its infantry, archers and cavalry in proportion
 
 **Advance Turn** while a battle is waiting also lets the map decide it, then plays the next turn.
 
@@ -419,8 +460,10 @@ battle on the 3D battlefield) and **Let the map decide** (settles it by the clas
 finishes once every waiting battle is decided.
 
 ### Selected Army Panel (below the map)
-Shows the army you clicked on the map — its ID, soldier count, and position — plus the
-**Split off** control and a link to the 3D battlefield. The link reads **⚔ Practice in 3D** and
+Shows the army you clicked on the map — its ID, soldier count (with its infantry, archers and
+cavalry when it has any), and position — plus the **Split off** control, the **Train** control when
+it stands on a village or castle you hold (see
+[Unit Types](#unit-types-infantry-archers-and-cavalry)), and a link to the 3D battlefield. The link reads **⚔ Practice in 3D** and
 opens a practice battle against the nearest enemy army, which changes nothing in your game. If the
 army is in a battle waiting this turn, it reads **⚔ Fight it in 3D** instead and opens that battle,
 the one that decides the map. Until you select one of your armies the panel just prompts you to

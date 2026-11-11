@@ -205,7 +205,25 @@ Track and display game statistics and historical events.
 
 #### 1.2.1 - Multiple Unit Types
 **Effort:** 20-25 hours  
-**Priority:** High
+**Priority:** High  
+**Status:** ✅ Infantry, archers and cavalry shipped (see CHANGELOG, Unreleased); siege weapons and
+the items below marked ⏳ remain future work.
+
+**What shipped** (it differs from the sketch below where noted):
+- ✅ An army keeps `soldiers` as its total with `archers` and `cavalry` counts (infantry is the rest),
+  so old saves load as all infantry and play exactly as before
+- ✅ Training converts infantry **1:1** (not 2:1 / 3:1): archers at a held village, 2 a turn per
+  army; cavalry at a held castle, 1 a turn per army; dropped if the army marches off or loses the tile
+- ✅ In the map's rule archers count 1.25 and cavalry 1.5 (no rock-paper-scissors matchups yet);
+  losses come out of every type in proportion
+- ✅ Field battles receive each side's mix and may report survivors by type
+- ✅ Unit composition display, map marks for archers and cavalry, and a Train control on the map page
+- ✅ The AI trains a modest share of archers and cavalry when idle (new games only)
+- ⏳ Different movement speeds (cavalry is not faster yet), ranged attacks on the map, rock-paper-
+  scissors bonuses, a tactical combat preview
+- ⏳ Siege weapons
+
+The original sketch:
 
 Introduce different unit types with unique characteristics and tactical roles.
 

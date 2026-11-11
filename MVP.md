@@ -594,7 +594,7 @@ An MVP is successful when:
 These features are explicitly **NOT** in MVP:
 
 **Core Gameplay:**
-- ❌ Multiple unit types (knights, archers, etc.)
+- ✅ ~~Multiple unit types~~: archers and cavalry shipped after the MVP (ROADMAP §1.2.1); siege weapons remain future work
 - ❌ Terrain effects (mountains, rivers, forests)
 - ❌ Fog of war / limited visibility
 - ❌ Resource system beyond soldier generation

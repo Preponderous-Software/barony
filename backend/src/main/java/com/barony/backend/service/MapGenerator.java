@@ -54,6 +54,8 @@ public class MapGenerator {
 
         state.getArmiesInternal().add(new Army(0, 0, 10, 1));
         state.getArmiesInternal().add(new Army(width - 1, height - 1, 10, 2));
+        // A new game is played with unit types: the AI trains archers and cavalry too.
+        state.setUnitTypes(true);
 
         return state;
     }

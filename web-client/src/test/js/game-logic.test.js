@@ -23,6 +23,13 @@ const {
     PREFERENCE_STORAGE_KEYS,
     mergePreferences,
     createPreferenceSync,
+    unitMix,
+    describeUnitMix,
+    describeArmyStrength,
+    describeTraining,
+    trainingOptionFor,
+    validateTrainCount,
+    armyUnitMarks,
     isUnreadableSave,
     readUnreadableSave,
     START_FRESH_CONFIRM,
@@ -1172,6 +1179,90 @@ test('a change is not uploaded when there is no signed-in account to upload it t
     harness.clock.advance(UPLOAD_DELAY_MS);
 
     assert.deepEqual(harness.uploads, []);
+});
+
+// ---------------------------------------------------------------------------
+// Unit types: archers and cavalry
+// ---------------------------------------------------------------------------
+
+test('an all-infantry army reads exactly as before unit types', () => {
+    const old = army(4, 1, 1, { soldiers: 24 });   // a state from before unit types: no mix fields
+    assert.equal(describeUnitMix(old), null);
+    assert.equal(describeArmyStrength(old), '24 soldiers');
+    assert.equal(describeArmyStrength(army(4, 1, 1, { soldiers: 1 })), '1 soldiers', 'word for word the old title');
+    assert.equal(describeArmyStrength(army(4, 1, 1, { soldiers: 24, archers: 0, cavalry: 0, infantry: 24 })), '24 soldiers');
+    assert.deepEqual(armyUnitMarks(old), []);
+    assert.equal(describeTraining(old), null);
+    assert.deepEqual(unitMix(old), { infantry: 24, archers: 0, cavalry: 0 });
+});
+
+test('a mixed army shows its infantry, archers and cavalry', () => {
+    const mixed = army(4, 1, 1, { soldiers: 24, archers: 5, cavalry: 3 });
+    assert.equal(describeArmyStrength(mixed), '24 soldiers: 16 infantry · 5 archers · 3 cavalry');
+    assert.equal(describeUnitMix(army(1, 0, 0, { soldiers: 6, archers: 1 })), '5 infantry · 1 archer');
+    assert.equal(describeUnitMix(army(1, 0, 0, { soldiers: 4, cavalry: 4 })), '4 cavalry');
+    assert.deepEqual(armyUnitMarks(mixed), ['archers', 'cavalry']);
+    assert.deepEqual(armyUnitMarks(army(1, 0, 0, { soldiers: 4, cavalry: 4 })), ['cavalry']);
+});
+
+test('the tooltip adds the mix and the training only when there is one', () => {
+    const state = tooltipState({ armies: [army(4, 1, 1, {
+        soldiers: 24, archers: 5, cavalry: 3, morale: 77, loyalty: 65, trainingType: 'CAVALRY', trainingRemaining: 2
+    })] });
+    assert.equal(getTooltipText(1, 1, state, CAPTURE_TURNS),
+        'Army #4 (Player 1) — Soldiers: 24 (16 infantry · 5 archers · 3 cavalry) | Morale: 77 | Loyalty: 65'
+        + ' | Training 2 more cavalry, 1 a turn');
+});
+
+test('describeTraining reads the order the army is working through', () => {
+    assert.equal(describeTraining(army(1, 0, 0, { trainingType: 'ARCHERS', trainingRemaining: 3 })),
+        'Training 3 more archers, 2 a turn');
+    assert.equal(describeTraining(army(1, 0, 0, { trainingType: 'ARCHERS', trainingRemaining: 1 })),
+        'Training 1 more archer, 2 a turn');
+    assert.equal(describeTraining(army(1, 0, 0, { trainingType: 'ARCHERS', trainingRemaining: 0 })), null);
+    assert.equal(describeTraining(army(1, 0, 0, { trainingType: null, trainingRemaining: 0 })), null);
+});
+
+// 2x2: (0,0) player-1 castle, (1,0) player-2 castle, (0,1) neutral village, (1,1) player-1 village.
+function trainingState() {
+    return {
+        width: 2, height: 2, armies: [],
+        grid: [
+            [tile('CASTLE', 1), tile('VILLAGE', 0)],
+            [tile('CASTLE', 2), tile('VILLAGE', 1)]
+        ]
+    };
+}
+
+test('archers train at a village you hold, cavalry at a castle you hold', () => {
+    const state = trainingState();
+    const atVillage = trainingOptionFor(army(1, 1, 1, { soldiers: 10, archers: 2 }), state);
+    assert.equal(atVillage.unitType, 'ARCHERS');
+    assert.equal(atVillage.perTurn, 2);
+    assert.equal(atVillage.max, 8, 'only infantry can be trained');
+    const atCastle = trainingOptionFor(army(1, 0, 0, { soldiers: 10 }), state);
+    assert.equal(atCastle.unitType, 'CAVALRY');
+    assert.equal(atCastle.perTurn, 1);
+    assert.equal(atCastle.max, 10);
+});
+
+test('there is nothing to train on open ground, on a tile you do not hold, or on the march', () => {
+    const state = trainingState();
+    state.grid[1][1] = tile('EMPTY', 0);
+    assert.equal(trainingOptionFor(army(1, 1, 1), state), null, 'open ground');
+    assert.equal(trainingOptionFor(army(1, 0, 1), state), null, 'a neutral village');
+    assert.equal(trainingOptionFor(army(1, 1, 0), state), null, "the enemy's castle");
+    assert.equal(trainingOptionFor(army(1, 0, 0, { destinationX: 1, destinationY: 1 }), state), null, 'marching');
+    assert.notEqual(trainingOptionFor(army(1, 0, 0, { destinationX: null, destinationY: null }), state), null);
+    assert.equal(trainingOptionFor(army(1, 0, 0), null), null);
+});
+
+test('validateTrainCount wants at least one and no more than the infantry', () => {
+    assert.equal(validateTrainCount(2, 8).valid, true);
+    assert.equal(validateTrainCount(8, 8).valid, true);
+    assert.equal(validateTrainCount(0, 8).valid, false);
+    assert.equal(validateTrainCount(NaN, 8).valid, false);
+    assert.deepEqual(validateTrainCount(9, 8), { valid: false, message: 'Only 8 infantry to train' });
 });
 
 // ---------------------------------------------------------------- unreadable saved game
