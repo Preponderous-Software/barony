@@ -154,6 +154,12 @@ public class BackendService {
         return restTemplate.postForObject(backendUrl + "/api/session/reset", entity, GameState.class);
     }
 
+    /** The player's confirmed fresh start after their saved game could not be read. */
+    public GameState sessionStartFresh(String cookie) {
+        HttpEntity<Void> entity = new HttpEntity<>(jsonHeaders(cookie));
+        return restTemplate.postForObject(backendUrl + "/api/session/start-fresh", entity, GameState.class);
+    }
+
     public GameState sessionChangePolicy(String cookie, RulerDecision decision) {
         HttpEntity<RulerDecision> entity = new HttpEntity<>(decision, jsonHeaders(cookie));
         return restTemplate.postForObject(backendUrl + "/api/session/decision", entity, GameState.class);

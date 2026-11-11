@@ -98,6 +98,15 @@ Then open http://localhost:3000 in your browser.
 - `PUT /api/session/preferences` - Replace the player's stored interface preferences (JSON object, up to 8192 characters serialized; larger is rejected with `400`)
 - `POST /api/session/battle` - Resolve one of the paused turn's pending battles, with a fought result or by the map's rule (body format under [3D Battlefield](#3d-battlefield))
 - `POST /api/session/field-battles` - Turn field battles on or off for the player's game (body format under [3D Battlefield](#3d-battlefield))
+- `POST /api/session/start-fresh` - Start a fresh game after the player's saved game could not be read (see below); the unreadable save is copied to `saved_game_backup` first. Returns a readable game unchanged, so repeating it is safe. Accounts only (`403` for a guest)
+
+**A saved game that cannot be read is never replaced.** If an account's stored game exists but
+cannot be read, it is left untouched in the database and logged (the username and the parse error,
+not the save itself), and every endpoint above that needs the game answers `409` with
+`{"error": "unreadable-save", "message": "...", "status": 409}` instead of making a fresh game. The
+game page shows that message with a **Start a fresh game** button, which asks for confirmation and
+then calls `POST /api/session/start-fresh`. A guest claim (`POST /api/guest/claim`) into such an
+account is refused with `409`, as for any account that already has a game.
 
 These endpoints validate the token against UserAuth on every request, so a missing, invalid,
 expired, or revoked (logged-out) token that cannot be renewed is rejected with `401`. When the
@@ -375,7 +384,9 @@ GitHub Actions runs on all PRs:
 
 ### Backend
 - Spring Boot REST API
-- Per-player game state, kept in memory and **persisted per account** so games survive restarts
+- Per-player game state, kept in memory and **persisted per account** so games survive restarts.
+  A stored game that can't be read is kept as it is, never overwritten; it is copied unchanged to the
+  insert-only `saved_game_backup` table only when the player confirms a fresh start
 - Storage: embedded **H2** saved to `./data` by default (mount it as a volume in production); set `DB_URL` (+ `DB_USERNAME`/`DB_PASSWORD`) to use Postgres instead
 - Unique army IDs (not list indices)
 - CORS: localhost only

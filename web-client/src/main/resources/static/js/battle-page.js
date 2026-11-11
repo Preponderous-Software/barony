@@ -116,7 +116,17 @@
     function loadGame() {
         var sel = $('engagement');
         return fetch('/api/session/state', { headers: headers() })
-            .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); return r.json(); })
+            .then(function (r) {
+                // 409 "unreadable-save": the account's saved game exists but cannot be read. The
+                // map explains it and offers a fresh start; here only a custom battle is possible.
+                if (r.status === 409) return r.json().catch(function () { return {}; }).then(function (body) {
+                    var e = new Error('status 409');
+                    e.unreadableSave = !!body && body.error === 'unreadable-save';
+                    throw e;
+                });
+                if (!r.ok) throw new Error('status ' + r.status);
+                return r.json();
+            })
             .then(function (state) {
                 engagements = engagementsFrom(state);
                 sel.textContent = '';
@@ -142,10 +152,21 @@
                 if (idx >= 0) { sel.value = String(idx); useEngagement(idx); return true; }
                 return false;
             })
-            .catch(function () {
+            .catch(function (e) {
                 sel.textContent = '';
                 sel.add(new Option('Custom battle', ''));
-                $('engagementNote').textContent = 'Sign in, or play as a guest on the map, to load battles from your game.';
+                var note = $('engagementNote');
+                if (e && e.unreadableSave) {
+                    pendingId = null;
+                    note.textContent = 'Your saved game couldn’t be read, so no battles can be loaded from it. It has been kept. ';
+                    var back = document.createElement('a');
+                    back.href = '/game';
+                    back.textContent = 'Go back to the map';
+                    note.appendChild(back);
+                    note.appendChild(document.createTextNode(' to start a fresh game, or set up a custom battle below.'));
+                } else {
+                    note.textContent = 'Sign in, or play as a guest on the map, to load battles from your game.';
+                }
                 return false;
             });
     }

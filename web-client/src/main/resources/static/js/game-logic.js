@@ -512,7 +512,53 @@
         return { load: load, queueUpload: queueUpload };
     }
 
+    // The backend's answer when the player's saved game exists but cannot be read: 409 with
+    // {"error": "unreadable-save"} (the web client's proxy relays that body unchanged). The save is
+    // kept as it was; the page shows a message and a "Start a fresh game" button instead of a game.
+    var UNREADABLE_SAVE_ERROR = 'unreadable-save';
+
+    function isUnreadableSave(status, body) {
+        return status === 409 && !!body && typeof body === 'object' && body.error === UNREADABLE_SAVE_ERROR;
+    }
+
+    // Resolves to true when a fetch Response is that answer. Reads a clone, so the caller can still
+    // read the body itself when it is some other 409.
+    function readUnreadableSave(response) {
+        if (!response || response.status !== 409) return Promise.resolve(false);
+        var copy = typeof response.clone === 'function' ? response.clone() : response;
+        return Promise.resolve()
+            .then(function () { return copy.json(); })
+            .then(function (body) { return isUnreadableSave(response.status, body); })
+            .catch(function () { return false; });
+    }
+
+    var START_FRESH_CONFIRM = 'Start a fresh game? Your unreadable save will be set aside, not deleted, '
+        + 'and a new game will begin.';
+
+    // The confirmed fresh start. Asks first (deps.confirm, i.e. window.confirm) and sends nothing if
+    // the player says no, resolving to null; otherwise resolves to the new game's state. A lapsed
+    // sign-in rejects with an error whose signedOut is true.
+    function startFreshGame(deps) {
+        if (!deps.confirm(START_FRESH_CONFIRM)) return Promise.resolve(null);
+        return deps.fetch('/api/session/start-fresh', { method: 'POST', headers: deps.headers })
+            .then(function (response) {
+                if (response.status === 401) {
+                    var signedOut = new Error('Your sign-in has lapsed. Please log in again.');
+                    signedOut.signedOut = true;
+                    throw signedOut;
+                }
+                if (!response.ok) {
+                    throw new Error('Could not start a fresh game (' + response.status + '). Your saved game is still kept.');
+                }
+                return response.json();
+            });
+    }
+
     return {
+        isUnreadableSave: isUnreadableSave,
+        readUnreadableSave: readUnreadableSave,
+        START_FRESH_CONFIRM: START_FRESH_CONFIRM,
+        startFreshGame: startFreshGame,
         summarizeHoldings: summarizeHoldings,
         getStatClass: getStatClass,
         diffCastleMilestones: diffCastleMilestones,

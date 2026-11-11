@@ -290,6 +290,17 @@ class BackendServiceTest {
     }
 
     @Test
+    void sessionStartFreshForwardsAuthCookie() {
+        server.expect(requestTo(BACKEND + "/api/session/start-fresh"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.COOKIE, "barony_token=jwt-abc"))
+                .andRespond(withSuccess("{\"tickCount\":0}", MediaType.APPLICATION_JSON));
+
+        assertEquals(0, service.sessionStartFresh("barony_token=jwt-abc").getTickCount());
+        server.verify();
+    }
+
+    @Test
     void sessionDecisionForwardsAuthCookieAndTheDecision() {
         server.expect(requestTo(BACKEND + "/api/session/decision"))
                 .andExpect(method(HttpMethod.POST))

@@ -2,6 +2,7 @@ package com.barony.webclient.controller;
 
 import com.barony.webclient.model.*;
 import com.barony.webclient.service.BackendService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,11 @@ import java.util.Map;
 public class WebController {
 
     private final BackendService backendService;
+
+    /** The backend's error code for a saved game that exists but could not be read. */
+    static final String UNREADABLE_SAVE = "unreadable-save";
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping("/")
     public String index() {
@@ -195,6 +201,12 @@ public class WebController {
         return proxy(() -> backendService.sessionReset(cookie(request)));
     }
 
+    @PostMapping("/api/session/start-fresh")
+    @ResponseBody
+    public ResponseEntity<?> sessionStartFresh(HttpServletRequest request) {
+        return proxy(() -> backendService.sessionStartFresh(cookie(request)));
+    }
+
     @PostMapping("/api/session/decision")
     @ResponseBody
     public ResponseEntity<?> sessionDecision(HttpServletRequest request, @RequestBody RulerDecision decision) {
@@ -257,11 +269,33 @@ public class WebController {
     }
 
     private ResponseEntity<Map<String, Object>> passthrough(org.springframework.web.client.RestClientResponseException e) {
+        Map<String, Object> unreadableSave = unreadableSaveBody(e);
+        if (unreadableSave != null) {
+            return ResponseEntity.status(e.getStatusCode()).body(unreadableSave);
+        }
         Map<String, Object> error = new HashMap<>();
         error.put("error", e.getStatusText());
         error.put("message", e.getResponseBodyAsString());
         error.put("status", e.getStatusCode().value());
         return ResponseEntity.status(e.getStatusCode()).body(error);
+    }
+
+    /**
+     * The backend's "saved game could not be read" answer (409 {@code {"error": "unreadable-save"}}),
+     * relayed with its body unchanged so the page sees the same JSON it gets behind the gateway and
+     * can offer a fresh start instead of a generic error. Any other body is not this answer.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> unreadableSaveBody(org.springframework.web.client.RestClientResponseException e) {
+        if (e.getStatusCode().value() != HttpStatus.CONFLICT.value()) {
+            return null;
+        }
+        try {
+            Map<String, Object> body = objectMapper.readValue(e.getResponseBodyAsString(), Map.class);
+            return body != null && UNREADABLE_SAVE.equals(body.get("error")) ? body : null;
+        } catch (Exception notJson) {
+            return null;
+        }
     }
 
     private ResponseEntity<Map<String, Object>> unavailable(RestClientException e) {
