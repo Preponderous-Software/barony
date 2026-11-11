@@ -160,19 +160,25 @@ public class GuestSessionService {
         }
         GameState state = session.getGameState();
         if (state.isGameOver() && !state.isRunRecorded()) {
-            RunRecord run = SessionService.buildRunRecord("guest", state);
-            List<RunRecord> runs = readRuns(guest.getRuns());
-            runs.add(0, run);
-            if (runs.size() > MAX_RUN_HISTORY) {
-                runs = new ArrayList<>(runs.subList(0, MAX_RUN_HISTORY));
-            }
-            guest.setRuns(write(runs));
-            if ("WIN".equals(run.getResult())) {
-                guest.setWins(guest.getWins() + 1);
+            List<RunRecord> runs = readRunsOrNull(guest.getRuns(), guest.getGuestKey());
+            if (runs == null) {
+                // Save integrity first: never overwrite stored history that cannot be read.
+                log.warn("Run not recorded for guest {}… — the stored run history could not be read "
+                        + "and is left untouched", shortKey(guest.getGuestKey()));
             } else {
-                guest.setLosses(guest.getLosses() + 1);
+                RunRecord run = SessionService.buildRunRecord("guest", state);
+                runs.add(0, run);
+                if (runs.size() > MAX_RUN_HISTORY) {
+                    runs = new ArrayList<>(runs.subList(0, MAX_RUN_HISTORY));
+                }
+                guest.setRuns(write(runs));
+                if ("WIN".equals(run.getResult())) {
+                    guest.setWins(guest.getWins() + 1);
+                } else {
+                    guest.setLosses(guest.getLosses() + 1);
+                }
+                state.setRunRecorded(true);
             }
-            state.setRunRecorded(true);
         }
         guest.setState(write(state));
         guest.setLastSeenAt(clock.instant());
@@ -184,7 +190,7 @@ public class GuestSessionService {
         repository.findById(session.getUsername()).ifPresent(guest -> {
             history.setWins(guest.getWins());
             history.setLosses(guest.getLosses());
-            history.setRuns(readRuns(guest.getRuns()));
+            history.setRuns(readRuns(guest.getRuns(), guest.getGuestKey()));
         });
         if (history.getRuns() == null) {
             history.setRuns(new ArrayList<>());
@@ -195,7 +201,7 @@ public class GuestSessionService {
     /** The guest's stored finished runs, newest first (used when an account claims them). */
     public synchronized List<RunRecord> getRuns(Session session) {
         return repository.findById(session.getUsername())
-                .map(g -> readRuns(g.getRuns()))
+                .map(g -> readRuns(g.getRuns(), g.getGuestKey()))
                 .orElseGet(ArrayList::new);
     }
 
@@ -259,14 +265,30 @@ public class GuestSessionService {
         }
     }
 
-    private List<RunRecord> readRuns(String json) {
+    /** The stored runs for display: empty when blank or unreadable (the latter is logged). */
+    private List<RunRecord> readRuns(String json, String key) {
+        List<RunRecord> runs = readRunsOrNull(json, key);
+        return runs == null ? new ArrayList<>() : runs;
+    }
+
+    /**
+     * The stored runs as a mutable list: empty when blank or absent, {@code null} when the JSON is
+     * present but unreadable (logged), so a caller can tell "no history yet" from "history it must
+     * not overwrite".
+     */
+    private List<RunRecord> readRunsOrNull(String json, String key) {
         if (json == null || json.isBlank()) {
             return new ArrayList<>();
         }
         try {
             return new ArrayList<>(objectMapper.readValue(json, new TypeReference<List<RunRecord>>() { }));
         } catch (Exception e) {
-            return new ArrayList<>();
+            log.warn("Could not deserialize run history of guest {}…: {}", shortKey(key), e.getMessage());
+            return null;
         }
+    }
+
+    private static String shortKey(String key) {
+        return key == null ? "?" : key.substring(0, Math.min(8, key.length()));
     }
 }
