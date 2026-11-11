@@ -211,6 +211,22 @@ class WebControllerTest {
     }
 
     @Test
+    void anUnreadableGuestGameIsRelayedFromTheGuestRoutesWithTheBackendsOwnBody() throws Exception {
+        HttpClientErrorException unreadable = HttpClientErrorException.create(HttpStatus.CONFLICT, "Conflict",
+                HttpHeaders.EMPTY, UNREADABLE_SAVE_BODY.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        when(backendService.guest(any())).thenThrow(unreadable);
+        when(backendService.claimGuest(any())).thenThrow(unreadable);
+
+        for (String route : new String[] {"/api/guest", "/api/guest/claim"}) {
+            mockMvc.perform(post(route))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error").value("unreadable-save"))
+                    .andExpect(jsonPath("$.message").value("Your saved game could not be read."))
+                    .andExpect(header().doesNotExist("Set-Cookie"));
+        }
+    }
+
+    @Test
     void registerReturns201WithTheBackendBody() throws Exception {
         when(backendService.register(any())).thenReturn(Map.of("username", "alice"));
 

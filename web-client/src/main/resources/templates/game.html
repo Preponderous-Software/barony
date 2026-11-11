@@ -21,7 +21,7 @@
         <div id="error" class="error" style="display: none;">
             <p id="errorMessage"></p>
         </div>
-        <!-- Shown instead of the game when the account's saved game exists but cannot be read
+        <!-- Shown instead of the game when the player's saved game (account or guest) exists but cannot be read
              (the backend's 409 "unreadable-save"). The save is kept; nothing replaces it until the
              player confirms a fresh start. -->
         <div id="unreadableSave" class="unreadable-save" role="alert" style="display: none;">
@@ -961,7 +961,7 @@
         // ========================
         // Unreadable saved game
         // ========================
-        // While the account's save cannot be read, the game is hidden and every game action is a
+        // While the player's save (account or guest) cannot be read, the game is hidden and every game action is a
         // no-op: the backend refuses them anyway (409), and the page offers only the fresh start.
         let saveUnreadable = false;
 

@@ -173,7 +173,8 @@
 
         // "Keep your progress": move this browser's guest game into the account just logged in to.
         // The server only does this for an account with no game yet; otherwise it keeps both as
-        // they are (409) and the guest game stays in this browser.
+        // they are (409) and the guest game stays in this browser. A guest game that can't be read
+        // is refused too (409 "unreadable-save") and kept, never copied or deleted.
         function claimGuestGameIfAsked() {
             const box = document.getElementById('keepGuest');
             if (!box || !box.checked || localStorage.getItem('barony_has_guest') !== '1') {
@@ -184,11 +185,20 @@
                     if (response.ok) {
                         localStorage.removeItem('barony_has_guest');
                     } else if (response.status === 409) {
-                        sessionStorage.setItem('gameNotice',
-                            'This account already had a game, so it was kept. Your guest game is still in this browser.');
+                        return response.json().catch(() => null).then(body => {
+                            sessionStorage.setItem('gameNotice', isUnreadableSaveAnswer(409, body)
+                                ? 'Your guest game couldn’t be read, so it was not moved. It has been kept in this browser.'
+                                : 'This account already had a game, so it was kept. Your guest game is still in this browser.');
+                        });
                     }
                 })
                 .catch(error => console.warn('Guest game was not moved:', error));
+        }
+
+        // The backend's answer when the saved game exists but cannot be read (as isUnreadableSave
+        // in game-logic.js, which this page does not load).
+        function isUnreadableSaveAnswer(status, body) {
+            return status === 409 && !!body && body.error === 'unreadable-save';
         }
 
         function playAsGuest() {
@@ -196,9 +206,12 @@
             const button = document.getElementById('guestButton');
             const restore = setButtonBusy(button, 'Starting…');
             fetch('/api/guest', { method: 'POST' })
-                .then(response => response.json().then(data => ({ ok: response.ok, data: data })))
+                .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data: data })))
                 .then(result => {
-                    if (!result.ok) {
+                    // This browser's guest game exists but can't be read: it is kept, and the game
+                    // page explains that and offers a confirmed fresh start, so go there.
+                    const unreadable = isUnreadableSaveAnswer(result.status, result.data);
+                    if (!result.ok && !unreadable) {
                         const msg = (result.data && (result.data.message || result.data.error))
                             || 'Could not start a guest game.';
                         throw new Error(msg);
