@@ -274,8 +274,26 @@ battle without signing in.
 
 One figure stands for each soldier up to 90 a side. Above that, both armies share one scale, so a
 larger army keeps its edge in numbers. Morale decides how hard a side hits and how long it holds
-before it breaks and runs. **The field battle does not change your game.** On the map, the turn rules
-still resolve the engagement in one exchange, and the result card shows both outcomes side by side.
+before it breaks and runs.
+
+**Battles decide the map.** When a turn brings your armies onto the same tile as the enemy, the turn
+pauses before combat and the game takes you to that battle (`/battle?pending=<id>`). That battle is
+locked to the real armies, ground and seed. When it ends, the result is sent back to the game. The
+winner keeps the soldiers still standing. The loser keeps only those who got away and falls back to
+a neighbouring tile (its own land first), or is lost if surrounded. Then the rest of the turn runs:
+captures, the win check, desertion and respawns. You can instead **Let the map decide**, which applies
+the classic rule that both sides lose the other's strength in one exchange. Turning off **Fight battles
+in 3D** in Settings makes every battle resolve that way at once. Ending the turn while a battle waits
+also lets the map decide it. Battles you set up yourself at `/battle` are practice and change
+nothing.
+
+The browser reports a fought battle's result, and the backend refuses any result in which a side
+keeps more soldiers than it started with or the winner has nobody left. Barony is single-player
+against the AI, so a forged result only affects your own game and run history.
+
+API: `POST /api/session/battle` takes `{"battleId", "result": "FIELD", "winner": 0|1|null,
+"survivors": [yours, theirs]}` or `{"battleId", "result": "AUTO"}`. `POST /api/session/field-battles`
+takes `{"enabled": true|false}`. Pending battles appear in the game state as `pendingBattles`.
 
 The engine is a thin C++ host (`web-client/battle3d/main.cpp`) built with Emscripten 6.0.11
 against Strata's pinned v0.7.0 wasm release (`web-client/battle3d/build.sh`). The outputs are
