@@ -258,3 +258,101 @@ test('fieldResult reports a scaled army in soldiers, and leaves the avatar out',
     const rc = Sim.fieldResult(c);
     assert.ok(rc.survivors[0] <= 3, 'the avatar is not one of the army\'s soldiers');
 });
+
+// ----------------------------------------------------------------------- the avatar cannot hold the field alone (#141)
+
+function killAll(b, side) {
+    for (const u of b.units) if (u.side === side && u.kind === 'soldier') { u.hp = 0; u.state = 'dead'; }
+}
+
+function runOut(b) {
+    let steps = 0;
+    while (b.phase !== 'over' && steps < 20000) { Sim.step(b, {}); steps++; }
+}
+
+test('an avatar left alone does not hold the field, and no soldier is made from nothing', () => {
+    const b = Sim.create({ sides: [{ soldiers: 4, playerId: 1 }, { soldiers: 2, playerId: 2 }], seed: 5 });
+    const a = Sim.spawnAvatar(b, 0, Avatar.clean(null));
+    killAll(b, 0);
+    killAll(b, 1);
+    runOut(b);
+    assert.ok(Sim.alive(a), 'the avatar still stands');
+    assert.equal(b.winner, 'draw');
+    assert.deepEqual(Sim.fieldResult(b), { winner: null, survivors: [0, 0] });
+});
+
+test('an avatar whose soldiers have all fallen loses to the enemy still standing', () => {
+    const b = Sim.create({ sides: [{ soldiers: 4, playerId: 1 }, { soldiers: 2, playerId: 2 }], seed: 5 });
+    const a = Sim.spawnAvatar(b, 0, Avatar.clean(null));
+    killAll(b, 0);
+    Sim.step(b, {});
+    assert.ok(Sim.alive(a));
+    assert.equal(b.winner, 1);
+    runOut(b);
+    const r = Sim.fieldResult(b);
+    assert.equal(r.winner, 1);
+    assert.equal(r.survivors[0], 0, 'side 0 kept no soldiers');
+    assert.ok(r.survivors[1] >= 1);
+});
+
+test('an avatar fighting beside its soldiers still helps them win', () => {
+    let wonWith = 0, wonWithout = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+        const opts = { sides: [{ soldiers: 6, playerId: 1 }, { soldiers: 6, playerId: 2 }], seed };
+        if (fight(opts).winner === 0) wonWithout++;
+        const b = Sim.create(opts);
+        Sim.spawnAvatar(b, 0, Avatar.clean(null));
+        Sim.release(b);   // the avatar fights on its own, like any figure the player is not driving
+        runOut(b);
+        if (b.winner === 0) {
+            wonWith++;
+            const r = Sim.fieldResult(b);
+            assert.equal(r.winner, 0);
+            assert.equal(r.survivors[0], Sim.summary(b).sides[0].standing, 'the winner keeps only real soldiers');
+            assert.ok(r.survivors[0] >= 1);
+        }
+    }
+    assert.ok(wonWith > 0, 'a side with its avatar can win');
+    assert.ok(wonWith >= wonWithout, 'the avatar helps: ' + wonWith + ' vs ' + wonWithout);
+});
+
+test('an avatar joining a beaten side with no soldiers left does not reopen the battle', () => {
+    const b = Sim.create({ sides: [{ soldiers: 4 }, { soldiers: 2 }], seed: 5 });
+    killAll(b, 0);
+    runOut(b);
+    assert.equal(b.winner, 1);
+    const a = Sim.spawnAvatar(b, 0, Avatar.clean(null));
+    assert.equal(b.phase, 'over');
+    assert.equal(b.winner, 1);
+    Sim.step(b, {});
+    assert.equal(b.winner, 1);
+    assert.equal(Sim.fieldResult(b).winner, 1);
+    assert.ok(Sim.alive(a));
+});
+
+test('an avatar joining before the lines meet fights alongside its soldiers as usual', () => {
+    const b = Sim.create({ sides: [{ soldiers: 5 }, { soldiers: 5 }], seed: 4 });
+    Sim.spawnAvatar(b, 0, Avatar.clean(null));
+    assert.equal(b.phase, 'hold');
+    Sim.step(b, {});
+    assert.equal(b.winner, null, 'the battle goes on');
+    runOut(b);
+    assert.ok([0, 1, 'draw'].includes(b.winner));
+});
+
+test('a winner whose last soldier falls during the pursuit holds nothing: the result is a draw', () => {
+    const b = Sim.create({ sides: [{ soldiers: 4 }, { soldiers: 2 }], seed: 5 });
+    const a = Sim.spawnAvatar(b, 0, Avatar.clean(null));
+    killAll(b, 0);
+    const runner = b.units.find(u => u.side === 0 && u.kind === 'soldier');
+    runner.hp = runner.maxHp; runner.state = 'routing';   // one runner keeps the pursuit going
+    Sim.step(b, {});
+    assert.equal(b.winner, 1);
+    assert.equal(b.phase, 'pursuit');
+    killAll(b, 1);   // as if the avatar cut them down while the pursuit ran
+    Sim.step(b, {});
+    assert.ok(Sim.alive(a));
+    assert.equal(b.winner, 'draw');
+    assert.equal(b.phase, 'over');
+    assert.deepEqual(Sim.fieldResult(b), { winner: null, survivors: [0, 0] });
+});

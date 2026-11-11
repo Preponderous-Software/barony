@@ -399,10 +399,12 @@
         }
     }
 
+    // Whether a side still holds the field. Only soldiers count: the avatar cannot hold the
+    // field alone, so once every soldier of a side has fallen or fled that side has lost.
     function standing(b, side) {
         for (var i = 0; i < b.units.length; i++) {
             var u = b.units[i];
-            if (u.side === side && fighting(u)) return true;
+            if (u.side === side && u.kind === 'soldier' && fighting(u)) return true;
         }
         return false;
     }
@@ -454,6 +456,11 @@
             b.phase = 'pursuit';
             b.pursuitEnds = b.time + PURSUIT_SECONDS;
         }
+        if (b.phase === 'pursuit' && b.winner !== 'draw' && !(b.winner === 0 ? a : c)) {
+            // The beaten side's avatar cut down the winner's last soldier during the pursuit.
+            b.winner = 'draw';
+            b.log.push({ t: b.time, text: 'Neither side holds the field.' });
+        }
         if (b.phase === 'pursuit') {
             var running = false;
             for (var r = 0; r < b.units.length; r++) if (b.units[r].state === 'routing') { running = true; break; }
@@ -503,8 +510,9 @@
         a.avatar = avatar || null;
         b.player = a.id;
         b.log.push({ t: b.time, text: ((avatar && avatar.name) || 'Your avatar') + ' takes the field.' });
-        // Joining the side that lost reopens the fight: the avatar is still standing on the field.
-        if ((b.phase === 'over' || b.phase === 'pursuit') && side !== b.winner) {
+        // Joining the side that lost reopens the fight only while that side still has a soldier
+        // standing (a draw at the time limit, say): the avatar cannot hold the field alone.
+        if ((b.phase === 'over' || b.phase === 'pursuit') && side !== b.winner && standing(b, side)) {
             b.phase = 'melee';
             b.winner = null;
         }
@@ -548,6 +556,9 @@
             var figures = winner === null || winner === side ? c.standing : c.routing + c.escaped;
             keep[side] = Math.max(0, Math.min(start[side], Math.round(figures * c.perFigure)));
         }
+        // Defensive only: the winner always has a soldier standing (standing() ignores the avatar,
+        // and a winner who loses its last soldier in the pursuit becomes a draw), so this never
+        // lifts a real result. It stays so the backend never sees a winner with nobody left.
         if (winner !== null && keep[winner] < 1) keep[winner] = 1;
         return { winner: winner, survivors: keep };
     }
