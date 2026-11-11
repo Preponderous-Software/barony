@@ -53,6 +53,11 @@ class BattlePageTest {
         assertTrue(html.contains("id=\"panelBattleLink\""), "the selected-army panel must offer the 3D battle");
         assertTrue(html.contains("'/battle?army=' + encodeURIComponent(army.id)"),
                 "the battle link must carry the selected army, so the battle loads its real numbers");
+        assertTrue(html.contains("Practice in 3D"),
+                "the selected army's own battle is practice and must say so (#144)");
+        assertTrue(html.contains("(b.side0ArmyIds || []).includes(armyId)")
+                        && html.contains("battleLink.href = '/battle?pending=' + encodeURIComponent(pending.id)"),
+                "an army in a waiting battle must link to that battle, the one that counts (#144)");
     }
 
     @Test
