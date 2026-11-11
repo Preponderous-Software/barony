@@ -252,6 +252,37 @@ Then open http://localhost:3000
 - Castle objective progress (yours / enemy / neutral, out of the map total) in the Game Status panel
 - Milestone toasts when a castle changes hands or the last castle on either side comes under siege
 
+## 3D Battlefield
+
+Any engagement can be fought out as a 3D field battle at `/battle`, drawn by the
+[Strata](https://github.com/Preponderous-Software/strata) engine in WebGL 2. Select one of your
+armies on the map and choose **Fight in 3D** to load it and the nearest enemy army, with their real
+soldier counts, morale and ground (open field, village or castle). You can also set up a custom
+battle without signing in.
+
+![Your avatar forms up with your army before an enemy castle](docs/images/battle-avatar-castle.jpg)
+
+- **Watch** from an orbit camera at ½×, 1×, 2× or 4× speed, with a live tally of soldiers standing and running.
+- **Take over any soldier** by tapping or clicking it. You get a third-person view, and **V** switches to first person.
+  Move with WASD and the mouse (click to lock the mouse), strike with a click or Space, and raise your shield
+  with the right button or F. On a phone you get a stick plus Strike and Shield buttons. If your soldier falls,
+  you can take over another.
+- **Enter as your own avatar**: name, tunic and trim colours, helmet, weapon and shield. Your avatar is
+  stronger than a soldier and is saved with your account preferences (a guest's stays in the browser).
+
+![A battle on a village tile, seen from above](docs/images/battle-village.jpg)
+
+One figure stands for each soldier up to 90 a side. Above that, both armies share one scale, so a
+larger army keeps its edge in numbers. Morale decides how hard a side hits and how long it holds
+before it breaks and runs. **The field battle does not change your game.** On the map, the turn rules
+still resolve the engagement in one exchange, and the result card shows both outcomes side by side.
+
+The engine is a thin C++ host (`web-client/battle3d/main.cpp`) built with Emscripten 6.0.11
+against Strata's pinned v0.7.0 wasm release (`web-client/battle3d/build.sh`). The outputs are
+committed so the Maven build needs no Emscripten. CI rebuilds them and fails if the bytes differ.
+The battle itself is plain JavaScript (`battle-sim.js`, `battle-render.js`, `battle-avatar.js`) and is
+tested under Node in `web-client/src/test/js/battle-sim.test.js`.
+
 ## Game Overview
 
 ### Basic Rules

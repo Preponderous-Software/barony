@@ -1352,3 +1352,15 @@ input[type="password"]:focus {
 .site-footer a {
     color: var(--accent, #c9a96e);
 }
+
+/* The selected army's way into the 3D battlefield (/battle). */
+.battle-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--accent, #c9a96e);
+    border: 1px solid var(--accent, #c9a96e);
+    border-radius: 4px;
+    padding: 4px 10px;
+    text-decoration: none;
+}
+.battle-link:hover, .battle-link:focus-visible { background: rgba(201, 169, 110, 0.15); }

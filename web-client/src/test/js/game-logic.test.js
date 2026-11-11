@@ -878,7 +878,8 @@ test('PREFERENCE_STORAGE_KEYS names the localStorage key each preference is kept
     assert.deepEqual(PREFERENCE_STORAGE_KEYS, {
         settings: 'barony_settings',
         panelLayout: 'barony_panel_layout',
-        panelState: 'barony_panel_state'
+        panelState: 'barony_panel_state',
+        avatar: 'barony_avatar'
     });
 });
 

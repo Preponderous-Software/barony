@@ -396,7 +396,10 @@
     var PREFERENCE_STORAGE_KEYS = {
         settings: 'barony_settings',
         panelLayout: 'barony_panel_layout',
-        panelState: 'barony_panel_state'
+        panelState: 'barony_panel_state',
+        // The player's avatar for the 3D battlefield (battle-avatar.js), carried with the rest so a
+        // preference upload from this page never drops it from the account.
+        avatar: 'barony_avatar'
     };
 
     // Reconciles the preferences stored against a player's account with the ones this browser
