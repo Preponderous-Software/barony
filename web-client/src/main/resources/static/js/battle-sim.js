@@ -4,7 +4,7 @@
  * web-client/src/test/js/battle-sim.test.js runs it under node. The same seed
  * and the same inputs give the same battle, step for step.
  *
- *   const b = BattleSim.create({sides: [{soldiers, archers, cavalry, morale, playerId}, {...}], terrain, seed});
+ *   const b = BattleSim.create({sides: [{soldiers, archers, cavalry, morale, playerId}, {...}], terrain, seed, ground});
  *   BattleSim.step(b, input);            // advances BattleSim.DT seconds
  *   BattleSim.embody(b, unitId);         // the player takes over a living figure
  *   BattleSim.spawnAvatar(b, side, avatar);  // or enters as their own avatar
@@ -28,6 +28,10 @@
 (function (root) {
     'use strict';
 
+    // The lie of the land (battle-ground.js). Optional: a battle given no ground fights on a bare
+    // field, exactly as before there was any.
+    var Ground = typeof module === 'object' && module.exports ? require('./battle-ground.js') : root.BattleGround;
+
     var DT = 1 / 30;                 // seconds per step
     var FIGURE_CAP = 90;             // figures per side; above it each figure stands for several soldiers
     var FILE_SPACING = 1.25;         // metres between figures in a rank
@@ -47,6 +51,8 @@
 
     var ARROW_SPEED = 38;            // m/s along the ground
     var ARCHER_KEEP_CLEAR = 5;       // an archer with an enemy this close stops shooting and fights
+    var HIGH_GROUND = 0.4;           // metres above the enemy that count as holding the high ground
+    var RISE_WAIT = 25;              // seconds a side holding a rise waits there for the enemy to come
 
     // A figure's numbers: an avatar by its kind, a soldier by its type.
     var KINDS = {
@@ -160,6 +166,27 @@
     function reachOf(u) { return stats(u).reach || REACH; }
     function radiusOf(u) { return stats(u).radius || BODY_RADIUS; }
 
+    // ---------------------------------------------------------------- the ground
+
+    function groundAt(b, x, z) { return b.ground ? Ground.at(b.ground, x, z) : null; }
+
+    // How the ground under a figure slows it: woods slow a horse badly and a man on foot a little,
+    // and wading a stream slows anyone.
+    function groundSpeed(b, u) {
+        var g = groundAt(b, u.x, u.z);
+        if (!g) return 1;
+        var k = 1;
+        if (g.wood) k *= u.type === 'cavalry' ? 0.55 : 0.8;
+        if (g.water) k *= 0.55;
+        return k;
+    }
+
+    // How far an archer can shoot: further from a rise.
+    function rangeOf(b, u) {
+        var g = groundAt(b, u.x, u.z);
+        return stats(u).range + (g && g.height >= 1 ? 6 : 0);
+    }
+
     function makeUnit(b, side, kind, x, z, type) {
         var k = kind === 'avatar' ? KINDS.avatar : TYPE_STATS[type || 'infantry'];
         var u = {
@@ -181,7 +208,8 @@
             blocking: false,
             diedAt: null,
             fallFacing: 0,
-            reload: 0                // an archer's seconds until it can shoot again
+            reload: 0,               // an archer's seconds until it can shoot again
+            hx: x, hz: z             // where it formed up, for holding a rise in the same order
         };
         b.units.push(u);
         return u;
@@ -196,6 +224,7 @@
             seed: seed,
             random: rng(seed),
             terrain: terrain,
+            ground: Ground ? Ground.clean(options.ground) : null,
             sides: sides,
             units: [],
             nextId: 1,
@@ -216,6 +245,14 @@
             sides[side].types = typeFigures(sides[side], f.figures);
             sides[side].mixed = sides[side].archers + sides[side].cavalry > 0;
             formUp(b, side);
+        }
+        // A side with a rise in its own half forms up on it and waits for the enemy to come.
+        b.holds = [null, null];
+        if (b.ground) {
+            for (var ri = 0; ri < b.ground.rises.length; ri++) {
+                var rise = b.ground.rises[ri];
+                b.holds[rise.z < 0 ? 0 : 1] = rise;
+            }
         }
         return b;
     }
@@ -339,7 +376,14 @@
     function damage(b, attacker, victim, opts) {
         var k = stats(attacker), range = opts && opts.ranged ? k.shot : k.damage;
         var dmg = range[0] + b.random() * (range[1] - range[0]);
-        if (!(opts && opts.ranged)) dmg *= matchup(attacker, victim);
+        if (!(opts && opts.ranged)) {
+            dmg *= matchup(attacker, victim);
+            // Striking down from the high ground.
+            if (b.ground && attacker.x != null) {
+                var ga = groundAt(b, attacker.x, attacker.z), gv = groundAt(b, victim.x, victim.z);
+                if (ga.height - gv.height >= HIGH_GROUND) dmg *= 1.3;
+            }
+        }
         if (opts && opts.charge) dmg *= 2;
         if (victim.blocking) {
             // A raised shield turns most of a blow from the front.
@@ -389,6 +433,10 @@
         u.cooldown = Math.max(u.cooldown, 0.4);
         u.swing = SWING_SECONDS;
         var chance = hitChance(b.sides[u.side]) * k.aim * (u.id === b.player ? 1.6 : 1);
+        if (b.ground) {
+            if (groundAt(b, victim.x, victim.z).wood) chance *= 0.5;       // the trees take the arrows
+            if (groundAt(b, u.x, u.z).height >= 1) chance *= 1.1;          // a clear line from a rise
+        }
         var hit = b.random() < chance;
         var dx = victim.x - u.x, dz = victim.z - u.z, d = Math.sqrt(dx * dx + dz * dz);
         var miss = hit ? 0 : 1.5 + b.random() * 2.5, ma = b.random() * Math.PI * 2;
@@ -416,7 +464,7 @@
 
     // The nearest enemy an archer can see in a narrow cone ahead, for the player's shot.
     function aimedVictim(b, u) {
-        var best = null, bestD = stats(u).range * stats(u).range;
+        var best = null, bestD = rangeOf(b, u) * rangeOf(b, u);
         for (var i = 0; i < b.units.length; i++) {
             var o = b.units[i];
             if (o.side === u.side || !alive(o)) continue;
@@ -484,7 +532,7 @@
         if (u.state === 'routing') {
             // Run for the side's own back edge.
             var away = u.side === 0 ? -1 : 1;
-            moveTowards(u, u.x * 1.05, away * (FIELD_HALF_LENGTH + 5), FLEE * k.speed, dt);
+            moveTowards(u, u.x * 1.05, away * (FIELD_HALF_LENGTH + 5), FLEE * k.speed * (b.ground ? groundSpeed(b, u) : 1), dt);
             u.facing = turnTowards(u.facing, away > 0 ? Math.PI / 2 : -Math.PI / 2, 6 * dt);
             if (Math.abs(u.z) > FIELD_HALF_LENGTH) u.state = 'escaped';
             return;
@@ -500,21 +548,41 @@
         }
         if (!t) return;
         var dx = t.x - u.x, dz = t.z - u.z, d = Math.sqrt(dx * dx + dz * dz);
+        var rise = b.holds && b.holds[u.side];
+        if (rise && d > CHARGE_RANGE + 2 && b.time < HOLD_SECONDS + RISE_WAIT && !(u.type === 'archer' && d <= rangeOf(b, u))) {
+            // Hold the rise: take up this figure's place in the line on its top and wait there.
+            // Full frontage across the rise, the front rank a little forward of its top.
+            var face = u.side === 0 ? 1 : -1, front = -face * START_GAP / 2, span = rise.r * 0.85;
+            var hx = rise.x + clamp(u.hx, -span, span);
+            var hz = rise.z + face * rise.r * 0.2 + clamp(u.hz - front, -span, span);
+            var ddx = hx - u.x, ddz = hz - u.z;
+            u.state = 'ready';
+            if (ddx * ddx + ddz * ddz > 0.09) moveTowards(u, hx, hz, WALK * k.speed * groundSpeed(b, u), dt);
+            u.facing = turnTowards(u.facing, face > 0 ? Math.PI / 2 : -Math.PI / 2, 4 * dt);
+            return;
+        }
         u.facing = turnTowards(u.facing, Math.atan2(dz, dx), 5 * dt);
         if (u.type === 'archer' && d > ARCHER_KEEP_CLEAR) {
             // Close enough to shoot: stand and loose. Otherwise walk up to range.
-            if (d <= k.range) {
+            if (d <= (b.ground ? rangeOf(b, u) : k.range)) {
                 u.state = 'ready';
                 shoot(b, u, t);
             } else {
                 u.state = 'ready';
-                moveTowards(u, t.x, t.z, WALK * k.speed, dt);
+                moveTowards(u, t.x, t.z, WALK * k.speed * (b.ground ? groundSpeed(b, u) : 1), dt);
             }
             return;
         }
         if (d > reachOf(u)) {
             u.state = 'ready';
-            var speed = (d < CHARGE_RANGE ? CHARGE : WALK) * k.speed;
+            var speed = (d < CHARGE_RANGE ? CHARGE : WALK) * k.speed * (b.ground ? groundSpeed(b, u) : 1);
+            if (b.ground) {
+                var here = groundAt(b, u.x, u.z).height, there = groundAt(b, t.x, t.z).height;
+                // Those holding a rise stand to receive a charge rather than run down off it, and
+                // climbing to them is slow going.
+                if (rise && here > 0 && there === 0) speed = WALK * 0.5 * k.speed;
+                else if (there > here) speed *= 0.7;
+            }
             moveTowards(u, t.x, t.z, speed, dt);
         } else {
             u.state = 'fighting';
@@ -537,7 +605,7 @@
             var mx = Math.cos(yaw) * f - Math.sin(yaw) * r;
             var mz = Math.sin(yaw) * f + Math.cos(yaw) * r;
             var ml = Math.sqrt(mx * mx + mz * mz) || 1;
-            var speed = (input.run ? CHARGE : WALK * 1.3) * k.speed * (u.blocking ? 0.5 : 1) * mag;
+            var speed = (input.run ? CHARGE : WALK * 1.3) * k.speed * (u.blocking ? 0.5 : 1) * mag * (b.ground ? groundSpeed(b, u) : 1);
             u.x += mx / ml * speed * dt;
             u.z += mz / ml * speed * dt;
             u.moving = speed / CHARGE;
@@ -764,7 +832,7 @@
         FIELD_HALF_LENGTH: FIELD_HALF_LENGTH, typeFigures: typeFigures, stats: stats,
         create: create, step: step, embody: embody, release: release, spawnAvatar: spawnAvatar,
         summary: summary, mapOutcome: mapOutcome, fieldResult: fieldResult, unit: unit, alive: alive, fighting: fighting,
-        figuresFor: figuresFor, breakingPoint: breakingPoint, hitChance: hitChance, rng: rng, wrapAngle: wrapAngle
+        figuresFor: figuresFor, groundAt: groundAt, groundSpeed: groundSpeed, breakingPoint: breakingPoint, hitChance: hitChance, rng: rng, wrapAngle: wrapAngle
     };
     if (typeof module === 'object' && module.exports) module.exports = api;
     else root.BattleSim = api;

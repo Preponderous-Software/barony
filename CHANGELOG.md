@@ -92,6 +92,22 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **The lie of the land on the 3D battlefield**: a field battle is now fought on ground of its
+  own: woods on the flanks, sometimes a rise on one side's half, sometimes a stream between the
+  lines (`battle-ground.js`). Barony's map only has castles, villages and open tiles, so the ground
+  is worked out from the battle's map tile: the same tile always gives the same ground. A practice
+  battle takes it from its seed, and villages and castles beside the tile on the map stand past the
+  field's edges. Woods slow a horse to about half pace and a man on foot a little, and halve an
+  archer's chance of hitting someone among the trees. A side with a rise in its half forms up on it
+  and waits (up to 25 s, or until the enemy closes), and it strikes harder at those below it, shoots
+  further from it, and makes attackers climb. A stream slows anyone wading it. Over 30 seeded 40 vs
+  40 battles, holding a rise wins about two in three against about one in two on bare ground. The
+  ground only matters on the battlefield: the map's own rule is unchanged, and a battle given no
+  ground fights exactly as before (the same six fingerprinted battles are identical).
+- 🐛 **The battlefield's hint no longer hides behind the controls on a phone**: it sat a fixed 70 px
+  from the bottom, under the control bar once that wrapped to two rows and under the setup panel a
+  phone shows at the bottom. It is now placed above both, measured as the touch controls are.
+
 - ✅ **Archers and cavalry on the map**: the selected army's panel, its tooltip and the Armies list
   show its mix ("24 soldiers: 16 infantry · 5 archers · 3 cavalry"; an all-infantry army reads as
   before), and the map marks archers with an arrowhead and cavalry with a diamond on the army's

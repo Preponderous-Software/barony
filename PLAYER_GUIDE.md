@@ -248,6 +248,18 @@ and the ground the armies met on (open field, a village, or before a castle). A 
 drawn at one figure per several soldiers, the same scale for both sides, and the tally always counts
 in soldiers. Morale decides how hard your side hits and how many losses it takes before it breaks.
 
+**The ground.** Every map tile has its own ground on the battlefield, the same each time you fight
+there: woods on the flanks, perhaps a rise on one side's half, perhaps a stream between the lines.
+Villages and castles next to the tile on the map stand beyond the edges of the field. The battle
+page says what the ground is when the armies form up.
+- **Woods** slow horses badly (and men on foot a little), and arrows mostly hit the trees instead of
+  anyone sheltering in them.
+- **A rise** is worth holding: the side whose half it is in forms up on top and waits for the
+  enemy. From it, blows strike harder at those below, bows shoot further, and attackers climb slowly.
+- **A stream** slows anyone wading it.
+
+The ground only matters on the battlefield. **Let the map decide** ignores it, as before.
+
 - **Watch** from above: drag to look around, and scroll or pinch to zoom. Play at ½×, 1×, 2× or 4×.
 - **Take over any soldier** by clicking or tapping it. You see it from behind; press **V** for
   first person.

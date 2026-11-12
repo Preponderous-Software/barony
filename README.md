@@ -337,6 +337,12 @@ battle instead. You can also set up a custom battle without signing in.
 </p>
 <p align="center"><em>The avatar editor, and fighting as the avatar on a phone (stick to move, drag to look, Strike and Shield).</em></p>
 
+- **The lie of the land**: every map tile has its own battlefield ground, the same each time: woods on the flanks,
+  perhaps a rise on one side's half, perhaps a stream between the lines, with the tile's neighbouring villages and
+  castles beyond the field's edges. Woods slow horses and stop arrows; a side with a rise in its half holds it and
+  strikes harder downhill; a stream slows anyone wading it. The map's own rule ignores the ground.
+
+  ![A blue army holds a terraced rise with its cavalry in front, a stream crossing the field and woods on both flanks, as the red line advances with its cavalry among the trees](docs/images/battle-ground.jpg)
 - **Watch** from an orbit camera at ½×, 1×, 2× or 4× speed, with a live tally of soldiers standing and running.
 - **Take over any soldier** by tapping or clicking it. You get a third-person view, and **V** switches to first person.
   Move with WASD and the mouse (click to lock the mouse), strike with a click or Space, and raise your shield
