@@ -7,7 +7,7 @@
 (function () {
     'use strict';
 
-    var Sim = window.BattleSim, Render = window.BattleRender, Avatar = window.BattleAvatar;
+    var Sim = window.BattleSim, Render = window.BattleRender, Avatar = window.BattleAvatar, Ground = window.BattleGround;
     var $ = function (id) { return document.getElementById(id); };
     var params = new URLSearchParams(location.search);
     var playerMode = (function () { try { return localStorage.getItem('barony_mode') === 'guest' ? 'guest' : 'account'; } catch (e) { return 'account'; } })();
@@ -23,6 +23,20 @@
         $('touch').style.bottom = (h + 8) + 'px';
         var slowBar = document.querySelector('.sk-slow');
         if (slowBar) slowBar.style.bottom = (h + 8 + ($('touch').hidden ? 0 : 140)) + 'px';
+        // The hint sits above the control bar, and above the setup panel where a phone puts it at
+        // the bottom too. (Taken over on a touch screen, the stylesheet moves the hint to the top.)
+        var hintEl = document.querySelector('.bt-hint');
+        if (hintEl) {
+            var body = document.body.classList;
+            if (body.contains('bt-coarse') && body.contains('bt-embodied')) { hintEl.style.bottom = ''; return; }
+            var clear = innerHeight - bar.getBoundingClientRect().top;
+            var panel = $('setupPanel');
+            if (panel && !panel.hidden) {
+                var r = panel.getBoundingClientRect();     // (fixed, so no offsetParent to test)
+                if (r.height > 0 && r.bottom > innerHeight * 0.6) clear = Math.max(clear, innerHeight - r.top);
+            }
+            hintEl.style.bottom = (clear + 8) + 'px';
+        }
     }
     addEventListener('resize', layoutOverlays);
     setInterval(layoutOverlays, 500);
@@ -88,6 +102,7 @@
     // ------------------------------------------------------------------ setup from the game
 
     var engagements = [];
+    var mapGrid = null;          // the game's map, once loaded, for the ground around a battle
     // Field battles: /battle?pending=<id> fights a battle the game is waiting on, and its result
     // decides the map. The battle is locked to the real armies and seed: no setup, no restart.
     var pendingId = params.get('pending');
@@ -128,6 +143,7 @@
                 return r.json();
             })
             .then(function (state) {
+                mapGrid = state.grid || null;
                 engagements = engagementsFrom(state);
                 sel.textContent = '';
                 var custom = new Option('Custom battle', '');
@@ -233,6 +249,16 @@
     var battle = null, running = false, speed = 1, accum = 0, scenery = null, sceneryLights = [];
     var resultShown = false, lastLogShown = 0;
 
+    // The ground for this battle: a battle from the map is fought on its tile's own ground, with its
+    // map neighbours at the edges; a custom battle takes its ground from its seed.
+    function groundFor(seed, terrain) {
+        if (!Ground) return null;
+        if (pending) return Ground.forTile({ x: pending.x, y: pending.y, type: pending.terrain, grid: mapGrid });
+        var sel = $('engagement').value, g = sel !== '' ? engagements[parseInt(sel, 10)] : null;
+        if (g) return Ground.forTile({ x: g.theirs.x, y: g.theirs.y, type: terrain, grid: mapGrid });
+        return Ground.forSeed(seed, terrain);
+    }
+
     function setup() {
         var n0 = parseInt($('soldiers0').value, 10), n1 = parseInt($('soldiers1').value, 10);
         var m0 = parseInt($('morale0').value, 10), seed = parseInt($('seed').value, 10);
@@ -243,9 +269,9 @@
                 { soldiers: n0, archers: num('archers0'), cavalry: num('cavalry0'), morale: m0, playerId: 1, label: 'Your army' },
                 { soldiers: n1, archers: num('archers1'), cavalry: num('cavalry1'), playerId: 2, label: 'The enemy' }
             ],
-            terrain: terrain, seed: seed
+            terrain: terrain, seed: seed, ground: groundFor(seed, terrain)
         });
-        scenery = Render.scenery(battle.terrain, battle.seed);
+        scenery = Render.scenery(battle.terrain, battle.seed, battle.ground);
         sceneryLights = Render.sceneryLights(battle.terrain);
         running = false; accum = 0; resultShown = false; lastLogShown = 0;
         $('result').hidden = true;
@@ -262,9 +288,10 @@
         updateControls();
         var per = battle.sides[0].perFigure;
         var mixed = battle.sides[0].mixed || battle.sides[1].mixed;
-        hint((per > 1.05 ? 'Each figure stands for about ' + per.toFixed(1) + ' soldiers. ' : '') +
+        var lie = battle.ground ? Ground.describe(battle.ground) + ' ' : '';
+        hint(lie + (per > 1.05 ? 'Each figure stands for about ' + per.toFixed(1) + ' soldiers. ' : '') +
             (mixed ? 'Infantry hold the front, archers shoot from behind them and cavalry ride on the wings. ' : '') +
-            (per > 1.05 || mixed ? 'Tap a soldier to take it over.' : 'Tap or click any soldier to take it over, or enter as your avatar.'));
+            (per > 1.05 || mixed || lie ? 'Tap a soldier to take it over.' : 'Tap or click any soldier to take it over, or enter as your avatar.'));
     }
 
     // " (12 archers, 5 cavalry)" for a side that has any; nothing for infantry alone.

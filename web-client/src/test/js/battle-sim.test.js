@@ -476,3 +476,104 @@ test('rows for archers, cavalry and arrows are whole and finite', () => {
     const plain = Sim.create({ sides: [{ soldiers: 40 }, { soldiers: 40 }], seed: 6 });
     assert.ok(Render.frame(b, {}).prims.length > Render.frame(plain, {}).prims.length, 'horses and bows add rows');
 });
+
+// ----------------------------------------------------------------------- the ground
+
+const Ground = require(js('battle-ground.js'));
+
+test('a map tile always gets the same ground, and tiles differ', () => {
+    const a = Ground.forTile({ x: 3, y: 4, type: 'EMPTY' }), b = Ground.forTile({ x: 3, y: 4, type: 'EMPTY' });
+    assert.deepEqual(a, b);
+    const all = new Set();
+    for (let x = 0; x < 6; x++) for (let y = 0; y < 6; y++) all.add(JSON.stringify(Ground.forTile({ x, y })));
+    assert.ok(all.size > 30, 'nearly every tile has its own ground');
+    assert.deepEqual(Ground.forSeed(42, 'EMPTY'), Ground.forSeed(42, 'EMPTY'));
+});
+
+test('generated woods keep to the flanks and a castle has no stream before its gate', () => {
+    for (let x = 0; x < 15; x++) for (let y = 0; y < 15; y++) {
+        const g = Ground.forTile({ x, y, type: 'CASTLE' });
+        assert.equal(g.stream, null);
+        g.woods.forEach(w => assert.ok(Math.abs(w.x) >= 12, 'a wood at x=' + w.x + ' would block the middle'));
+    }
+});
+
+test('neighbouring villages and castles on the map stand at the field edges', () => {
+    const grid = [[{ type: 'EMPTY' }, { type: 'VILLAGE', ownerId: 1 }, { type: 'EMPTY' }],
+                  [{ type: 'CASTLE', ownerId: 2 }, { type: 'EMPTY' }, { type: 'EMPTY' }],
+                  [{ type: 'EMPTY' }, { type: 'EMPTY' }, { type: 'EMPTY' }]];
+    const g = Ground.forTile({ x: 1, y: 1, type: 'EMPTY', grid });
+    assert.deepEqual(g.edges.map(e => e.dir + ' ' + e.type).sort(), ['north CASTLE', 'west VILLAGE']);
+    const bare = Render.scenery('EMPTY', 1, Object.assign({}, g, { edges: [] }));
+    assert.ok(Render.scenery('EMPTY', 1, g).length > bare.length, 'the neighbours are drawn');
+});
+
+test('the ground at a point: terraces on a rise, woods, and water only off the rise', () => {
+    const g = Ground.clean({ rises: [{ x: 0, z: 0, r: 10, h: 2 }], woods: [{ x: 20, z: 0, r: 4 }], stream: { z: 0, width: 4 } });
+    assert.equal(Ground.at(g, 0, 0).height, 2, 'flat on top');
+    assert.equal(Ground.at(g, 10.5, 0).height, 0, 'the plain past its foot');
+    const mid = Ground.at(g, 7, 0).height;
+    assert.ok(mid > 0 && mid < 2 && Math.abs(mid / 2 * Ground.RISE_STEPS - Math.round(mid / 2 * Ground.RISE_STEPS)) < 1e-9, 'on a terrace: ' + mid);
+    assert.equal(Ground.at(g, 20, 0).wood, true);
+    assert.equal(Ground.at(g, 0, 0).water, false, 'the rise stands above the stream');
+    assert.equal(Ground.at(g, -15, 1).water, true);
+});
+
+test('ground that is not ground is no ground; bad numbers are clamped', () => {
+    assert.equal(Ground.clean(null), null);
+    assert.equal(Ground.clean('hills'), null);
+    const g = Ground.clean({ woods: [{ x: 'a', z: 1e9, r: -4 }], rises: 'x', edges: [{ dir: 'up', type: 'CASTLE' }] });
+    assert.deepEqual(g.woods, [{ x: 0, z: 60, r: 1 }]);
+    assert.deepEqual(g.rises, []);
+    assert.deepEqual(g.edges, []);
+});
+
+test('a battle on featureless ground fights exactly as one with no ground at all', () => {
+    const sides = [{ soldiers: 40, archers: 8, cavalry: 6, playerId: 1 }, { soldiers: 36, playerId: 2 }];
+    const a = fight({ sides, seed: 12 }), b = fight({ sides, seed: 12, ground: {} });
+    assert.equal(a.time, b.time);
+    assert.deepEqual(a.units.map(u => [u.state, u.x.toFixed(6), u.z.toFixed(6)]), b.units.map(u => [u.state, u.x.toFixed(6), u.z.toFixed(6)]));
+});
+
+test('holding a rise is worth holding', () => {
+    const sides = [{ soldiers: 40, playerId: 1 }, { soldiers: 40, playerId: 2 }];
+    const ours = { rises: [{ x: 0, z: -12, r: 13, h: 2.5 }] }, theirs = { rises: [{ x: 0, z: 12, r: 13, h: 2.5 }] };
+    let bare = 0, held = 0, against = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+        if (fight({ sides, seed }).winner === 0) bare++;
+        if (fight({ sides, seed, ground: ours }).winner === 0) held++;
+        if (fight({ sides, seed, ground: theirs }).winner === 0) against++;
+    }
+    assert.ok(held > bare && against <= bare, `bare ${bare}, holding ${held}, attacking it ${against} of 12`);
+});
+
+test('woods slow a horse more than a man, and wading slows anyone', () => {
+    const b = Sim.create({ sides: [{ soldiers: 2, cavalry: 1 }, { soldiers: 1 }], seed: 1,
+                           ground: { woods: [{ x: 0, z: 0, r: 5 }], stream: { z: 20, width: 4 } } });
+    const horse = b.units.find(u => u.type === 'cavalry'), foot = b.units.find(u => u.type === 'infantry');
+    horse.x = foot.x = 0; horse.z = foot.z = 0;
+    assert.ok(Sim.groundSpeed(b, horse) < Sim.groundSpeed(b, foot) && Sim.groundSpeed(b, foot) < 1);
+    foot.z = 20;
+    assert.ok(Sim.groundSpeed(b, foot) < 0.6);
+});
+
+test('a figure on a rise is drawn standing on it', () => {
+    const b = Sim.create({ sides: [{ soldiers: 1 }, { soldiers: 1 }], seed: 1, ground: { rises: [{ x: 0, z: -17, r: 8, h: 2 }] } });
+    const plain = Sim.create({ sides: [{ soldiers: 1 }, { soldiers: 1 }], seed: 1 });
+    // The lowest row drawn within a metre of side 0's figure: its feet.
+    const lowest = (bt) => { const u = bt.units.find(v => v.side === 0), rows = Render.frame(bt, {}).prims; let y = Infinity;
+        for (let i = 0; i < rows.length; i += Render.STRIDE) {
+            if (Math.abs(rows[i + 1] - u.x) < 1 && Math.abs(rows[i + 3] - u.z) < 1) y = Math.min(y, rows[i + 2]);
+        }
+        return y; };
+    assert.ok(lowest(b) - lowest(plain) > 1.5, 'lifted by the rise');
+});
+
+test('the ground is described in a few words, for the phone-sized hint', () => {
+    assert.equal(Ground.describe(Ground.clean({ woods: [{ x: -14, z: 0, r: 5 }, { x: 15, z: 3, r: 5 }], rises: [{ x: 0, z: -10, r: 10, h: 2 }], stream: { z: 0, width: 3 } })),
+        'Woods on both flanks, a rise on your side, a stream between the lines.');
+    assert.equal(Ground.describe(Ground.clean({ woods: [{ x: 14, z: 0, r: 5 }], rises: [{ x: 0, z: 10, r: 10, h: 2 }] })),
+        'A wood on one flank, a rise on the enemy’s side.');
+    assert.equal(Ground.describe(Ground.clean({})), 'Open ground.');
+    for (let x = 0; x < 20; x++) assert.ok(Ground.describe(Ground.forTile({ x, y: x * 3 })).length <= 80);
+});

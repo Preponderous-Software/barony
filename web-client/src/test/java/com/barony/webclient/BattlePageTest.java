@@ -29,7 +29,7 @@ class BattlePageTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        for (String script : new String[] {"strata-loader", "strata-kit", "battle-sim", "battle-render",
+        for (String script : new String[] {"strata-loader", "strata-kit", "battle-ground", "battle-sim", "battle-render",
                 "battle-avatar", "battle-page"}) {
             assertTrue(html.contains(script), "the battle page must load " + script);
         }

@@ -3,7 +3,8 @@
  * No DOM and no engine, so it runs under node too. The page copies the rows into the wasm heap
  * each frame (bt_set_prims / bt_set_points / bt_set_lights in web-client/battle3d/main.cpp).
  *
- *   BattleRender.scenery(terrain, seed)  -> Float32Array of static rows (ground, trees, huts, walls)
+ *   BattleRender.scenery(terrain, seed, ground) -> Float32Array of static rows (ground, trees, huts,
+ *                                        walls, and the ground's woods, rises, stream and neighbours)
  *   BattleRender.frame(battle, opts)     -> {prims, points, lights}: this frame's figures and effects
  *   BattleRender.hexToLinear('#0066FF')  -> [r, g, b] in linear light (Strata takes linear colour)
  *
@@ -13,6 +14,8 @@
  */
 (function (root) {
     'use strict';
+
+    var Ground = typeof module === 'object' && module.exports ? require('./battle-ground.js') : root.BattleGround;
 
     var CUBE = 0, CAPSULE = 1, CYLINDER = 2, SPHERE = 3;
     var STRIDE = 10;
@@ -32,9 +35,10 @@
     function scale(c, k) { return [c[0] * k, c[1] * k, c[2] * k]; }
 
     // A growable list of rows.
-    function Rows() { this.a = []; }
+    // dy lifts everything added while it is set: a figure standing on a rise.
+    function Rows() { this.a = []; this.dy = 0; }
     Rows.prototype.add = function (kind, x, y, z, sx, sy, sz, c) {
-        this.a.push(kind, x, y, z, sx, sy, sz, c[0], c[1], c[2]);
+        this.a.push(kind, x, y + this.dy, z, sx, sy, sz, c[0], c[1], c[2]);
     };
     Rows.prototype.f32 = function () { return new Float32Array(this.a); };
 
@@ -57,6 +61,9 @@
     var BLOOD = hexToLinear('#7a1712');
     var HORSES = [hexToLinear('#6b4a2e'), hexToLinear('#3e2c1f'), hexToLinear('#8a6a48'), hexToLinear('#5a5550')];
     var FLETCH = hexToLinear('#e8e2d0');
+    var WATER = hexToLinear('#3f6f8f');
+    var UNDERGROWTH = hexToLinear('#3f5a2a');
+    var RISE = [hexToLinear('#6c8a42'), hexToLinear('#728f46'), hexToLinear('#78944a'), hexToLinear('#7e994e'), hexToLinear('#849e52')];
 
     // ------------------------------------------------------------- scenery
 
@@ -100,7 +107,7 @@
 
     // The ground and what stands around the field, by Barony tile type. The fight happens in the
     // middle (|x| < 25, |z| < 40); everything here keeps clear of it.
-    function scenery(terrain, seed) {
+    function scenery(terrain, seed, ground) {
         var r = new Rows(), rand = rng((seed >>> 0) ^ 0x9e3779b9);
         r.add(CUBE, 0, -0.5, 0, 600, 1, 600, GRASS);
         r.add(CUBE, 0, 0.005, 0, 60, 0.01, 90, FIELD);
@@ -144,7 +151,51 @@
             r.add(CYLINDER, 0, 14, zw + 8, 6, 14, 6, STONE);         // the keep behind
             r.add(CUBE, 0, 29, zw + 8, 0.2, 2, 0.2, WOOD);
         }
+        if (ground) groundFeatures(r, ground, seed);
         return r.f32();
+    }
+
+    // The ground's woods, rises and stream, and the map's neighbouring villages and castles past
+    // the field's edges. Terraces match BattleGround.riseHeight, so figures stand on them.
+    function groundFeatures(r, g, seed) {
+        var rand = rng((seed >>> 0) ^ 0x2545f491), i, k;
+        if (g.stream) {
+            r.add(CUBE, 0, 0.02, g.stream.z, 160, 0.02, g.stream.width, WATER);
+            r.add(CUBE, 0, 0.015, g.stream.z, 160, 0.015, g.stream.width + 1.4, MUD);
+        }
+        for (i = 0; i < g.rises.length; i++) {
+            var ri = g.rises[i], steps = Ground.RISE_STEPS;
+            for (k = 1; k <= steps; k++) {
+                var radius = ri.r - (k - 1) / steps * ri.r * 0.67, top = ri.h * k / steps;
+                r.add(CYLINDER, ri.x, top / 2, ri.z, radius * 2, top / 2, radius * 2, RISE[(k - 1) % RISE.length]);
+            }
+        }
+        for (i = 0; i < g.woods.length; i++) {
+            var w = g.woods[i], base = Ground.at(g, w.x, w.z).height;
+            r.add(CYLINDER, w.x, base + 0.03, w.z, w.r * 2, 0.03, w.r * 2, UNDERGROWTH);
+            var n = Math.round(w.r * 1.8);
+            for (k = 0; k < n; k++) {
+                var a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * (w.r - 0.8);
+                var tx = w.x + Math.cos(a) * d, tz = w.z + Math.sin(a) * d;
+                r.dy = Ground.at(g, tx, tz).height;
+                tree(r, tx, tz, 4.5 + rand() * 3.5);
+            }
+            r.dy = 0;
+        }
+        var out = { east: [1, 0], west: [-1, 0], north: [0, 1], south: [0, -1] };
+        for (i = 0; i < g.edges.length; i++) {
+            var e = g.edges[i], o = out[e.dir];
+            var cx = o[0] * 70, cz = o[1] * 72;
+            if (e.type === 'VILLAGE') {
+                for (k = 0; k < 4; k++) hut(r, cx + (o[1] ? (k - 1.5) * 9 : (rand() - 0.5) * 6), cz + (o[0] ? (k - 1.5) * 9 : (rand() - 0.5) * 6), 5, 4.5);
+            } else {
+                var along = o[0] ? [cx, cz - 18, cx, cz + 18] : [cx - 18, cz, cx + 18, cz];
+                if (o[1]) wall(r, along[0], along[2], cz, 8);
+                else r.add(CUBE, cx, 4, cz, 2.2, 8, 36, STONE);
+                tower(r, along[0], along[1], 12);
+                tower(r, along[2], along[3], 12);
+            }
+        }
     }
 
     // Torches on the castle walls and by the village well: point lights the page keeps each frame.
@@ -342,7 +393,9 @@
                          weapon: u.id % 7 === 0 ? 'axe' : 'spear', shield: true, tall: 0.96 + (u.id % 9) * 0.01 };
             }
             look.hideHead = u.id === player && !!opts.firstPerson;
+            r.dy = b.ground ? Ground.at(b.ground, u.x, u.z).height : 0;
             figure(r, u, look, t);
+            r.dy = 0;
         }
         // Arrows in the air, on a shallow arc from bow to target: a shaft along the axis nearest
         // their flight, with pale fletching at the back.
@@ -360,8 +413,10 @@
         var me = player != null ? findUnit(b, player) : null;
         var points = [], lights = [];
         if (me && me.state !== 'dead') {
+            r.dy = b.ground ? Ground.at(b.ground, me.x, me.z).height : 0;
             r.add(CYLINDER, me.x, 0.025, me.z, me.type === 'cavalry' ? 1.6 : 0.95, 0.01, me.type === 'cavalry' ? 1.6 : 0.95, scale(GOLD, 0.6));
-            lights.push([me.x, 2.6, me.z, 6, [1, 0.85, 0.5], 1.2]);
+            lights.push([me.x, 2.6 + r.dy, me.z, 6, [1, 0.85, 0.5], 1.2]);
+            r.dy = 0;
         }
         // Dust from the moving and sparks from blows this frame.
         for (var j = 0; j < (opts.events || []).length; j++) {
