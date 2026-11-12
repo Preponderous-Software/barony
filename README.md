@@ -339,8 +339,9 @@ battle instead. You can also set up a custom battle without signing in.
 
 - **The lie of the land**: every map tile has its own battlefield ground, the same each time: woods on the flanks,
   perhaps a rise on one side's half, perhaps a stream between the lines, with the tile's neighbouring villages and
-  castles beyond the field's edges. Woods slow horses and stop arrows; a side with a rise in its half holds it and
-  strikes harder downhill; a stream slows anyone wading it. The map's own rule ignores the ground.
+  castles beyond the field's edges. Woods slow horses and halve arrows' chance of hitting those among the trees; a
+  side with a rise in its half holds it and strikes harder downhill; a stream slows anyone wading it. The map's own
+  rule ignores the ground.
 
   ![A blue army holds a terraced rise with its cavalry in front, a stream crossing the field and woods on both flanks, as the red line advances with its cavalry among the trees](docs/images/battle-ground.jpg)
 - **Watch** from an orbit camera at ½×, 1×, 2× or 4× speed, with a live tally of soldiers standing and running.
@@ -389,8 +390,8 @@ takes `{"enabled": true|false}`. Pending battles appear in the game state as `pe
 The engine is a thin C++ host (`web-client/battle3d/main.cpp`) built with Emscripten 6.0.11
 against Strata's pinned v0.7.0 wasm release (`web-client/battle3d/build.sh`). The outputs are
 committed so the Maven build needs no Emscripten. CI rebuilds them and fails if the bytes differ.
-The battle itself is plain JavaScript (`battle-sim.js`, `battle-render.js`, `battle-avatar.js`) and is
-tested under Node in `web-client/src/test/js/battle-sim.test.js`.
+The battle itself is plain JavaScript (`battle-sim.js`, `battle-ground.js`, `battle-render.js`,
+`battle-avatar.js`) and is tested under Node in `web-client/src/test/js/battle-sim.test.js`.
 
 ## Game Overview
 
