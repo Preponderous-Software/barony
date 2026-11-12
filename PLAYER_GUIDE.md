@@ -252,10 +252,11 @@ in soldiers. Morale decides how hard your side hits and how many losses it takes
 there: woods on the flanks, perhaps a rise on one side's half, perhaps a stream between the lines.
 Villages and castles next to the tile on the map stand beyond the edges of the field. The battle
 page says what the ground is when the armies form up.
-- **Woods** slow horses badly (and men on foot a little), and arrows mostly hit the trees instead of
-  anyone sheltering in them.
+- **Woods** slow horses badly (and men on foot a little), and arrows shot at anyone sheltering in
+  them hit half as often.
 - **A rise** is worth holding: the side whose half it is in forms up on top and waits for the
-  enemy. From it, blows strike harder at those below, bows shoot further, and attackers climb slowly.
+  enemy, for up to 25 seconds or until the enemy closes (its archers still shoot at anyone in
+  range). From it, blows strike harder at those below, bows shoot further, and attackers climb slowly.
 - **A stream** slows anyone wading it.
 
 The ground only matters on the battlefield. **Let the map decide** ignores it, as before.
