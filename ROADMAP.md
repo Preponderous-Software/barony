@@ -284,7 +284,26 @@ Introduce different unit types with unique characteristics and tactical roles.
 
 #### 1.2.2 - Terrain Effects & Elevation
 **Effort:** 18-24 hours  
-**Priority:** High
+**Priority:** High  
+**Status:** 🔄 Partly shipped, on the 3D battlefield only (see CHANGELOG, Unreleased); the map
+itself still has only castles, villages and open tiles, so the items below marked ⏳ remain future
+work.
+
+**What shipped** (it differs from the sketch below where noted):
+- ✅ Each field battle is fought on ground of its own, worked out from its map tile so the same tile
+  always gives the same ground (`battle-ground.js`): woods on the flanks, sometimes a rise in one
+  side's half, sometimes a stream between the lines
+- ✅ Woods slow cavalry to about half pace and infantry a little, and halve an archer's chance of
+  hitting someone among the trees (not a flat +20% defense)
+- ✅ A rise acts as elevation: its holders wait on it, strike harder at those below and shoot further
+  from it
+- ✅ A stream slows anyone wading it (there are no bridges or fords)
+- ✅ Villages and castles beside the battle's tile on the map stand past the field's edges
+- ⏳ Terrain on the map's tiles: forest, mountains, rivers and roads, with movement costs,
+  pathfinding and AI that consider them; the map's own battle rule still ignores the ground
+- ⏳ Vision effects (these wait on fog of war)
+
+The original sketch:
 
 Add terrain variety that affects movement and combat.
 
