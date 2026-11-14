@@ -10,6 +10,9 @@
  *   BattleGround.at(ground, x, z)              -> {height, wood, water} at a point on the field
  *   BattleGround.describe(ground)              -> one sentence about the ground, for the page
  *
+ * On a map built from a real place each tile also says what its land is (tile.ground: snow, sand,
+ * forest...); that comes along as ground.cover and only changes how the field looks.
+ *
  * The ground only matters on the 3D battlefield (battle-sim.js reads it): woods slow horses and
  * hide those in them from arrows, a rise lends its holders a stronger blow and a longer bowshot,
  * and a stream slows anyone wading it. The map's own rule ignores it, as it always has.
@@ -21,6 +24,15 @@
     'use strict';
 
     var RISE_STEPS = 5;              // a rise is drawn, and stood on, as this many terraces
+
+    // What a real map's tile can say its land is, and the word the page's hint opens with for it
+    // (short, so the hint still fits a phone).
+    var COVERS = {
+        plain: '', forest: 'Forest.', snow: 'Snow.', sand: 'Sand.', stone: 'Stony.', badland: 'Badlands.',
+        ice: 'Ice.', water: 'Marsh.', built: 'Town.', farm: 'Farmland.'
+    };
+
+    function isCover(c) { return typeof c === 'string' && Object.prototype.hasOwnProperty.call(COVERS, c); }
 
     function rng(seed) {
         var a = seed >>> 0;
@@ -96,6 +108,8 @@
         var type = tile.type === 'VILLAGE' || tile.type === 'CASTLE' ? tile.type : 'EMPTY';
         var g = generate(rng(tileSeed(tile.x, tile.y)), type);
         g.edges = edgesFrom(tile.grid, tile.x | 0, tile.y | 0);
+        var col = tile.grid && tile.grid[tile.x | 0], here = col && col[tile.y | 0];
+        if (here && isCover(here.ground)) g.cover = here.ground;
         return g;
     }
 
@@ -120,6 +134,7 @@
                 out.edges.push({ dir: e.dir, type: e.type, ownerId: e.ownerId | 0 });
             }
         });
+        if (isCover(g.cover)) out.cover = g.cover;
         return out;
     }
 
@@ -157,9 +172,11 @@
         }
         if (g.rises.length) parts.push('a rise on ' + (g.rises[0].z < 0 ? 'your' : 'the enemy\u2019s') + ' side');
         if (g.stream) parts.push('a stream between the lines');
-        if (!parts.length) return 'Open ground.';
+        var lead = isCover(g.cover) && COVERS[g.cover] ? COVERS[g.cover] + ' ' : '';
+        if (!parts.length) return lead + 'Open ground.';
         var s = parts.join(', ') + '.';
-        return s.charAt(0).toUpperCase() + s.slice(1);
+        s = s.charAt(0).toUpperCase() + s.slice(1);
+        return (lead + s).length <= 80 ? lead + s : s;      // the land gives way when the hint is full
     }
 
     var api = { RISE_STEPS: RISE_STEPS, forTile: forTile, forSeed: forSeed, clean: clean, at: at,

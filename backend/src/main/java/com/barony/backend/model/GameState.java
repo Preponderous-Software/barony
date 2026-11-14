@@ -90,6 +90,7 @@ public class GameState {
                 target.setOccupationTicks(source.getOccupationTicks());
                 target.setStability(source.getStability());
                 target.setPopulation(source.getPopulation());
+                target.setGround(source.getGround());
             }
         }
         for (Army army : armies) {

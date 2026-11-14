@@ -6,6 +6,13 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Backend
 
+- ✅ **Real maps**: with `BARONY_MAP_REALMS` set, every new game starts on a map built from a realms
+  map file and a heightmap world package instead of a random one (`example` picks the bundled
+  example island). Two realms play. Their towns and castles become castles and their villages
+  villages, and every other realm's seats become neutral villages. Each tile carries its `ground`
+  (snow, sand, forest...), which tints the map and dresses the 3D battlefield but changes no rule.
+  Random maps stay the default, and their saves are unchanged. See [docs/REAL_MAPS.md](docs/REAL_MAPS.md).
+
 - ✅ **Unit types: archers and cavalry alongside infantry** (ROADMAP §1.2.1): an `Army` keeps
   `soldiers` as its total and gains `archers` and `cavalry` (infantry is the rest, exposed read-only
   as `infantry`). Saves without them load as all infantry. A new `TRAIN` command converts infantry

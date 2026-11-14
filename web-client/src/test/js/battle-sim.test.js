@@ -577,3 +577,39 @@ test('the ground is described in a few words, for the phone-sized hint', () => {
     assert.equal(Ground.describe(Ground.clean({})), 'Open ground.');
     for (let x = 0; x < 20; x++) assert.ok(Ground.describe(Ground.forTile({ x, y: x * 3 })).length <= 80);
 });
+
+// ----------------------------------------------------------------------- a real map's land
+
+test('a real map tile brings its land along; a random map tile brings nothing', () => {
+    const grid = [[{ type: 'EMPTY', ground: 'snow' }, { type: 'EMPTY' }], [{ type: 'EMPTY', ground: 'lava?' }, { type: 'EMPTY' }]];
+    const snowy = Ground.forTile({ x: 0, y: 0, type: 'EMPTY', grid });
+    assert.equal(snowy.cover, 'snow');
+    const plain = Ground.forTile({ x: 0, y: 1, type: 'EMPTY', grid });
+    assert.equal('cover' in plain, false);
+    assert.deepEqual(plain, Ground.forTile({ x: 0, y: 1, type: 'EMPTY' }), 'no land given: the ground is as it was');
+    assert.equal('cover' in Ground.forTile({ x: 1, y: 0, type: 'EMPTY', grid }), false, 'an unknown land is ignored');
+    // Apart from its land the ground is the tile's usual ground.
+    const { cover, ...rest } = snowy;
+    assert.deepEqual(rest, Ground.forTile({ x: 0, y: 0, type: 'EMPTY' }));
+    assert.equal(Ground.clean({ cover: 'sand' }).cover, 'sand');
+    assert.equal('cover' in Ground.clean({ cover: '<b>' }), false);
+});
+
+test('the land opens the description and changes the look, never the fight', () => {
+    assert.equal(Ground.describe(Ground.clean({ cover: 'snow' })), 'Snow. Open ground.');
+    assert.equal(Ground.describe(Ground.clean({ cover: 'plain', stream: { z: 0, width: 3 } })), 'A stream between the lines.');
+    const g = Ground.forTile({ x: 2, y: 5, type: 'VILLAGE' });
+    const bare = Render.scenery('VILLAGE', 9, g);
+    assert.deepEqual(Render.scenery('VILLAGE', 9, Object.assign({}, g, { cover: 'nothing' })), bare);
+    const sand = Render.scenery('VILLAGE', 9, Object.assign({}, g, { cover: 'sand' }));
+    const forest = Render.scenery('VILLAGE', 9, Object.assign({}, g, { cover: 'forest' }));
+    const grid = Array.from({ length: 20 }, () => Array.from({ length: 20 }, () => ({ type: 'EMPTY', ground: 'badland' })));
+    for (let x = 0; x < 20; x++) assert.ok(Ground.describe(Ground.forTile({ x, y: (x * 3) % 20, grid })).length <= 80);
+    assert.ok(sand.length < bare.length && forest.length > bare.length, 'fewer trees on sand, more in forest');
+    assert.notDeepEqual(Array.from(sand.slice(7, 10)), Array.from(bare.slice(7, 10)), 'the ground is another colour');
+
+    const sides = [{ soldiers: 30, archers: 6, cavalry: 4, playerId: 1 }, { soldiers: 30, playerId: 2 }];
+    const a = fight({ sides, seed: 4, ground: g }), b = fight({ sides, seed: 4, ground: Object.assign({}, g, { cover: 'snow' }) });
+    assert.equal(a.time, b.time);
+    assert.equal(a.winner, b.winner);
+});

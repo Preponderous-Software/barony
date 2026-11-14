@@ -1,5 +1,6 @@
 package com.barony.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,6 +14,13 @@ public class Tile {
     private int occupationTicks;
     private int stability;
     private int population;
+    /**
+     * What the land is like on this tile (plain, forest, snow, sand, stone, badland, ice, water,
+     * built or farm) on a map built from a world package; null on a random map and in every save
+     * made before real maps, and left out of the JSON then. Only the battlefield's look reads it.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String ground;
     
     public Tile(TileType type) {
         this.type = type;

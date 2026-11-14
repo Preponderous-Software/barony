@@ -1,0 +1,49 @@
+{
+  "map": {"package": "package"},
+  "name": "Example island",
+  "default_realm": "westmarch",
+  "world": {"name": "the Isle", "adjective": "Island", "people": "islanders"},
+  "realms": [
+    {
+      "slot": 1, "key": "westmarch", "name": "March of the West", "short": "Westmarch", "color": "#2f5d8a",
+      "seats": [
+        {"name": "Greywater", "kind": "town", "x": 300, "z": 520},
+        {"name": "Thornhold", "kind": "castle", "x": 340, "z": 330},
+        {"name": "Lowgate", "kind": "castle", "x": 330, "z": 650},
+        {"name": "Reedby", "kind": "village", "x": 250, "z": 455},
+        {"name": "Millbrook", "kind": "village", "x": 260, "z": 600},
+        {"name": "Hollins", "kind": "village", "x": 400, "z": 560},
+        {"name": "the western shore", "kind": "claim", "x": 220, "z": 520, "weight": 1.0}
+      ]
+    },
+    {
+      "slot": 2, "key": "highcairn", "name": "Highcairn", "short": "Highcairn", "color": "#8a2f2f",
+      "seats": [
+        {"name": "Cairnmouth", "kind": "town", "x": 700, "z": 540},
+        {"name": "Snowcrest", "kind": "castle", "x": 650, "z": 470},
+        {"name": "Eastwatch", "kind": "castle", "x": 680, "z": 670},
+        {"name": "Fellside", "kind": "village", "x": 770, "z": 440},
+        {"name": "Ashby", "kind": "village", "x": 775, "z": 600},
+        {"name": "Stonefield", "kind": "village", "x": 590, "z": 590}
+      ]
+    },
+    {
+      "slot": 3, "key": "saltreach", "name": "Saltreach", "short": "Saltreach", "color": "#3f7f4f",
+      "seats": [
+        {"name": "Saltreach", "kind": "town", "x": 512, "z": 255},
+        {"name": "Gullrock", "kind": "castle", "x": 430, "z": 290},
+        {"name": "Dunmere", "kind": "village", "x": 600, "z": 290},
+        {"name": "Kelpwick", "kind": "village", "x": 500, "z": 345}
+      ]
+    },
+    {
+      "slot": 4, "key": "southfold", "name": "Southfold", "short": "Southfold", "color": "#9a7b2f",
+      "seats": [
+        {"name": "Southfold", "kind": "town", "x": 500, "z": 760},
+        {"name": "Barrowby", "kind": "castle", "x": 590, "z": 725},
+        {"name": "Wheatley", "kind": "village", "x": 420, "z": 735},
+        {"name": "Sandholme", "kind": "village", "x": 540, "z": 805}
+      ]
+    }
+  ]
+}
