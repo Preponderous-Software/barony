@@ -105,22 +105,38 @@
         for (var x = Math.min(x0, x1) + 0.6; x < Math.max(x0, x1); x += 1.6) r.add(CUBE, x, h + 0.4, z, 0.8, 0.8, 2.2, DARK_STONE);
     }
 
+    // How a real map's land looks: the colour of the ground and the field, and how many trees stand
+    // around it compared with green open country.
+    var COVER_LOOK = {
+        forest: { grass: hexToLinear('#46682e'), field: hexToLinear('#5a7238'), trees: 2 },
+        snow: { grass: hexToLinear('#e4eaee'), field: hexToLinear('#d3dadd'), trees: 0.8 },
+        ice: { grass: hexToLinear('#cfe1ea'), field: hexToLinear('#c0d2dc'), trees: 0.3 },
+        sand: { grass: hexToLinear('#d6c28d'), field: hexToLinear('#c9b27a'), trees: 0.25 },
+        badland: { grass: hexToLinear('#b5714b'), field: hexToLinear('#a5653f'), trees: 0.2 },
+        stone: { grass: hexToLinear('#8c897f'), field: hexToLinear('#7e7b71'), trees: 0.5 },
+        farm: { grass: hexToLinear('#97984a'), field: hexToLinear('#a29f52'), trees: 0.5 },
+        water: { grass: hexToLinear('#6c876a'), field: hexToLinear('#6d7c55'), trees: 0.6 },
+        built: { grass: hexToLinear('#7c796d'), field: hexToLinear('#75725f'), trees: 0.4 }
+    };
+
     // The ground and what stands around the field, by Barony tile type. The fight happens in the
     // middle (|x| < 25, |z| < 40); everything here keeps clear of it.
     function scenery(terrain, seed, ground) {
         var r = new Rows(), rand = rng((seed >>> 0) ^ 0x9e3779b9);
-        r.add(CUBE, 0, -0.5, 0, 600, 1, 600, GRASS);
-        r.add(CUBE, 0, 0.005, 0, 60, 0.01, 90, FIELD);
+        var look = (ground && COVER_LOOK[ground.cover]) || null;
+        var trees = look ? look.trees : 1;
+        r.add(CUBE, 0, -0.5, 0, 600, 1, 600, look ? look.grass : GRASS);
+        r.add(CUBE, 0, 0.005, 0, 60, 0.01, 90, look ? look.field : FIELD);
         // Trampled mud where the lines will meet.
         r.add(CUBE, 0, 0.012, 0, 34, 0.01, 18, MUD);
         var i, x, z;
-        for (i = 0; i < 70; i++) {
+        for (i = 0; i < Math.round(70 * trees); i++) {
             var side = rand() < 0.5 ? -1 : 1;
             x = side * (34 + rand() * 60);
             z = (rand() - 0.5) * 200;
             tree(r, x, z, 4 + rand() * 4);
         }
-        for (i = 0; i < 24; i++) {
+        for (i = 0; i < Math.round(24 * trees); i++) {
             x = (rand() - 0.5) * 160;
             z = (rand() < 0.5 ? -1 : 1) * (60 + rand() * 60);
             tree(r, x, z, 4 + rand() * 3);

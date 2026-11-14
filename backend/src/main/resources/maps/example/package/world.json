@@ -1,0 +1,61 @@
+{
+  "source": {
+    "world": "synthetic",
+    "level_name": "Example island",
+    "dimension": "overworld",
+    "step": 4
+  },
+  "grid": {
+    "origin_x": 0,
+    "origin_z": 0,
+    "blocks_per_px": 4,
+    "width": 256,
+    "height": 256,
+    "y_offset": 1024
+  },
+  "classes": [
+    "void",
+    "water",
+    "plain",
+    "forest",
+    "snow",
+    "sand",
+    "stone",
+    "badland",
+    "ice",
+    "lava",
+    "built",
+    "farm"
+  ],
+  "stats": {
+    "surveyed_px": 65536,
+    "land_px": 20336,
+    "class_px": {
+      "void": 0,
+      "water": 45200,
+      "plain": 15200,
+      "forest": 0,
+      "snow": 677,
+      "sand": 3120,
+      "stone": 1339,
+      "badland": 0,
+      "ice": 0,
+      "lava": 0,
+      "built": 0,
+      "farm": 0
+    },
+    "land_y_percentiles": {
+      "5": 62,
+      "25": 67,
+      "50": 74,
+      "75": 87,
+      "90": 115,
+      "95": 133,
+      "99": 156
+    }
+  },
+  "files": {
+    "height": "height.png",
+    "ground": "ground.png"
+  }
+}

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class MapGenerator {
+public class MapGenerator implements MapSource {
     private final Random random;
 
     static final int MIN_SIZE = 10;
@@ -23,6 +23,7 @@ public class MapGenerator {
         this.random = new Random(seed);
     }
 
+    @Override
     public GameState generate() {
         int width = MIN_SIZE + random.nextInt(MAX_SIZE - MIN_SIZE + 1);
         int height = MIN_SIZE + random.nextInt(MAX_SIZE - MIN_SIZE + 1);
