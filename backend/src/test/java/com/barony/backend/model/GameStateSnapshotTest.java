@@ -30,7 +30,7 @@ class GameStateSnapshotTest {
         state.setWinnerId(2);
         state.setAiEnabled(false);
         state.setEconomicPolicy("HEAVY_TAXATION");
-        state.setMilitaryPolicy("CONSCRIPTION");
+        state.setMilitaryPolicy("AGGRESSIVE_TRAINING");
         state.setPopulationPolicy("GROWTH_FOCUS");
         state.setLastPolicyChangeTick(30);
         state.setNextBattleId(9);
@@ -44,7 +44,7 @@ class GameStateSnapshotTest {
         assertEquals(2, snapshot.getWinnerId());
         assertFalse(snapshot.isAiEnabled());
         assertEquals("HEAVY_TAXATION", snapshot.getEconomicPolicy());
-        assertEquals("CONSCRIPTION", snapshot.getMilitaryPolicy());
+        assertEquals("AGGRESSIVE_TRAINING", snapshot.getMilitaryPolicy());
         assertEquals("GROWTH_FOCUS", snapshot.getPopulationPolicy());
         assertEquals(30, snapshot.getLastPolicyChangeTick());
         assertEquals(9, snapshot.getNextBattleId());
