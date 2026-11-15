@@ -71,7 +71,7 @@ public class GuestSessionService {
     private final int idleDays;
     private final long maxGuests;
     private final Clock clock;
-    private final MapGenerator mapGenerator = new MapGenerator();
+    private MapSource mapSource = new MapGenerator();
     private final SecureRandom random = new SecureRandom();
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
 
@@ -97,6 +97,12 @@ public class GuestSessionService {
         this.clock = clock;
     }
 
+    /** Where new games' maps come from (see {@link MapSourceConfig}); random maps by default. */
+    @Autowired(required = false)
+    void setMapSource(MapSource mapSource) {
+        this.mapSource = mapSource;
+    }
+
     /** A newly created guest: the cookie token (given to the browser once) and their session. */
     public record NewGuest(String token, Session session) { }
 
@@ -117,7 +123,7 @@ public class GuestSessionService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         String key = keyFor(token);
 
-        GameState state = mapGenerator.generate();
+        GameState state = mapSource.generate();
         Instant now = clock.instant();
         GuestGame row = new GuestGame(key);
         row.setState(write(state));
@@ -187,7 +193,7 @@ public class GuestSessionService {
             log.warn("Unreadable guest game {}… set aside as backup {} before a fresh game replaces it",
                     shortKey(key), backup.getId());
         }
-        GameState state = mapGenerator.generate();
+        GameState state = mapSource.generate();
         guest.setState(write(state));
         guest.setLastSeenAt(clock.instant());
         repository.save(guest);

@@ -325,6 +325,21 @@
             textWhite: '#FFF'
         };
         
+        // A map built from a real place says what each tile's land is; it is washed in faintly under
+        // the owner tint. Random maps have no ground, so they look as they always have.
+        const GROUND_TINT = {
+            water: 'rgba(60, 110, 150, 0.35)',
+            plain: 'rgba(110, 140, 70, 0.18)',
+            forest: 'rgba(50, 100, 45, 0.30)',
+            farm: 'rgba(150, 150, 70, 0.22)',
+            snow: 'rgba(235, 240, 245, 0.30)',
+            ice: 'rgba(200, 225, 240, 0.30)',
+            sand: 'rgba(215, 190, 130, 0.28)',
+            badland: 'rgba(180, 110, 70, 0.28)',
+            stone: 'rgba(150, 145, 135, 0.25)',
+            built: 'rgba(130, 125, 110, 0.25)'
+        };
+
         const COLORBLIND_PALETTES = {
             none: {
                 player1Tint: 'rgba(100, 150, 255, 0.3)',
@@ -1283,6 +1298,11 @@
                     const px = x * cellWidth;
                     const py = y * cellHeight;
                     
+                    if (GROUND_TINT[tile.ground]) {
+                        ctx.fillStyle = GROUND_TINT[tile.ground];
+                        ctx.fillRect(px, py, cellWidth, cellHeight);
+                    }
+
                     // Draw tile background based on owner
                     if (tile.ownerId === 1) {
                         ctx.fillStyle = PALETTE.player1Tint;

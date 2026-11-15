@@ -64,6 +64,12 @@ Post-MVP roadmap:
 
 Development tickets and issue templates.
 
+### Running a Server on a Real Map
+👉 **See:** [docs/REAL_MAPS.md](docs/REAL_MAPS.md)
+
+How to start every new game on a map built from a realms map file and a heightmap world package,
+and what both formats hold.
+
 ## I Need Help
 
 ### Playing the Game

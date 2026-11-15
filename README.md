@@ -28,6 +28,7 @@ Barony is a browser-based turn-based strategy game where you command armies to c
 - **[PLAYER_GUIDE.md](PLAYER_GUIDE.md)** - Complete guide to playing Barony (start here!)
 - **[DOCS.md](DOCS.md)** - Documentation index (find what you need)
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and features
+- **[docs/REAL_MAPS.md](docs/REAL_MAPS.md)** - Starting games on a real map (a realms map file plus a heightmap world package) instead of a random one
 
 ### For Developers
 - **[MVP.md](MVP.md)** - MVP specification and implementation details
@@ -231,7 +232,9 @@ and `python3`, and `BASE_URL` points it at a backend other than `http://localhos
 `POST /api/session/field-battles`, all return the game state as JSON:
 
 - `grid` - tiles indexed `grid[x][y]`, each with `type` (`CASTLE`, `VILLAGE` or `EMPTY`), `ownerId`
-  (`0` neutral, `1` player, `2` AI), `occupationTicks`, `stability` and `population`
+  (`0` neutral, `1` player, `2` AI), `occupationTicks`, `stability` and `population`; on a
+  [real map](docs/REAL_MAPS.md) also `ground` (the tile's land: `plain`, `forest`, `snow`, `sand`...),
+  which is absent on random maps
 - `width`, `height` - the map size
 - `armies` - each with `id`, `x`, `y`, `soldiers`, `playerId`, `destinationX`, `destinationY` (`null`
   with no order), `moving`, `morale`, `loyalty` and `desertionCarryBasisPoints`; and the unit mix:

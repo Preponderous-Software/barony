@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +42,7 @@ public class SessionService {
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
 
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
-    private final MapGenerator mapGenerator = new MapGenerator();
+    private MapSource mapSource = new MapGenerator();
     private final SavedGameRepository savedGameRepository;
     private final RunRecordRepository runRecordRepository;
     private final SavedGameBackupRepository savedGameBackupRepository;
@@ -58,6 +59,12 @@ public class SessionService {
     private static final int MAX_RUN_HISTORY = 20;
 
     private static final int PLAYER_ID = 1;
+
+    /** Where new games' maps come from (see {@link MapSourceConfig}); random maps by default. */
+    @Autowired(required = false)
+    void setMapSource(MapSource mapSource) {
+        this.mapSource = mapSource;
+    }
 
     public SessionService(SavedGameRepository savedGameRepository, RunRecordRepository runRecordRepository,
                           SavedGameBackupRepository savedGameBackupRepository) {
@@ -274,7 +281,7 @@ public class SessionService {
     }
 
     private Session createFreshGame(String username, boolean failIfNotSaved) {
-        GameState newGameState = mapGenerator.generate();
+        GameState newGameState = mapSource.generate();
         Session newSession = new Session(username, newGameState);
         if (failIfNotSaved) {
             write(username, newGameState);

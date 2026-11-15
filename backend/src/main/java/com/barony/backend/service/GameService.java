@@ -10,6 +10,7 @@ import com.barony.backend.model.RulerStats;
 import com.barony.backend.model.Tile;
 import com.barony.backend.model.TileType;
 import com.barony.backend.model.UnitType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -28,14 +29,21 @@ public class GameService {
     private final AiService aiService = new AiService();
     private final CombatService combatService = new CombatService();
     private final PolicyService policyService = new PolicyService();
+    private MapSource mapSource = new MapGenerator();
 
     public GameService() {
         initializeGame();
     }
 
+    /** Where new games' maps come from (see {@link MapSourceConfig}); random maps by default. */
+    @Autowired(required = false)
+    public synchronized void setMapSource(MapSource mapSource) {
+        this.mapSource = mapSource;
+        initializeGame();
+    }
+
     private void initializeGame() {
-        MapGenerator generator = new MapGenerator();
-        gameState = generator.generate();
+        gameState = mapSource.generate();
     }
 
     public synchronized void setGameState(GameState state) {
