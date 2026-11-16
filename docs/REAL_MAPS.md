@@ -21,13 +21,18 @@ ships with the backend.
 | Setting (environment variable) | Meaning |
 |---|---|
 | `barony.map.realms` (`BARONY_MAP_REALMS`) | Unset or empty: random maps (the default). `example`: the bundled example island. A file path, or `classpath:<resource>`: that realms map file. |
-| `barony.map.package` (`BARONY_MAP_PACKAGE`) | The world package folder. Optional: by default it is the realms file's `map.package`, resolved against the realms file's folder when relative. |
+| `barony.map.package` (`BARONY_MAP_PACKAGE`) | The world package folder, for a realms file given as a file path. Optional: by default it is the realms file's `map.package`, resolved against the realms file's folder when relative. If neither is set, the backend stops at startup. It is ignored for `example` and `classpath:` maps, whose package is always the bundled `map.package` (default `package`) beside the realms file. |
 | `barony.map.players` (`BARONY_MAP_PLAYERS`) | Optional: two realm keys, `player,opponent`. By default the player is the file's `default_realm` (or the largest realm), and the opponent is the largest other realm. |
 
 ```bash
 BARONY_MAP_REALMS=example ./start-backend.sh
 BARONY_MAP_REALMS=/maps/isle/realms.json BARONY_MAP_PLAYERS=westmarch,highcairn ./start-backend.sh
 ```
+
+`start-backend.sh` runs the backend from the `backend/` folder, so a relative file path is taken
+from there. `docker-compose.yml` does not pass these variables on: to use a real map with
+`docker-compose up`, add them to the `backend` service's `environment`, and give a file path that
+exists inside the container (`example` needs no file).
 
 A map that cannot be read, or names a realm that cannot play, stops the backend at startup with the
 reason. It never falls back to random maps without saying so. Games already saved keep the map they
@@ -46,15 +51,18 @@ were started on. The setting only decides the map of the next new game (a new ac
   Grid `x` runs east and grid `y` runs south, so north is at the top of the map.
 - **Crowding.** When two seats fall on the same tile, the capitals go first, then the players' other
   castles, then the players' villages, then the neutral seats. A castle whose tile is taken moves to
-  the nearest free tile within 2 steps. A village is left off if another castle or village is on its
-  tile or next to it. The startup log reports how many seats were left off.
+  the nearest free tile within 2 steps (counted along rows and columns). If there is none, the castle
+  is left off, except a capital, which stops the backend at startup. A village is left off if another
+  castle or village is on its tile or on one of the four tiles beside it (diagonals do not count).
+  The startup log reports how many seats were left off.
 - **Ground.** Each tile records the commonest ground class (`plain`, `forest`, `snow`, `sand`,
   `stone`, `badland`, `ice`, `water`, `built`, `farm`) among the pixels it covers. Castles and
   villages use the commonest *land* class, so a coastal seat is not fought at sea. The ground
   appears in the game state as `tile.ground`, tints the map faintly, and sets how the 3D battlefield
   looks: the colour of the field, how many trees stand around it, and a word in the battle hint
-  ("Snow."). It does not change any rule or any battle's outcome. Random maps
-  have no ground, and their saves are unchanged.
+  ("Snow."). It does not change any rule or any battle's outcome. Any other class name in the
+  package (such as `lava`) is still recorded in `tile.ground`, but the map does not tint it and
+  the battlefield draws it as plain ground. Random maps have no ground, and their saves are unchanged.
 
 ## Realms map file
 
