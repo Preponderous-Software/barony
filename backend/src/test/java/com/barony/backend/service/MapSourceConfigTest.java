@@ -84,7 +84,10 @@ class MapSourceConfigTest {
     @Test
     void aFileNamingNoPackageNeedsThePackageSetting(@TempDir Path dir) throws IOException {
         Path realms = copyExample(dir, dir.resolve("package"));
-        Files.writeString(realms, Files.readString(realms).replace("{\"package\": \"package\"}", "{}"));
+        String named = Files.readString(realms);
+        String unnamed = named.replace("{\"package\": \"package\"}", "{}");
+        assertNotEquals(named, unnamed, "the example's map.package entry was found and removed");
+        Files.writeString(realms, unnamed);
         assertThrows(IllegalArgumentException.class, () -> config.mapSource(realms.toString(), "  ", ""));
         assertInstanceOf(RealmsMap.class, config.mapSource(realms.toString(), dir.resolve("package").toString(), ""));
     }
