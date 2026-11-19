@@ -538,6 +538,11 @@ apply it to each one that should stop):
 - `DO_NOT_TRACK=1` in the environment (also `true`, `yes`; see
   [consoledonottrack.com](https://consoledonottrack.com))
 
+Every switch fails closed: only `true`, `on`, `yes` or `1` keeps `USAGE_REPORTING_ENABLED` on, so
+a blank value (`USAGE_REPORTING_ENABLED=`), a typo or anything else turns reporting off. Likewise
+`TRACE_USAGE_REPORTING` set to anything but blank or a clear on value, and `DO_NOT_TRACK` set to
+anything but blank or a clear no, turn it off.
+
 Each process logs one line at startup saying whether reporting is on and, if it is off, which
 switch turned it off. Details: https://danielstephenson.dev/usage-reporting
 

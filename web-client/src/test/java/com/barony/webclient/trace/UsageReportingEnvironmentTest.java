@@ -40,7 +40,7 @@ class UsageReportingEnvironmentTest {
     @Test
     void doNotTrackDisablesReportingEvenWhenTheSettingSaysEnabled() {
         environment.put("DO_NOT_TRACK", "1");
-        UsageReportingService service = new UsageReportingService(true, ENDPOINT, "test-key", "1.0");
+        UsageReportingService service = new UsageReportingService("true", ENDPOINT, "test-key", "1.0");
         assertFalse(service.isEnabled(), "DO_NOT_TRACK=1 must switch reporting off");
         service.close();
     }
@@ -48,17 +48,34 @@ class UsageReportingEnvironmentTest {
     @Test
     void traceUsageReportingOffDisablesReportingEvenWhenTheSettingSaysEnabled() {
         environment.put("TRACE_USAGE_REPORTING", "off");
-        UsageReportingService service = new UsageReportingService(true, ENDPOINT, "test-key", "1.0");
+        UsageReportingService service = new UsageReportingService("true", ENDPOINT, "test-key", "1.0");
         assertFalse(service.isEnabled(), "TRACE_USAGE_REPORTING=off must switch reporting off");
         service.close();
     }
 
     @Test
+    void anUnclearTraceUsageReportingValueDisablesReporting() {
+        // Fails closed: anything but blank or a clear "on" is an opt-out, not a typo to ignore.
+        environment.put("TRACE_USAGE_REPORTING", "disabled");
+        UsageReportingService service = new UsageReportingService("true", ENDPOINT, "test-key", "1.0");
+        assertFalse(service.isEnabled(), "TRACE_USAGE_REPORTING=disabled must switch reporting off");
+        service.close();
+    }
+
+    @Test
+    void anyDoNotTrackValueButAClearNoDisablesReporting() {
+        environment.put("DO_NOT_TRACK", "please");
+        UsageReportingService service = new UsageReportingService("true", ENDPOINT, "test-key", "1.0");
+        assertFalse(service.isEnabled(), "DO_NOT_TRACK=please must switch reporting off");
+        service.close();
+    }
+
+    @Test
     void anEmptyEnvironmentLeavesTheSettingInCharge() {
-        UsageReportingService on = new UsageReportingService(true, ENDPOINT, "test-key", "1.0");
+        UsageReportingService on = new UsageReportingService("true", ENDPOINT, "test-key", "1.0");
         assertTrue(on.isEnabled());
         on.close();
-        UsageReportingService off = new UsageReportingService(false, ENDPOINT, "test-key", "1.0");
+        UsageReportingService off = new UsageReportingService("false", ENDPOINT, "test-key", "1.0");
         assertFalse(off.isEnabled());
         off.close();
     }
