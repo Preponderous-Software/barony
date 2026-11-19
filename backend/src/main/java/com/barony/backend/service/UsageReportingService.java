@@ -26,7 +26,7 @@ import java.util.Map;
  *
  * <p>Configured through the {@code usage-reporting.*} properties in {@code application.properties}
  * (each with an environment-variable override): {@code enabled} (default {@code true}),
- * {@code endpoint} and {@code key}. Setting {@code USAGE_REPORTING_ENABLED=false} turns it off, as
+ * {@code endpoint} and {@code key}. Setting {@code USAGE_REPORTING_ENABLED=false} (or any value but {@code true}, {@code on}, {@code yes} or {@code 1}) turns it off, as
  * does {@code TRACE_USAGE_REPORTING=off} or {@code DO_NOT_TRACK=1} in the environment: the
  * {@link TraceClient} checks those two itself, before this setting, so they always win. Details:
  * {@value #DETAILS_URL}.
@@ -46,12 +46,12 @@ public class UsageReportingService {
     private final String version;
 
     public UsageReportingService(
-            @Value("${usage-reporting.enabled:true}") boolean enabled,
+            @Value("${usage-reporting.enabled:true}") String enabled,
             @Value("${usage-reporting.endpoint:https://trace.danielstephenson.dev}") String endpoint,
             @Value("${usage-reporting.key:}") String key,
             @Value("${barony.version:unknown}") String version) {
         this.version = version == null || version.isBlank() ? "unknown" : version;
-        this.client = buildClient(enabled, endpoint, key, this.version);
+        this.client = buildClient(settingAllows(enabled), endpoint, key, this.version);
         if (client.isEnabled()) {
             log.info("Usage reporting is on: barony sends a startup event (program name, version and"
                     + " service=true only) to {}. Turn it off with USAGE_REPORTING_ENABLED=false"
@@ -59,6 +59,16 @@ public class UsageReportingService {
         } else {
             log.info("Usage reporting is off ({}).", disabledReason(client));
         }
+    }
+
+    /**
+     * Whether the operator's {@code usage-reporting.enabled} value allows reporting. Read as
+     * text and judged by the client so it fails closed: only {@code true}, {@code on},
+     * {@code yes} or {@code 1} keep reporting on; a blank value ({@code USAGE_REPORTING_ENABLED=}),
+     * a typo or anything else turns it off rather than being read as on.
+     */
+    static boolean settingAllows(String enabled) {
+        return TraceClient.allowsReporting(enabled);
     }
 
     /**

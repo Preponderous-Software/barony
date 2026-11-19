@@ -50,8 +50,8 @@ class UsageReportingServiceTest {
 
     @Test
     void carriesARandomInstallationIdOnlyWhileReportingIsOn() {
-        UsageReportingService on = new UsageReportingService(true, endpoint, "test-key", "9.9.9-TEST");
-        UsageReportingService off = new UsageReportingService(false, endpoint, "test-key", "9.9.9-TEST");
+        UsageReportingService on = new UsageReportingService("true", endpoint, "test-key", "9.9.9-TEST");
+        UsageReportingService off = new UsageReportingService("false", endpoint, "test-key", "9.9.9-TEST");
 
         assertNotNull(on.installId());
         assertNull(off.installId(), "a disabled client never makes up an ID");
@@ -61,7 +61,7 @@ class UsageReportingServiceTest {
 
     @Test
     void startupEventCarriesProgramNameVersionAndServiceTag() throws Exception {
-        UsageReportingService service = new UsageReportingService(true, endpoint, "test-key", "9.9.9-TEST");
+        UsageReportingService service = new UsageReportingService("true", endpoint, "test-key", "9.9.9-TEST");
         assertTrue(service.isEnabled());
 
         service.reportStartup();
@@ -76,7 +76,7 @@ class UsageReportingServiceTest {
 
     @Test
     void pageViewEventCarriesPathAndVersionOnly() throws Exception {
-        UsageReportingService service = new UsageReportingService(true, endpoint, "test-key", "9.9.9-TEST");
+        UsageReportingService service = new UsageReportingService("true", endpoint, "test-key", "9.9.9-TEST");
 
         service.reportPageView("/game");
 
@@ -90,7 +90,7 @@ class UsageReportingServiceTest {
 
     @Test
     void startupTagsAreOnlyService() {
-        UsageReportingService service = new UsageReportingService(false, endpoint, "k", "1.2.3");
+        UsageReportingService service = new UsageReportingService("false", endpoint, "k", "1.2.3");
         Map<String, String> tags = service.startupTags();
         assertEquals(Map.of("service", "true"), tags, "the client adds version to every event itself");
         service.close();
@@ -98,14 +98,14 @@ class UsageReportingServiceTest {
 
     @Test
     void blankVersionIsReportedAsUnknown() {
-        UsageReportingService service = new UsageReportingService(false, endpoint, "k", " ");
+        UsageReportingService service = new UsageReportingService("false", endpoint, "k", " ");
         assertEquals("unknown", service.version());
         service.close();
     }
 
     @Test
     void disabledSendsNothing() throws Exception {
-        UsageReportingService service = new UsageReportingService(false, endpoint, "test-key", "1.0");
+        UsageReportingService service = new UsageReportingService("false", endpoint, "test-key", "1.0");
         assertFalse(service.isEnabled());
 
         service.reportStartup();
@@ -118,7 +118,7 @@ class UsageReportingServiceTest {
 
     @Test
     void missingKeySendsNothing() throws Exception {
-        UsageReportingService service = new UsageReportingService(true, endpoint, "", "1.0");
+        UsageReportingService service = new UsageReportingService("true", endpoint, "", "1.0");
         assertFalse(service.isEnabled());
 
         service.reportStartup();
@@ -132,7 +132,7 @@ class UsageReportingServiceTest {
     @Test
     void blankEndpointIsDisabledRatherThanFailing() {
         UsageReportingService service = assertDoesNotThrow(
-                () -> new UsageReportingService(true, " ", "test-key", "1.0"));
+                () -> new UsageReportingService("true", " ", "test-key", "1.0"));
         assertFalse(service.isEnabled());
         service.close();
     }
@@ -141,7 +141,7 @@ class UsageReportingServiceTest {
     void unreachableServerNeverThrows() {
         // Nothing listens on this port once the stub is stopped; the report must be dropped quietly.
         server.stop(0);
-        UsageReportingService service = new UsageReportingService(true, endpoint, "test-key", "1.0");
+        UsageReportingService service = new UsageReportingService("true", endpoint, "test-key", "1.0");
         assertDoesNotThrow(service::reportStartup);
         assertDoesNotThrow(() -> service.reportPageView("/game"));
         assertDoesNotThrow(service::close);
@@ -157,5 +157,29 @@ class UsageReportingServiceTest {
             }
             return new String(out.toByteArray(), StandardCharsets.UTF_8);
         }
+    }
+
+    @Test
+    void onlyAClearlyOnSettingAllowsReporting() {
+        for (String on : new String[] {"true", "TRUE", "on", "yes", "1", " true "}) {
+            assertTrue(UsageReportingService.settingAllows(on), "usage-reporting.enabled=" + on);
+        }
+        // An operator's opt-out must never be read as on: a blank USAGE_REPORTING_ENABLED=,
+        // a quoted "false", a typo or anything else unclear turns reporting off.
+        for (String off : new String[] {"false", "off", "no", "0", "", "  ", "\"false\"", "flase", "disabled", null}) {
+            assertFalse(UsageReportingService.settingAllows(off), "usage-reporting.enabled=" + off);
+        }
+    }
+
+    @Test
+    void aBlankOrUnclearSettingSendsNothing() throws Exception {
+        for (String off : new String[] {"", "\"false\"", "disabled"}) {
+            UsageReportingService service = new UsageReportingService(off, endpoint, "test-key", "1.0");
+            assertFalse(service.isEnabled(), "usage-reporting.enabled=" + off + " must turn reporting off");
+            service.reportStartup();
+            service.close();
+        }
+        assertFalse(arrived.await(300, TimeUnit.MILLISECONDS));
+        assertTrue(bodies.isEmpty());
     }
 }
