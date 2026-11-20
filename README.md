@@ -429,10 +429,14 @@ node --test web-client/src/test/js/
 ```
 
 ### CI/CD
-GitHub Actions runs on all PRs:
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request to, and every push to,
+`main` or `develop`:
 - Builds backend and web client
 - Runs all unit and integration tests
 - Runs the game page's JS test suite (`web-client/src/test/js/`) with Node
+- Rebuilds the 3D battlefield's engine with Emscripten (`web-client/battle3d/build.sh`) and fails
+  if the result differs from the committed files in `web-client/src/main/resources/static/battle3d/`
+  (see [3D Battlefield](#3d-battlefield))
 - Uses JDK 17 with Maven caching
 
 ## Technical Architecture
