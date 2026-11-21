@@ -497,6 +497,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request to, and e
   differs from the committed files in `web-client/src/main/resources/static/map3d/` (see [3D Map](#3d-map))
 - Uses JDK 17 with Maven caching
 
+`.github/workflows/release.yml` builds the release downloads (the backend and web-client jars, each
+with a `.sha256`) when a version tag is pushed; see [docs/RELEASING.md](docs/RELEASING.md) for
+versions, tags and saved-game fixtures.
+
 ## Technical Architecture
 
 ### Backend

@@ -12,6 +12,20 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 public class GameState {
+    /**
+     * The format of a saved game: the JSON this class serializes to, stored in the
+     * {@code saved_game} and {@code guest_game} tables (and their backups).
+     *
+     * <p>The contract: bump this when the stored format changes (a field is added, removed, renamed
+     * or changes meaning), make the load path read every older format exactly as it always did
+     * (a migration on load where one is needed), and add a new fixture
+     * {@code backend/src/test/resources/saves/v<N>-<name>.json} written by the new serializer and
+     * listed in {@code SaveFixturesTest}. Fixtures of released formats never change.
+     *
+     * <p>Static, so it is not part of the saved JSON; saves do not record their format.
+     */
+    public static final int SAVE_VERSION = 1;
+
     private Tile[][] grid;
     private List<Army> armies;
     private int tickCount;

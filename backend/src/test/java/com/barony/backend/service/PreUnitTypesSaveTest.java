@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Saves made before unit types must load and play exactly as they always did.
  *
- * <p>{@code saves/pre-unit-types-save.json} was written by the code before unit types (commit
+ * <p>{@code saves/v0-pre-unit-types.json} was written by the code before unit types (commit
  * 6466263): a game 22 turns in, under the desertion-heavy military policy, paused on a pending
  * field battle. The digests below were recorded by running {@link LegacyGameHarness} on that same
  * code; this build must reproduce them bit for bit, through movement, merging, recruiting, the AI
@@ -40,7 +40,7 @@ class PreUnitTypesSaveTest {
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private String fixtureJson() throws Exception {
-        try (InputStream in = getClass().getResourceAsStream("/saves/pre-unit-types-save.json")) {
+        try (InputStream in = getClass().getResourceAsStream("/saves/v0-pre-unit-types.json")) {
             assertNotNull(in, "fixture missing");
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
