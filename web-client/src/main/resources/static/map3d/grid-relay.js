@@ -22,7 +22,9 @@
    Input is forwarded, not interpreted: keys (with desktop Strata's
    scancodes, USB HID usage ids, and SDL3 modifier bits), the mouse, the
    wheel, touch and pen, and resizes, as STRATA_EVENT_* records (see WIRE.md,
-   "Input"), so every control a game has in 2D works the same in 3D.
+   "Input"), so every control a game has in 2D works the same in 3D. A page
+   with its own keyboard UI passes {"keys": false}: no key is forwarded and
+   none has its browser default (Tab, Space, the arrows) prevented.
 
    MIT licensed, as Strata. */
 (function () {
@@ -61,12 +63,18 @@
     "PageDown", "Home", "End", "Backspace"]);
 
   let state = "idle", kit = null, mod = null, canvas = null, opts = {};
-  let queue = [];  // wire messages that arrived before the module
+  // Wire messages that arrived before the module: the latest of each kind,
+  // as each replaces the last of its kind (WIRE.md), so a game that keeps
+  // sending while the module loads (or waits on the data-saver prompt) keeps
+  // at most four messages here, in the order their kinds last arrived.
+  let queue = [];
+  let closed = false;  // close() came while loading: stay hidden once loaded
   let events = [];
   const MAX_EVENTS = 1024;
   let heap = 0, heapCap = 0;
   let cpuMs = 0, cpuFrames = 0, frameStart = 0, lastErr = null;
   const held = new Set();
+  let fed = false;  // the module has accepted a message: there is something to draw
 
   function fail(reason) {
     state = "failed:" + reason;
@@ -174,7 +182,13 @@
       lastErr = msg;
       return -2;
     }
-    if (!mod) { queue.push(bytes); return 1; }
+    if (!mod) {
+      if (bytes.length < 2 || bytes[0] !== 0x47 || bytes[1] !== 0x33) return -1;
+      if (bytes.length < 8) return -3;  // as relay.h says it, once loaded
+      queue = queue.filter((m) => m[4] !== bytes[4]);
+      queue.push(bytes);
+      return 1;
+    }
     if (bytes.length > heapCap) {
       if (heap) mod._free(heap);
       heapCap = Math.max(bytes.length, 4096);
@@ -182,7 +196,11 @@
     }
     new Uint8Array(mod.HEAPU8 ? mod.HEAPU8.buffer : mod.HEAP32.buffer, heap, bytes.length).set(bytes);
     const rc = mod._gr_submit(heap, bytes.length);
-    if (rc !== 0) {
+    if (rc === 0) {
+      fed = true;
+      // not while open() replays the queue for a page that said close()
+      if (state === "ready" && !closed && kit && !kit.running) kit.start();
+    } else {
       const msg = `grid-relay: message kind ${bytes[4]} refused: ${STATUS[rc] || "status " + rc}`;
       if (lastErr !== msg) console.error(msg);
       lastErr = msg;
@@ -205,8 +223,10 @@
     if (!canvas) return fail("no canvas #" + opts.canvas);
     state = "loading";
     const base = opts.base;
-    // The size gate: the module's bytes, before any are downloaded.
-    const bytes = (await headBytes(base + opts.wasm)) + (await headBytes(base + opts.script));
+    // The size gate: the module's bytes, before any are downloaded. Both
+    // asked at once: on a phone each round trip is a tenth of a second or more.
+    const sizes = await Promise.all([headBytes(base + opts.wasm), headBytes(base + opts.script)]);
+    const bytes = sizes[0] + sizes[1];
     if (opts.maxBytes && bytes > opts.maxBytes) {
       return fail(`the 3D view is ${(bytes / 1e6).toFixed(1)} MB, over the ${(opts.maxBytes / 1e6).toFixed(1)} MB limit`);
     }
@@ -224,8 +244,15 @@
     try {
       kit = StrataKit.create({
         module: mod, canvas, idleOrbit: false, quality: opts.quality, reducedMotion: opts.reducedMotion,
+        // Slow means under 25 frames a second, not the kit's 35: a board game
+        // is fine at 30, and iOS Low Power Mode (and many Android battery
+        // savers) hold every page to 30, which would otherwise cost the view
+        // its pixel density and shadows on a phone with a GPU to spare.
+        slowMs: opts.slowMs || 40,
         limits: {minPitch: -1.6, maxPitch: 1.6, minDist: 0, maxDist: 1e9},
-        // The game owns every key: none moves the kit's camera.
+        // The game owns every key: none moves the kit's camera. With keys:
+        // false the page owns them, and the kit leaves them alone too.
+        keys: opts.keys !== false,
         onKey: () => true,
         frame() {
           frameStart = performance.now();
@@ -248,17 +275,33 @@
     canvas.addEventListener("pointerup", onPointer);
     canvas.addEventListener("pointercancel", onPointer);
     canvas.addEventListener("wheel", onWheel, {passive: false});
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("keyup", onKey);
-    window.addEventListener("blur", () => held.clear());
+    if (opts.keys !== false) {
+      window.addEventListener("keydown", onKey);
+      window.addEventListener("keyup", onKey);
+      window.addEventListener("blur", () => held.clear());
+    }
     if (typeof ResizeObserver === "function") new ResizeObserver(resized).observe(canvas);
     state = "ready";
     resized();
     const pending = queue;
     queue = [];
     for (const m of pending) submit(m);
-    kit.start();
     StrataLoader.done();
+    if (closed) {
+      // the page said close() while the module loaded: keep it, hidden and
+      // not drawing, until request() shows it again
+      canvas.hidden = true;
+      state = "idle";
+      return kit;
+    }
+    // a close() and then a request() while loading: shown after all
+    canvas.hidden = false;
+    // The frame loop starts with the first message the module accepts (in
+    // submit), not before: until then there is nothing to draw, and on a
+    // phone the game in the page is usually still starting (pygbag compiles
+    // and boots CPython on this thread), so frames drawn now would slow that
+    // down and their times would make the kit lower its quality for good.
+    if (fed && !kit.running) kit.start();
     return kit;
   }
 
@@ -267,11 +310,17 @@
     EVENTS: EV,
     open,
     request(json) {
-      if (state === "loading" || state === "ready") return state;
-      if (kit && state === "idle") {  // reopened after close(): the module is still here
+      closed = false;
+      if (state === "loading") return state;
+      if (state === "ready") {  // shown, and drawing once there is something to draw
+        canvas.hidden = false;
+        if (fed && !kit.running) kit.start();
+        return state;
+      }
+      if (kit && state === "idle") {  // reopened after close(), or after a close() while it loaded
         canvas.hidden = false;
         state = "ready";
-        kit.start();
+        if (fed) kit.start();
         return state;
       }
       let o = {};
@@ -301,6 +350,7 @@
     close() {
       if (kit) kit.running = false;
       if (canvas) canvas.hidden = true;
+      if (state === "loading") closed = true;  // open() finishes hidden and idle
       state = state === "ready" ? "idle" : state;
     },
     get kit() { return kit; },

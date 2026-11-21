@@ -100,7 +100,7 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 ### Web Client
 
 - ✅ **The map in 3D**: the game page draws the strategy map in 3D by default where the browser has
-  WebGL 2, with Strata's grid relay (v0.9.0, prebuilt, driven through its JS page API), and keeps
+  WebGL 2, with Strata's grid relay (v0.9.1, prebuilt, driven through its JS page API), and keeps
   the 2D canvas map as the fallback, with the reason shown. It is at parity with the 2D map: the
   same tile colours (owner and land), castles, villages, armies fanned out on shared tiles with
   their soldier counts, archer and cavalry marks, the selection ring, destination outlines, capture

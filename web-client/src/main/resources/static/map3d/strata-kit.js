@@ -29,7 +29,9 @@
      pins a tier; ?fps=1 shows what it settled on and the frame's stats.
    - One orbit/pan/zoom controller: pointer capture, drag to orbit,
      right-drag or shift-drag or two fingers to pan, pinch and wheel to zoom,
-     arrow keys and +/-, and a slow idle orbit (none under reduced motion).
+     arrow keys and +/- on the focused canvas (none with keys: false, for a
+     page with its own keyboard UI), and a slow idle orbit (none under
+     reduced motion).
      A tap is a gesture of exactly one pointer (the primary mouse button, a
      pen or one finger) that moved under 6 CSS pixels: one onTap on its
      pointer-up. Two fingers, or a right or middle click, never tap.
@@ -38,8 +40,11 @@
      never enters picking.
    - webglcontextlost / webglcontextrestored: the loop stops, and on restore
      the engine is rebuilt in the same canvas (sk_restore) and the host's
-     onRestore runs. A context that is lost twice in a minute, or does not
-     come back in 5 seconds, calls onFatal("context-lost").
+     onRestore runs. A context that is lost a third time in a minute, or
+     does not come back in 5 seconds (restoreMs), calls
+     onFatal("context-lost"). Losses while the page is hidden do not count,
+     and the 5 seconds start when it is visible again: a phone takes a
+     hidden page's context away and gives it back on return.
    - window.__strataKit: drive(t) (draws scene time t synchronously; the loop
      does not run under ?drive=1), pickAt, tapAt, lastTapId, targets, stats,
      loseContext/restoreContext, for tools such as testing/smoke.cjs.
@@ -262,7 +267,9 @@
       kit.clampCam();
       touch();
     }, {passive: false});
-    canvas.addEventListener("keydown", (e) => {
+    // keys: false leaves the keyboard to the page: no camera keys, and no
+    // key's browser default (Tab's focus move, Space) is prevented.
+    if (opts.keys !== false) canvas.addEventListener("keydown", (e) => {
       if (opts.onKey && opts.onKey(e)) { e.preventDefault(); return; }
       const k = e.key;
       if (k === "ArrowLeft") cam.yaw -= 0.08;
@@ -343,6 +350,10 @@
     kit.start = function () {
       if (driven || kit.running) return kit;
       kit.running = true;
+      // Frame times are measured from here: a page that creates the kit and
+      // starts it later (the grid relay waits for something to draw) gets a
+      // fresh settle window, so its own start-up never lowers the quality.
+      qStart = 0; settleUntil = performance.now() + settleMs;
       requestAnimationFrame(loop);
       return kit;
     };
@@ -358,19 +369,39 @@
     };
 
     /* ------------------------------------------------- context loss */
+    // A phone's browser takes a hidden page's context away (iOS Safari does
+    // when the player switches apps or locks the screen) and gives it back
+    // only once the page is visible again, so a loss while hidden is not
+    // counted as a repeat, and the wait for the restore starts when the page
+    // is visible.
     let lostAt = [], restoreTimer = 0;
+    const restoreMs = opts.restoreMs || 5000;
+    const hidden = () => document.visibilityState === "hidden";
+    function awaitRestore() {
+      clearTimeout(restoreTimer);
+      restoreTimer = 0;
+      if (hidden()) return;
+      restoreTimer = setTimeout(() => giveUp("The 3D view lost its graphics context and it did not come back."), restoreMs);
+    }
     canvas.addEventListener("webglcontextlost", (e) => {
       e.preventDefault();  // without this the browser never restores it
       kit.lost = true;
       const now = performance.now();
-      lostAt = lostAt.filter((x) => now - x < 60000).concat(now);
+      lostAt = lostAt.filter((x) => now - x < 60000);
+      if (!hidden()) lostAt.push(now);
       if (opts.onLost) opts.onLost();
       clearTimeout(restoreTimer);
+      restoreTimer = 0;
       if (lostAt.length > 2) return giveUp("The 3D view lost its graphics context again.");
-      restoreTimer = setTimeout(() => giveUp("The 3D view lost its graphics context and it did not come back."), 5000);
+      awaitRestore();
+    });
+    // Hidden again before the restore came: the wait starts over on return.
+    document.addEventListener("visibilitychange", () => {
+      if (kit.lost && !kit.fatal && (hidden() || !restoreTimer)) awaitRestore();
     });
     canvas.addEventListener("webglcontextrestored", () => {
       clearTimeout(restoreTimer);
+      restoreTimer = 0;
       if (kit.fatal) return;
       kit.resize();
       const rc2 = mod._sk_restore();
