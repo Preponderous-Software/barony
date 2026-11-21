@@ -25,7 +25,11 @@
      size (with a console warning), so the buffer cannot feed back into it.
    - Adaptive quality: when frames average over slowMs, first lowers the
      pixel density towards 1, then the quality tier (shadows), with a settle
-     window after each step. A hidden tab resets the measurement. ?quality=
+     window after each step. After upMs (8 s) of frames at or under fastMs
+     (0.6 x slowMs), it takes the last step back, so a stall at start-up or
+     a busy moment does not cost the view for good; a step back up that does
+     not hold doubles the wait, and after three it is not tried again.
+     A hidden tab resets the measurement. ?quality=
      pins a tier; ?fps=1 shows what it settled on and the frame's stats.
    - One orbit/pan/zoom controller: pointer capture, drag to orbit,
      right-drag or shift-drag or two fingers to pan, pinch and wheel to zoom,
@@ -287,12 +291,25 @@
     /* --------------------------------------------------------- quality */
     let qStart = 0, qFrames = 0, settleUntil = performance.now() + settleMs;  // first frames compile shaders
     let slowSeen = false;
+    // Recovery: what was given up, last first, so a step back up restores
+    // exactly what the step down took. A step back up needs upMs of windows
+    // all at or under fastMs (well under slowMs, so one step's cost cannot
+    // flip it straight back); a step up that is lowered again within
+    // heldMs doubles the wait, and after maxUpFailures such failures that
+    // step is out of reach and is no longer tried (the ones under it still
+    // are).
+    const fastMs = opts.fastMs || slowMs * 0.6, upMs = opts.upMs || 8000;
+    const heldMs = settleMs + 2 * windowMs, maxUpFailures = opts.maxUpFailures != null ? opts.maxUpFailures : 3;
+    const givenUp = [];
+    let fastSince = 0, upWait = upMs, upFailures = 0, lastUp = 0;
     const fpsEl = q.get("fps") === "1" ? document.body.appendChild(Object.assign(document.createElement("div"), {
       className: "sk-fps",
       style: "position:fixed;right:8px;bottom:8px;font:12px monospace;background:#000a;color:#fff;" +
              "padding:2px 6px;border-radius:4px;z-index:9;pointer-events:none",
     })) : null;
-    document.addEventListener("visibilitychange", () => { qStart = 0; settleUntil = performance.now() + settleMs / 2; });
+    document.addEventListener("visibilitychange", () => {
+      qStart = 0; fastSince = 0; settleUntil = performance.now() + settleMs / 2;
+    });
     kit.stats = function () {
       const s = mod._sk_stats() >> 2, h = mod.HEAP32;
       return {primitives: h[s], points: h[s + 1], lines: h[s + 2], lights: h[s + 3], terrain: h[s + 4],
@@ -311,12 +328,35 @@
         fpsEl.textContent = `${(1000 / ms).toFixed(0)} fps · q${kit.quality} · ${kit.dpr.toFixed(2)}x · ` +
           `${st.primitives} prims · ${st.meshes} meshes · ${st.points} pts · ${st.lines} lines · ${st.lights} lights · ${st.terrain} ground`;
       }
+      const windowStart = qStart;
       qStart = now; qFrames = 0;
-      if (forcedQuality != null || now < settleUntil || ms <= slowMs) return;
+      if (forcedQuality != null || now < settleUntil) { fastSince = 0; return; }
+      if (ms <= slowMs) {
+        if (ms > fastMs || !givenUp.length) { fastSince = 0; return; }
+        if (!fastSince) fastSince = windowStart;
+        if (now - fastSince < upWait) return;
+        // A sustained run of fast frames: take back the last thing given up.
+        const step = givenUp.pop();
+        if (step.dprCap != null) kit.dprCap = step.dprCap;
+        else kit.setQuality(step.quality);
+        console.log(`strata-kit: frames are fast (${ms.toFixed(0)} ms); ` +
+          (step.dprCap != null ? `pixel density ${Math.min(window.devicePixelRatio || 1, kit.dprCap).toFixed(2)}`
+            : `quality ${kit.quality}`));
+        fastSince = 0; lastUp = now;
+        settleUntil = now + settleMs;
+        return;
+      }
+      fastSince = 0;
+      // The last step up did not hold: wait longer before trying it again.
+      const failedUp = !!lastUp && now - lastUp < heldMs;
+      if (failedUp) { upFailures++; upWait *= 2; }
+      lastUp = 0;
       if (kit.dpr > minDprCap + 0.01) {
+        givenUp.push({dprCap: kit.dprCap});
         kit.dprCap = Math.max(minDprCap, kit.dpr * 0.75);
         console.log(`strata-kit: frames are slow (${ms.toFixed(0)} ms); pixel density ${kit.dprCap.toFixed(2)}`);
       } else if (kit.quality > 0) {
+        givenUp.push({quality: kit.quality});
         kit.setQuality(kit.quality - 1);
         console.log(`strata-kit: frames are slow (${ms.toFixed(0)} ms); quality ${kit.quality}`);
       } else {
@@ -325,6 +365,11 @@
         if (!slowSeen && opts.onSlow) opts.onSlow({frameMs: ms});
         slowSeen = true;
         return;
+      }
+      if (failedUp && upFailures >= maxUpFailures) {
+        // That step is out of reach here: forget it, and try the ones under it.
+        givenUp.pop();
+        upFailures = 0; upWait = upMs;
       }
       settleUntil = now + settleMs;
     }

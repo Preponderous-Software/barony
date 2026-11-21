@@ -38,9 +38,12 @@
    - the poster (if any) as a blurred backdrop, and the title;
    - real progress: the .wasm is fetched as a stream and its bytes counted
      against Content-Length (or `bytes`), shown as "1.2 of 3.4 MB", with
-     role=progressbar. The counted bytes are handed to the module as
-     wasmBinary, so nothing is downloaded twice. The glue script loads at the
-     same time;
+     role=progressbar. Served as application/wasm, the same response is
+     compiled while it arrives (WebAssembly.compileStreaming, which also
+     lets the browser keep the compiled code for the next visit) and handed
+     to the module compiled (instantiateWasm); otherwise the counted bytes
+     are handed over as wasmBinary. Nothing is downloaded twice. The glue
+     script loads at the same time;
    - the fallback, instead of a blank page: when WebGL 2 is missing, when the
      engine fails, when a lost context does not come back, or when the device
      is too slow even at the lowest tier (StrataLoader.slow()): the trailer
@@ -281,18 +284,28 @@
     });
   }
 
-  async function fetchWasm(url, statedBytes) {
-    const res = await fetch(url, {credentials: "same-origin"});
+  async function fetchWasm(url, statedBytes, signal) {
+    const res = await fetch(url, {credentials: "same-origin", signal});
     if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
     // Content-Length is the size on the wire; when the body is compressed it
     // is smaller than what the reader yields, so the stated size wins then.
     const enc = res.headers.get("Content-Encoding");
     const header = parseInt(res.headers.get("Content-Length") || "", 10);
     let total = (!enc || enc === "identity") && header > 0 ? header : (statedBytes || 0);
+    // The engine compiles while its bytes arrive (and the browser may keep
+    // the compiled code for the next visit), from a copy of the same
+    // response, so nothing is fetched twice. That needs the application/wasm
+    // type; without it, or should it fail, the counted bytes are compiled as
+    // before.
+    let compiled = null;
+    if (typeof WebAssembly.compileStreaming === "function" && res.body && typeof res.clone === "function" &&
+        /^application\/wasm\b/i.test(res.headers.get("Content-Type") || "")) {
+      compiled = WebAssembly.compileStreaming(res.clone()).catch(() => null);
+    }
     if (!res.body || !res.body.getReader) {
       const buf = await res.arrayBuffer();
       byteProgress(buf.byteLength, buf.byteLength);
-      return buf;
+      return {bytes: buf, module: null};
     }
     const reader = res.body.getReader();
     const chunks = [];
@@ -306,11 +319,13 @@
       if (total && got > total) total = 0;  // the stated size was wrong: say bytes only
       byteProgress(got, total);
     }
+    byteProgress(got, got);
+    const module = compiled ? await compiled : null;
+    if (module) return {bytes: null, module};
     const out = new Uint8Array(got);
     let o = 0;
     for (const c of chunks) { out.set(c, o); o += c.byteLength; }
-    byteProgress(got, got);
-    return out.buffer;
+    return {bytes: out.buffer, module: null};
   }
 
   function waitForStart(reason) {
@@ -342,18 +357,31 @@
     state = "loading";
     shown = 0;
     mount();
+    // The .wasm download starts before the WebGL 2 probe, which blocks the
+    // thread while the browser makes a context (on a phone, often the first
+    // one the page has, and the slowest), so the two overlap. With no
+    // WebGL 2 it is cancelled; behind the gate it waits for the tap.
+    const why = opts.gate ? asksForLess() : null;
+    const abort = typeof AbortController === "function" ? new AbortController() : null;
+    let wasmFetch = null;
+    const startFetch = () => {
+      wasmFetch = fetchWasm(opts.wasm, opts.bytes, abort ? abort.signal : undefined);
+      wasmFetch.catch(() => {});  // awaited below; this only keeps an early failure from being unhandled
+    };
+    if (!why) startFetch();
     if (!hasWebGL2()) {
+      if (abort) abort.abort();
       fallback("no-webgl2");
       throw Object.assign(new Error("no-webgl2"), {code: "no-webgl2"});
     }
-    if (opts.gate) {
-      const why = asksForLess();
-      if (why) await waitForStart(why);
+    if (why) {
+      await waitForStart(why);
+      startFetch();
     }
-    let binary;
+    let wasm;
     try {
       const glue = window[opts.factory] ? Promise.resolve() : loadScript(opts.script);
-      [binary] = await Promise.all([fetchWasm(opts.wasm, opts.bytes), glue]);
+      [wasm] = await Promise.all([wasmFetch, glue]);
     } catch (e) {
       fallback("network", `${REASONS.network} (${e.message || e})`);
       throw Object.assign(new Error("network"), {code: "network", cause: e});
@@ -363,13 +391,26 @@
       fallback("network", `${REASONS.network} (${opts.factory} is missing)`);
       throw Object.assign(new Error("network"), {code: "network"});
     }
+    // A compiled module is handed over through instantiateWasm (the glue
+    // then only instantiates it), else the bytes as wasmBinary. Either way
+    // the glue downloads nothing itself.
+    let instantiateFailed = null;
+    const failed = new Promise((resolve, reject) => { instantiateFailed = reject; });
+    const args = {
+      locateFile: (p) => (opts.base || "") + p,
+      print: (t) => console.log(t),
+      printErr: (t) => console.warn(t),
+    };
+    if (wasm.module) {
+      args.instantiateWasm = (imports, receive) => {
+        WebAssembly.instantiate(wasm.module, imports).then(receive, instantiateFailed);
+        return {};
+      };
+    } else {
+      args.wasmBinary = wasm.bytes;
+    }
     try {
-      return await factory(Object.assign({
-        wasmBinary: binary,
-        locateFile: (p) => (opts.base || "") + p,
-        print: (t) => console.log(t),
-        printErr: (t) => console.warn(t),
-      }, opts.moduleArgs || {}));
+      return await Promise.race([factory(Object.assign(args, opts.moduleArgs || {})), failed]);
     } catch (e) {
       fallback("engine", `${REASONS.engine} (${e.message || e})`);
       throw Object.assign(new Error("engine"), {code: "engine", cause: e});
