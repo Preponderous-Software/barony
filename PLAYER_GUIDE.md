@@ -106,6 +106,19 @@ drawn smaller and spread around the middle of the cell so each one can still be 
 hovering picks the circle you are nearest, so on a shared tile you choose between them by aiming at
 the one you want rather than getting whichever the game listed first.
 
+**The map in 3D.** Where your browser can draw it (it needs WebGL 2), the map opens in 3D: the same
+tiles and colours, castles as keeps flying their holder's flag, villages as huts, and each army as a
+soldier with a banner in its colour and its soldier count over it. Everything above works the same
+way: click or tap an army to select it, click or tap a tile to send it there, right-click or press
+`Escape` to deselect, and hover or tap for the same tooltips. You can also move the view: drag the
+map to move it, right-drag (or Shift-drag) to turn it and scroll to zoom; on a phone, drag with one
+finger and pinch or twist with two. The buttons in the map's top corner turn, tilt and zoom it, and
+the house button shows the whole map again. On a keyboard: the arrows move the view, `Q`/`E` turn
+it, `Page Up`/`Page Down` tilt it, `+`/`-` zoom and `0` shows the whole map.
+
+Use **3D map / 2D map** above the map (or press `V`) to switch; your choice is remembered. If the
+3D map can't run on your device, the 2D map is shown with a note saying why.
+
 ### Controlling Your Armies
 
 **Mouse Controls:**
