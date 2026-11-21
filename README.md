@@ -294,6 +294,8 @@ docker-compose up
 Then open http://localhost:3000
 
 ### Features
+- The map in 3D by default (see [3D Map](#3d-map)), with the 2D canvas map one click away and as the
+  fallback where 3D cannot run
 - Toast notifications replace all in-game blocking alerts
 - Canvas hover tooltips (tile info, army stats, castle capture progress)
 - Army selection highlight ring on canvas
@@ -319,9 +321,63 @@ Then open http://localhost:3000
   also stored against their account (`/api/session/preferences`) and applied on any browser or
   device they sign in from. `localStorage` remains the working copy, so an unreachable backend
   costs nothing beyond the arrangement not travelling
-- Keyboard shortcuts: `Space` advance turn, `R` reset, `S` focus split amount, `A` toggle Auto Play, `Escape` deselect
+- Keyboard shortcuts: `Space` advance turn, `R` reset, `S` focus split amount, `A` toggle Auto Play, `Escape` deselect,
+  `V` switch between the 3D and 2D map; on the 3D map also arrows (move), `Q`/`E` (turn), `Page Up`/`Page Down` (tilt),
+  `+`/`-` (zoom) and `0` (whole map)
+- The tile under the mouse is outlined, on both maps
 - Castle objective progress (yours / enemy / neutral, out of the map total) in the Game Status panel
 - Milestone toasts when a castle changes hands or the last castle on either side comes under siege
+
+## 3D Map
+
+The game page draws the strategy map in 3D wherever the browser has WebGL 2, with
+[Strata](https://github.com/Preponderous-Software/strata)'s grid relay: a prebuilt Strata scene the
+page drives through its JavaScript API (`window.StrataGridRelay`), sending it the board, the armies,
+the soldier-count labels and the camera as small binary messages (Strata's `WIRE.md`, format 1.0).
+The 3D map does everything the 2D map does, through the same handlers:
+
+<p align="center">
+  <img src="docs/images/map-3d.png" alt="The game page's map in 3D: a dark board of tiles seen from the south, the player's blue army selected in the far left corner with a gold-edged soldier-count label and its tooltip, villages as huts across the board, and the red army on its castle in the near right corner; camera buttons along the top" width="560">
+  <img src="docs/images/map-3d-mobile.png" alt="The 3D map on a phone: the board fills the width, the selected army's tooltip shows below the finger's tap and the camera buttons run along the top" width="250">
+</p>
+<p align="center"><em>The 3D map with an army selected, on a desktop and on a phone (headless Chromium, guest game, 2026-11-20).</em></p>
+
+| 2D map | 3D map |
+|---|---|
+| Tiles tinted by owner and, on a real map, by land | The same colours, composited the same way; water lies lower, forests have trees |
+| Castles and villages | Keeps with towers (the holder's flag on top) and huts |
+| Armies as circles, fanned out on a shared tile | A soldier and banner in the army's colour, at the same fanned-out spots, sliding a turn's move |
+| Soldier count on the circle | A label over each army |
+| Archer and cavalry marks | A white bow-stave (back left) and horse (back right) |
+| Gold selection ring | A gold ring under the army and a marker over it; its label is edged in gold |
+| Dashed outline on your armies' destinations | The same, in your army colour |
+| Castle capture bar | A bar over the castle |
+| Hover and tap tooltips | The same text, from the same `getTooltipText` |
+| Click or tap to select and move, right-click to deselect | The same; an army is picked by its figure, or by the tile under the pointer |
+| Keys (`Space`, `R`, `S`, `A`, `Escape`) | The same keys, and typing in the split and train boxes is unaffected |
+| Colour-blind palettes | The same palettes |
+
+The 3D map adds a camera: drag to move the map, right-drag (or Shift-drag) to turn it, wheel to
+zoom; on a phone one finger moves it and two pinch and turn it; buttons in its corner and keys
+(above) do the same, and `0` or the house button shows the whole map again. The camera fits the
+whole map to the canvas in portrait or landscape.
+
+**Choosing the view.** 3D is the default. The **3D map / 2D map** switch over the map (or `V`)
+changes it, and the choice is kept in `localStorage` under `barony_map_view` and, for a signed-in
+player, with their other preferences. `/game?view=2d` or `/game?view=3d` picks a view for one
+visit without changing what is kept. The relay's module (about 1.3 MB) is
+downloaded only when the 3D map is wanted; until it is ready, and wherever it cannot run (no WebGL
+2, a failed download or engine), the 2D map is shown with the reason beside the switch.
+
+**Files.** `web-client/src/main/resources/static/js/grid-wire.js` encodes the relay's messages
+and does the camera's projection and picking; it knows nothing of Barony, so it could move into
+Strata's web kit. `map3d-scene.js` turns a game state into the 3D scene, and `map3d-view.js`
+drives the relay on the page. The relay itself (`static/map3d/`) is copied from Strata's pinned
+v0.9.1 wasm release by `web-client/map3d/fetch.sh` (SHA-256 checked) and committed; CI fetches it
+again and fails if the bytes differ. Tests: `web-client/src/test/js/grid-wire.test.js`,
+`map3d-scene.test.js`, `map3d-view.test.js` (Node), `GamePageMap3DTest` (the page's wiring), and
+`web-client/e2e/map3d.cjs`, which plays the page in headless Chromium against a local Barony, on a
+desktop and a phone.
 
 ## 3D Battlefield
 
@@ -437,6 +493,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request to, and e
 - Rebuilds the 3D battlefield's engine with Emscripten (`web-client/battle3d/build.sh`) and fails
   if the result differs from the committed files in `web-client/src/main/resources/static/battle3d/`
   (see [3D Battlefield](#3d-battlefield))
+- Fetches Strata's grid relay for the 3D map (`web-client/map3d/fetch.sh --check`) and fails if it
+  differs from the committed files in `web-client/src/main/resources/static/map3d/` (see [3D Map](#3d-map))
 - Uses JDK 17 with Maven caching
 
 ## Technical Architecture

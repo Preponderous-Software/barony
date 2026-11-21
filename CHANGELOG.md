@@ -99,6 +99,19 @@ All notable changes to the Barony Prototype MVP are documented in this file.
 
 ### Web Client
 
+- ✅ **The map in 3D**: the game page draws the strategy map in 3D by default where the browser has
+  WebGL 2, with Strata's grid relay (v0.9.1, prebuilt, driven through its JS page API), and keeps
+  the 2D canvas map as the fallback, with the reason shown. It is at parity with the 2D map: the
+  same tile colours (owner and land), castles, villages, armies fanned out on shared tiles with
+  their soldier counts, archer and cavalry marks, the selection ring, destination outlines, capture
+  bars, tooltips, click and tap to select and move, right-click and `Escape` to deselect, the page's
+  keys and the colour-blind palettes. It adds a camera (drag, right-drag, wheel, pinch and twist,
+  buttons and keys) fitted to portrait and landscape screens, and armies slide a turn's move. A
+  **3D map / 2D map** switch (and `V`) is remembered under `barony_map_view` (with a signed-in
+  player's preferences); `?view=2d` or `?view=3d` picks one for a visit. The tile under the mouse
+  is now outlined on both maps. The relay is fetched and SHA-checked by `web-client/map3d/fetch.sh`,
+  and CI checks the committed copy.
+
 - ✅ **The lie of the land on the 3D battlefield**: a field battle is now fought on ground of its
   own: woods on the flanks, sometimes a rise on one side's half, sometimes a stream between the
   lines (`battle-ground.js`). Barony's map only has castles, villages and open tiles, so the ground

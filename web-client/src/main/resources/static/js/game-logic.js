@@ -405,7 +405,9 @@
         panelState: 'barony_panel_state',
         // The player's avatar for the 3D battlefield (battle-avatar.js), carried with the rest so a
         // preference upload from this page never drops it from the account.
-        avatar: 'barony_avatar'
+        avatar: 'barony_avatar',
+        // Whether the game page draws the map in 3D or 2D ('3d' or '2d'; map3d-view.js).
+        mapView: 'barony_map_view'
     };
 
     // Reconciles the preferences stored against a player's account with the ones this browser
