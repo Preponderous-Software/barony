@@ -12,8 +12,8 @@ work="${MAP3D_WORK:-$here/.build}"
 out="$client/src/main/resources/static/map3d"
 mkdir -p "$work"
 
-STRATA_VERSION=0.9.1
-STRATA_SHA256=80aa63085857a50186a4db6f22c14663dad34fd3856f8de03b528fdbfe33fc96
+STRATA_VERSION=0.10.0
+STRATA_SHA256=bb86b974c7e0309db91625ba5ee157273704c77d93f4338c8a63ee625e3d56de
 FILES="grid-relay.js grid-relay-scene.js grid-relay-scene.wasm strata-kit.js strata-loader.js"
 
 tarball="$work/strata-$STRATA_VERSION-wasm32-emscripten.tar.gz"

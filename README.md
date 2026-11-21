@@ -365,7 +365,7 @@ whole map to the canvas in portrait or landscape.
 **Choosing the view.** 3D is the default. The **3D map / 2D map** switch over the map (or `V`)
 changes it, and the choice is kept in `localStorage` under `barony_map_view` and, for a signed-in
 player, with their other preferences. `/game?view=2d` or `/game?view=3d` picks a view for one
-visit without changing what is kept. The relay's module (about 1.3 MB) is
+visit without changing what is kept. The relay's module (about 1.2 MB) is
 downloaded only when the 3D map is wanted; until it is ready, and wherever it cannot run (no WebGL
 2, a failed download or engine), the 2D map is shown with the reason beside the switch.
 
@@ -373,7 +373,7 @@ downloaded only when the 3D map is wanted; until it is ready, and wherever it ca
 and does the camera's projection and picking; it knows nothing of Barony, so it could move into
 Strata's web kit. `map3d-scene.js` turns a game state into the 3D scene, and `map3d-view.js`
 drives the relay on the page. The relay itself (`static/map3d/`) is copied from Strata's pinned
-v0.9.1 wasm release by `web-client/map3d/fetch.sh` (SHA-256 checked) and committed; CI fetches it
+v0.10.0 wasm release by `web-client/map3d/fetch.sh` (SHA-256 checked) and committed; CI fetches it
 again and fails if the bytes differ. Tests: `web-client/src/test/js/grid-wire.test.js`,
 `map3d-scene.test.js`, `map3d-view.test.js` (Node), `GamePageMap3DTest` (the page's wiring), and
 `web-client/e2e/map3d.cjs`, which plays the page in headless Chromium against a local Barony, on a
