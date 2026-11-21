@@ -890,7 +890,8 @@ test('PREFERENCE_STORAGE_KEYS names the localStorage key each preference is kept
         settings: 'barony_settings',
         panelLayout: 'barony_panel_layout',
         panelState: 'barony_panel_state',
-        avatar: 'barony_avatar'
+        avatar: 'barony_avatar',
+        mapView: 'barony_map_view'
     });
 });
 

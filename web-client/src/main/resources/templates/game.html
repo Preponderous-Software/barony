@@ -49,8 +49,33 @@
                 </div>
             </div>
 
+            <!-- The map is drawn in 3D (Strata's grid relay) where the browser can, else in 2D; the
+                 choice is remembered, and ?view=2d or ?view=3d picks one for a visit. -->
+            <div class="map-view-bar">
+                <div class="map-view-switch" role="group" aria-label="Map view">
+                    <button type="button" id="mapView3d" aria-pressed="false" onclick="setMapView(true)"
+                            title="Draw the map in 3D (V)">3D map</button>
+                    <button type="button" id="mapView2d" aria-pressed="false" onclick="setMapView(false)"
+                            title="Draw the map in 2D (V)">2D map</button>
+                </div>
+                <span id="mapViewNote" class="map-view-note" role="status" aria-live="polite"></span>
+            </div>
+
             <div id="gameCanvas">
                 <canvas id="mapCanvas" width="800" height="600"></canvas>
+                <div id="map3dStage" class="map3d-stage" hidden>
+                    <canvas id="mapRelay" role="img"
+                            aria-label="The map in 3D: your armies, the enemy's, castles and villages. Click or tap as on the 2D map."></canvas>
+                    <div class="map3d-controls" role="group" aria-label="3D camera">
+                        <button type="button" onclick="mapCamera('turn-left')" title="Turn left (Q)" aria-label="Turn left">&#10226;</button>
+                        <button type="button" onclick="mapCamera('turn-right')" title="Turn right (E)" aria-label="Turn right">&#10227;</button>
+                        <button type="button" onclick="mapCamera('tilt-up')" title="Look more from above (Page Up)" aria-label="Look more from above">&#9651;</button>
+                        <button type="button" onclick="mapCamera('tilt-down')" title="Look more from the side (Page Down)" aria-label="Look more from the side">&#9661;</button>
+                        <button type="button" onclick="mapCamera('zoom-in')" title="Zoom in (+)" aria-label="Zoom in">+</button>
+                        <button type="button" onclick="mapCamera('zoom-out')" title="Zoom out (-)" aria-label="Zoom out">&minus;</button>
+                        <button type="button" onclick="mapCamera('reset')" title="Show the whole map (0)" aria-label="Show the whole map">&#8962;</button>
+                    </div>
+                </div>
                 <div class="canvas-tooltip" id="canvasTooltip"></div>
                 <div class="game-over-banner" id="gameOverBanner" style="display: none;">
                     <div class="game-over-banner-content">
@@ -80,6 +105,17 @@
                     </div>
                 </div>
             </div>
+
+            <p id="map3dHint" class="map3d-hint" hidden>
+                <span class="hint-mouse">Drag to move the map, right-drag (or Shift-drag) to turn it, scroll to
+                    zoom. Keys: arrows move, Q/E turn, Page Up/Down tilt, +/&minus; zoom, 0 whole map, V 2D/3D.</span>
+                <span class="hint-touch">Tap as on the 2D map. Drag to move the map; pinch to zoom and twist two
+                    fingers to turn it, or use the buttons.</span>
+            </p>
+            <!-- The 3D map's module, loaded only when the 3D map is wanted; Thymeleaf gives each a
+                 content-hashed URL. -->
+            <div id="map3dAssets" hidden
+                 th:attr="data-script=@{/map3d/grid-relay-scene.js},data-wasm=@{/map3d/grid-relay-scene.wasm}"></div>
 
             <!-- Acts on the army selected on the map, right below it — no scrolling to the list. -->
             <div id="selectedArmyPanel" class="selected-army-panel">
@@ -261,6 +297,14 @@
 
     <!-- Pure game-state calculations, tested independently under web-client/src/test/js/. -->
     <script th:src="@{/js/game-logic.js}"></script>
+    <!-- The 3D map: Strata's grid relay page scripts (small; the module itself is fetched only
+         when the 3D map is wanted), the wire encoder, the scene and the view. -->
+    <script th:src="@{/map3d/strata-loader.js}"></script>
+    <script th:src="@{/map3d/strata-kit.js}"></script>
+    <script th:src="@{/map3d/grid-relay.js}"></script>
+    <script th:src="@{/js/grid-wire.js}"></script>
+    <script th:src="@{/js/map3d-scene.js}"></script>
+    <script th:src="@{/js/map3d-view.js}"></script>
     <script>
         let autoPlayInterval = null;
         let isAutoPlaying = false;
@@ -269,6 +313,10 @@
         // 'guest' when playing without an account (see login.html's Play as guest); else account mode.
         let playerMode = 'account';
         let lastGameState = null;
+        // The 3D map (map3d-view.js), created once the page is ready; null until then.
+        let map3d = null;
+        // The tile under the mouse on the 2D map, outlined as the 3D map outlines it; or null.
+        let hoverCell = null;
         
         // Sidebar layout preferences (see "Panel Layout Management" below). The default order is
         // read off the markup once, before any saved layout is applied, so it stays the authoring
@@ -367,6 +415,8 @@
             }
         };
         
+        // The hover outline's colour on both maps (map3d-scene.js's HOVER_COLOR).
+        const MAP_HOVER_COLOR = '#f5e6c8';
         const POLICY_COOLDOWN_TURNS = 15;
         // Consecutive turns of occupation the backend requires to flip a castle.
         const CASTLE_CAPTURE_TURNS = 3;
@@ -716,6 +766,7 @@
             restorePanelOpenState();
             applyPanelLayout();
             renderLayoutControls();
+            if (map3d) map3d.applyStored();
         }
 
         // createPreferenceSync is defined in game-logic.js (loaded above) and exposed as a global.
@@ -1439,6 +1490,16 @@
                 ctx.strokeStyle = PALETTE.castleBorder;
                 ctx.strokeRect(barX, barY, barWidth, barHeight);
             });
+
+            // Outline the tile under the mouse, as the 3D map does, so it is clear which tile a
+            // click would send the selected army to.
+            if (hoverCell && hoverCell.x < width && hoverCell.y < height) {
+                ctx.strokeStyle = MAP_HOVER_COLOR;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(hoverCell.x * cellWidth + 1, hoverCell.y * cellHeight + 1,
+                    cellWidth - 2, cellHeight - 2);
+                ctx.lineWidth = 1;
+            }
         }
         
         // ========================
@@ -1823,6 +1884,120 @@
         }
         
         // ========================
+        // Map presses, tooltip and view (2D and 3D)
+        // ========================
+        // What a click or tap on the map does, whichever map was pressed: with no army selected it
+        // selects the player's army there (`ownArmy`, as the pressed map resolved it); with one
+        // selected, pressing another of the player's armies selects that one instead, and
+        // anywhere else orders the selected army to (gridX, gridY).
+        function handleMapPress(gridX, gridY, ownArmy) {
+            if (!lastGameState) return;
+            if (!selectedArmy || (ownArmy && ownArmy.id !== selectedArmy.id)) {
+                if (ownArmy) {
+                    selectedArmy = ownArmy;
+                    showToast('Army #' + ownArmy.id + ' selected. Click a tile to move.', 'info');
+                    drawMap(lastGameState);
+                    updateSelectedArmyPanel();
+                }
+                return;
+            }
+
+            // Move selected army
+            fetch('/api/session/command', {
+                method: 'POST',
+                headers: getSessionHeaders(),
+                body: JSON.stringify({
+                    type: 'MOVE',
+                    armyId: selectedArmy.id,
+                    targetX: gridX,
+                    targetY: gridY
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to move army: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                updateUI(data);
+                selectedArmy = null;
+                updateSelectedArmyPanel();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error moving army: ' + error.message, 'danger');
+            });
+        }
+
+        function isOwnArmy(army) {
+            return army.playerId === 1;
+        }
+
+        // The tooltip over either map, at (cssX, cssY) on `mapCanvas` (CSS pixels from its top
+        // left): just above the pointer, or below a finger so it is not covered.
+        function showMapTooltip(text, mapCanvas, cssX, cssY, below) {
+            const tooltip = document.getElementById('canvasTooltip');
+            const containerRect = document.getElementById('gameCanvas').getBoundingClientRect();
+            const canvasRect = mapCanvas.getBoundingClientRect();
+            tooltip.textContent = text;
+            tooltip.style.display = 'block';
+            // Position relative to #gameCanvas container
+            tooltip.style.left = (canvasRect.left - containerRect.left + cssX + 12) + 'px';
+            tooltip.style.top = (canvasRect.top - containerRect.top + cssY + (below ? 24 : -8)) + 'px';
+        }
+
+        // The 3D map's camera keys (only while the 3D map shows; the 2D map keeps the browser's).
+        const MAP_CAMERA_KEYS = {
+            ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'forward', ArrowDown: 'back',
+            q: 'turn-left', Q: 'turn-left', e: 'turn-right', E: 'turn-right',
+            PageUp: 'tilt-up', PageDown: 'tilt-down',
+            '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', '_': 'zoom-out',
+            '0': 'reset', Home: 'reset'
+        };
+
+        function mapCamera(action) {
+            if (map3d) map3d.camera(action);
+        }
+
+        function setMapView(on) {
+            if (!map3d) return;
+            map3d.set3D(on);
+            queuePreferenceUpload();
+        }
+
+        // localStorage, or null where the browser refuses it (a private window).
+        function safeStorage() {
+            try { return window.localStorage; } catch (e) { return null; }
+        }
+
+        // The 2D/3D switch, the note beside it, and which map is on show.
+        function updateMapViewControls(info) {
+            const failed = info.status === 'failed';
+            const on3d = info.want && !failed;
+            const showing3d = info.want && info.status === 'on';
+            const button3d = document.getElementById('mapView3d');
+            button3d.setAttribute('aria-pressed', on3d ? 'true' : 'false');
+            document.getElementById('mapView2d').setAttribute('aria-pressed', on3d ? 'false' : 'true');
+            button3d.disabled = failed;
+            button3d.title = failed ? '3D map unavailable: ' + info.reason : 'Draw the map in 3D (V)';
+            const note = document.getElementById('mapViewNote');
+            if (failed) {
+                note.textContent = '3D map unavailable: ' + info.reason + '. Showing the 2D map.';
+            } else if (info.want && info.status === 'loading') {
+                note.textContent = 'Loading the 3D map\u2026';
+            } else {
+                note.textContent = '';
+            }
+            document.getElementById('gameCanvas').classList.toggle('showing-3d', showing3d);
+            document.getElementById('map3dHint').hidden = !showing3d;
+            document.getElementById('canvasTooltip').style.display = 'none';
+            hoverCell = null;
+            // The 2D map is redrawn when it comes back, as the window may have changed under it.
+            if (!showing3d && lastGameState) drawMap(lastGameState);
+        }
+
+        // ========================
         // Initialization
         // ========================
         document.addEventListener('DOMContentLoaded', function() {
@@ -1900,63 +2075,10 @@
                     lastGameState.armies, canvasX, canvasY, cellWidth, cellHeight, matches);
             }
 
-            function isOwnArmy(army) {
-                return army.playerId === 1;
-            }
-
             canvas.addEventListener('click', function(e) {
                 if (!lastGameState) return;
-                
                 const { gridX, gridY } = eventToGrid(e);
-                
-                if (!selectedArmy) {
-                    // Try to select an army at this position
-                    const army = armyAtEvent(e, isOwnArmy);
-                    if (army) {
-                        selectedArmy = army;
-                        showToast('Army #' + army.id + ' selected. Click a tile to move.', 'info');
-                        drawMap(lastGameState);
-                        updateSelectedArmyPanel();
-                    }
-                } else {
-                    // Check if clicking on an empty area (no player 1 army) to deselect
-                    const clickedArmy = armyAtEvent(e, isOwnArmy);
-                    if (clickedArmy && clickedArmy.id !== selectedArmy.id) {
-                        // Select the new army instead
-                        selectedArmy = clickedArmy;
-                        showToast('Army #' + clickedArmy.id + ' selected. Click a tile to move.', 'info');
-                        drawMap(lastGameState);
-                        updateSelectedArmyPanel();
-                        return;
-                    }
-                    
-                    // Move selected army
-                    fetch('/api/session/command', {
-                        method: 'POST',
-                        headers: getSessionHeaders(),
-                        body: JSON.stringify({
-                            type: 'MOVE',
-                            armyId: selectedArmy.id,
-                            targetX: gridX,
-                            targetY: gridY
-                        })
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Failed to move army: ' + response.status);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        updateUI(data);
-                        selectedArmy = null;
-                        updateSelectedArmyPanel();
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showToast('Error moving army: ' + error.message, 'danger');
-                    });
-                }
+                handleMapPress(gridX, gridY, armyAtEvent(e, isOwnArmy));
             });
             
             // Right-click to deselect
@@ -1980,24 +2102,26 @@
                 tooltipFramePending = false;
                 if (!lastGameState || !latestTooltipMouseEvent) {
                     hideTooltip();
+                    setHoverCell(null);
                     return;
                 }
                 const { gridX, gridY, cssX, cssY } = eventToGrid(latestTooltipMouseEvent);
-                const canvasContainer = document.getElementById('gameCanvas');
-                const containerRect = canvasContainer.getBoundingClientRect();
-                const canvasRect = canvas.getBoundingClientRect();
-                
+                setHoverCell({ x: gridX, y: gridY });
                 const text = tooltipTextAt(
                     gridX, gridY, lastGameState, armyAtEvent(latestTooltipMouseEvent));
                 if (text) {
-                    tooltip.textContent = text;
-                    tooltip.style.display = 'block';
-                    // Position relative to #gameCanvas container
-                    tooltip.style.left = (canvasRect.left - containerRect.left + cssX + 12) + 'px';
-                    tooltip.style.top = (canvasRect.top - containerRect.top + cssY - 8) + 'px';
+                    showMapTooltip(text, canvas, cssX, cssY, false);
                 } else {
                     hideTooltip();
                 }
+            }
+
+            // The 2D map's hover outline follows the mouse from tile to tile.
+            function setHoverCell(cell) {
+                const same = cell && hoverCell ? cell.x === hoverCell.x && cell.y === hoverCell.y : cell === hoverCell;
+                if (same) return;
+                hoverCell = cell;
+                if (lastGameState) drawMap(lastGameState);
             }
             
             canvas.addEventListener('mousemove', function(e) {
@@ -2011,6 +2135,7 @@
             canvas.addEventListener('mouseleave', function() {
                 latestTooltipMouseEvent = null;
                 hideTooltip();
+                setHoverCell(null);
             });
 
             // Touch-tap tooltip for mobile: show tile info on tap, auto-dismiss after 3s.
@@ -2021,19 +2146,46 @@
                 const { gridX, gridY, cssX, cssY } = eventToGrid(touch);
                 const text = tooltipTextAt(gridX, gridY, lastGameState, armyAtEvent(touch));
                 if (text) {
-                    const canvasContainer = document.getElementById('gameCanvas');
-                    const containerRect = canvasContainer.getBoundingClientRect();
-                    const canvasRect = canvas.getBoundingClientRect();
-                    tooltip.textContent = text;
-                    tooltip.style.display = 'block';
-                    // Position below touch point so the finger doesn't obscure it
-                    tooltip.style.left = (canvasRect.left - containerRect.left + cssX + 12) + 'px';
-                    tooltip.style.top = (canvasRect.top - containerRect.top + cssY + 24) + 'px';
+                    // Below the touch point so the finger doesn't obscure it.
+                    showMapTooltip(text, canvas, cssX, cssY, true);
                     clearTimeout(touchTooltipTimer);
                     touchTooltipTimer = setTimeout(hideTooltip, 3000);
                 } else {
                     hideTooltip();
                 }
+            });
+
+            // The 3D map: drawn by Strata's grid relay (map3d-view.js), pressed, hovered and
+            // tapped through the same handlers as the 2D map above.
+            map3d = Map3DView.create({
+                relay: window.StrataGridRelay || null,
+                scene: window.Map3DScene,
+                wire: window.GridWire,
+                stage: document.getElementById('map3dStage'),
+                canvas: 'mapRelay',
+                canvasElement: document.getElementById('mapRelay'),
+                assets: document.getElementById('map3dAssets'),
+                getState: function() { return saveUnreadable ? null : lastGameState; },
+                getSelectedId: function() { return selectedArmy ? selectedArmy.id : null; },
+                palette: function() { return PALETTE; },
+                groundTint: GROUND_TINT,
+                captureTurns: CASTLE_CAPTURE_TURNS,
+                onPress: handleMapPress,
+                onDeselect: deselectArmy,
+                isOwnArmy: isOwnArmy,
+                tooltipText: function(gridX, gridY, army) {
+                    return tooltipTextAt(gridX, gridY, lastGameState, army);
+                },
+                showTooltip: showMapTooltip,
+                hideTooltip: hideTooltip,
+                onChange: updateMapViewControls,
+                storage: safeStorage(),
+                location: window.location
+            });
+            document.getElementById('mapRelay').addEventListener('pointerleave', function(e) {
+                if (e.pointerType !== 'mouse') return;
+                hideTooltip();
+                if (map3d) map3d.clearHover();
             });
 
             // Redraw on viewport resize so canvas fits available space.
@@ -2053,7 +2205,8 @@
             });
 
             // Keyboard shortcuts (Space=tick, R=reset, S=focus split amount,
-            // A=toggle auto play, Escape=deselect). Ignored while typing in a
+            // A=toggle auto play, Escape=deselect, V=2D/3D map; on the 3D map also its camera:
+            // arrows, Q/E, PageUp/PageDown, +/- and 0, as MAP_CAMERA_KEYS lists). Ignored while typing in a
             // form field, or with a modifier held (so Cmd/Ctrl+R refresh etc.
             // still work), so as not to fight normal browser/input behavior.
             document.addEventListener('keydown', function(e) {
@@ -2061,6 +2214,16 @@
                 if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
                 if (e.ctrlKey || e.metaKey || e.altKey) return;
                 if (saveUnreadable) return;
+
+                if (e.key === 'v' || e.key === 'V') {
+                    setMapView(!(map3d && map3d.wanted()));
+                    return;
+                }
+                if (map3d && map3d.showing() && MAP_CAMERA_KEYS[e.key]) {
+                    e.preventDefault();
+                    map3d.camera(MAP_CAMERA_KEYS[e.key]);
+                    return;
+                }
 
                 switch (e.key) {
                     case ' ':

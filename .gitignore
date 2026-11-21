@@ -31,3 +31,4 @@ Thumbs.db
 # Local embedded H2 game-save data (dev)
 backend/data/
 web-client/battle3d/.build/
+web-client/map3d/.build/

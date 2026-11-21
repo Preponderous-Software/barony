@@ -105,3 +105,17 @@ jobs:
         source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
         web-client/battle3d/build.sh
         git diff --stat --exit-code -- web-client/src/main/resources/static/battle3d/
+
+  map3d:
+    # The game page's 3D map is drawn by Strata's grid relay, which Strata's wasm release carries
+    # prebuilt (kit/grid-relay/dist/). Its files are committed under static/map3d/ so the Maven
+    # build needs no network; this fetches the pinned release (SHA-256 checked) and fails if the
+    # committed bytes differ.
+    name: 3D map relay (fetch and compare)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Fetch and compare
+      run: web-client/map3d/fetch.sh --check
