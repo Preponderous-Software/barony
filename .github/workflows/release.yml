@@ -1,0 +1,139 @@
+name: Release
+
+# Builds Barony's downloads and attaches them to the GitHub release for a version tag.
+#
+# - push of a tag X.Y.Z: build that tag, create the release "Barony X.Y.Z" if it does not exist,
+#   and upload the jars with their .sha256 sidecars (replacing any of the same name).
+# - workflow_dispatch with a tag: the same, for an existing tag.
+# - workflow_dispatch with no tag, or a pull request touching the release build: a dry run of the
+#   current commit. Builds and checks everything, keeps the jars as workflow artifacts, attaches
+#   nothing.
+#
+# Releases are made by the fleet's release automation; the arcade keeps deploying main as before.
+# See docs/RELEASING.md.
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (X.Y.Z). Empty = dry run of the selected ref.'
+        required: false
+        default: ''
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'backend/pom.xml'
+      - 'web-client/pom.xml'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build release downloads
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve the tag
+        id: tag
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          case "$EVENT" in
+            push) TAG="$REF_NAME" ;;
+            workflow_dispatch) TAG="$INPUT_TAG" ;;
+            *) TAG="" ;;
+          esac
+          if [ -n "$TAG" ]; then
+            if ! printf '%s' "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::tag '$TAG' is not of the form X.Y.Z"
+              exit 1
+            fi
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "ref=refs/tags/$TAG" >> "$GITHUB_OUTPUT"
+            echo "Releasing tag $TAG"
+          else
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "ref=" >> "$GITHUB_OUTPUT"
+            echo "Dry run of $GITHUB_SHA: nothing will be attached"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Check the version files
+        id: version
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          backend=$(mvn -B -q -f backend/pom.xml help:evaluate -Dexpression=project.version -DforceStdout)
+          web=$(mvn -B -q -f web-client/pom.xml help:evaluate -Dexpression=project.version -DforceStdout)
+          echo "backend/pom.xml:    $backend"
+          echo "web-client/pom.xml: $web"
+          if [ "$backend" != "$web" ]; then
+            echo "::error::backend/pom.xml ($backend) and web-client/pom.xml ($web) disagree"
+            exit 1
+          fi
+          if [ -n "$TAG" ] && [ "$backend" != "$TAG" ]; then
+            echo "::error::the pom versions ($backend) do not equal the tag ($TAG)"
+            exit 1
+          fi
+          echo "version=$backend" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test the backend
+        run: mvn -B package
+        working-directory: backend
+
+      - name: Build and test the web client
+        run: mvn -B package
+        working-directory: web-client
+
+      - name: Collect the downloads and their checksums
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir dist
+          cp "backend/target/backend-$VERSION.jar" "dist/barony-backend-$VERSION.jar"
+          cp "web-client/target/web-client-$VERSION.jar" "dist/barony-web-client-$VERSION.jar"
+          cd dist
+          for f in *.jar; do
+            sha256sum "$f" > "$f.sha256"
+          done
+          sha256sum -c *.sha256
+          ls -l
+
+      - name: Keep the downloads (dry run)
+        if: steps.tag.outputs.tag == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: barony-${{ steps.version.outputs.version }}-dry-run
+          path: dist/
+          if-no-files-found: error
+
+      - name: Create the release if missing and upload the downloads
+        if: steps.tag.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --title "Barony $VERSION" \
+              --notes "Barony $VERSION. Downloads: barony-backend-$VERSION.jar and barony-web-client-$VERSION.jar (Java 17), each with a .sha256 checksum. See CHANGELOG.md for what changed."
+          fi
+          gh release upload "$TAG" dist/* --clobber
